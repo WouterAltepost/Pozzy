@@ -1,30 +1,60 @@
 # Pozzy progress
 
-Active milestone: 2 (Areas, Settings, Tasks, Goals). Milestone 1 is deployed and verified.
+## v1 released, 2026-09-14
 
-## Deployed
-- api: https://api-production-c9d96.up.railway.app (Railway project `pozzy`, service `api`, root `api`)
-- web: https://web-production-e418d.up.railway.app (service `web`, root `web`)
-- Database: Supabase Postgres, Alembic head 722da3773e5d, seeds applied. Migrations run from a laptop, see docs/DEPLOY.md.
+Live:
+- web: https://web-production-e418d.up.railway.app (PWA, installable; service worker network-first for `/api`, cache-first for assets)
+- api: https://api-production-c9d96.up.railway.app (`/api/health` reports db and scheduler status)
+- Database: Supabase Postgres at Alembic head `e1000000merge` (merge of `b1000000calendar`, `c1000000mail`, `d1000000ai`; all 22 tables from plan section 5 verified by query). Migrations run from a laptop over the pooler URL; Railway has no release step.
+- Code: `main` on GitHub WouterAltepost/Pozzy. PRs #1 (A), #2 (B), #3 (C), #4 (D) merged with merge commits; stream E committed directly to main. 207 pytest tests green, `npm run build` green.
 
-## Done
-- 2026-09-14: plan written (docs/POZZY_PLAN.md), CLAUDE.md, .env.example.
-- 2026-09-14: milestone 0 complete. Supabase project, Anthropic key, Apple app-specific password, 4 Google app passwords, Railway project, GitHub repo (WouterAltepost/Pozzy). All secrets in root .env (gitignored).
-- 2026-09-14: milestone 1 complete. `api/` Flask 3 app factory, config that fails loudly on missing vars, Supabase JWT auth, models Area/Setting/JobRun/AiCall, blueprints health/me/settings/areas, one Alembic migration, idempotent `seeds.py`, 16 pytest tests. `web/` Vue 3 + Vite + Pinia + Router, Supabase JS for auth only, login and home views. Login verified locally and on Railway. Deploy steps in docs/DEPLOY.md.
+Background jobs (APScheduler in the api process, `RUN_SCHEDULER=1` on the Railway api service only, gunicorn `--workers 1`, Europe/Amsterdam):
 
-## Facts found in M1
-- JWT algorithm: **ES256** (asymmetric), confirmed with a real login. The project JWKS at `/auth/v1/.well-known/jwks.json` publishes a P-256 key. `require_auth` verifies via JWKS (cached per process) and falls back to HS256 with `SUPABASE_JWT_SECRET` when a token header says HS256.
-- Tests use SQLite in-memory. `sqlalchemy.Uuid` and `JSON().with_variant(JSONB, "postgresql")` work on SQLite, so no Postgres test schema was needed.
-- Pooler: the project lives on `aws-1-eu-west-1.pooler.supabase.com`, not `aws-0-eu-central-1` as first assumed. Transaction pooler (port 6543) is used for the app and for Alembic; `flask db upgrade` and `db current` both worked through it. The first migration itself was applied over the direct host before the pooler host was known. If a future DDL migration fails on 6543, switch to the session pooler (5432) for that run and note it here.
-- Vite dev proxy targets `127.0.0.1:5000`, not `localhost`, because Node resolves localhost to IPv6 and Flask listens on IPv4.
-- Railway variables were set with the CLI from the local `.env`, so no secret went through the dashboard or chat.
+| Job | Schedule |
+|---|---|
+| calendar_sync | every 10 min |
+| mail_sync_and_classify | every 15 min |
+| three_do_rollover | daily 00:05 |
+| deadline_urgency | daily 00:10 |
+| daily_briefing | daily at Settings `briefing_time` (07:00), read at process start |
+| weekly_review_draft | Sunday 18:00 |
+| ai_cost_rollup | daily 23:55 |
 
-## Next
-- Milestone 2 per plan section 9: Areas (edit), Settings page, Tasks CRUD + Eisenhower board, Goals (weekly goals, three do's, rollover job). Write the brief first: docs/briefs/M2-core.md.
+Verified against real services on 2026-09-14 (local API against Supabase):
+- `scripts/claude_smoke.py`: Haiku call ok, 65 in / 37 out, $0.00025 logged to `ai_calls`.
+- `scripts/caldav_smoke.py`: 10 iCloud calendars, 31 objects, next 5 events listed with etags.
+- `scripts/imap_smoke.py`: 4/4 Gmail accounts log in and list newest subjects.
+- Jobs run as functions, each with a `job_runs` row `ok=true`: `calendar_sync` (10/10 calendars, 61 events inserted, 12 s), `mail_sync_and_classify` (355 emails backfilled over 4 accounts, 354 classified by Claude, 1 by rules, 488 s), `daily_briefing` (Claude text written), `three_do_rollover` (0 of 0, nothing pending).
+- Every route in ROUTES.md clicked through in Chrome against the local API: no console errors, no failed `/api` calls. Mobile pass at 390px on every view.
+- Production job_runs evidence: see the "Production evidence" list below.
 
-## Open issues
-- Work mail address in .env reads `wout@alpacaai`, looks truncated (matters from milestone 6).
-- APScheduler is wired but not started. Starts in M2 with the rollover job.
+Decisions made in integration (BUILD.md task 5):
+- Route names and nav order exactly as ROUTES.md after merging A, B, C, D: home, agenda, tasks, goals, mail, trackers, hours, capture, study, notes, review, settings. Unknown paths redirect to home.
+- Nav lives in `App.vue` as a second row under the top bar, collapsible behind a menu button under 720px. `CaptureBar` sits between the brand and the user block, authenticated only.
+- `HomeView.vue` renders the ten widgets in WIDGETS.md order in a two-column grid from 900px.
+- `SettingsView.vue` mounts `CalendarAccounts` (B) and `MailAccounts` (C) inside the Integrations card, replacing A's placeholder divs.
+- `settings_defaults.py` keeps every stream's keys; `ai_enabled` gained `three_dos` (D's kill switch) in the defaults, so the Settings page shows six switches without a reseed.
+- C's migration chained onto A's (`c1000000mail` revises `a1000000local`), D's too; B's revises M1. The merge migration joins the three heads and changes no schema.
+- Job runner: every job keeps its own `run(app)`; `scheduler.py` wraps each in a thread-safe runner with `max_instances=1`, `coalesce=True`, 5 minute misfire grace. Registration is idempotent by job id.
+
+Fixed during integration:
+- CalDAV sync failed in production shape with "caldav.icloud.com can't be joined with p55-caldav": `caldav.DAVClient` only moves its base URL during the calendar-home lookup. The client now resolves the home once before any per-calendar request.
+- `iso()` looked up the timezone Setting per datetime (400 queries for a 200 row list, 22 s). Cached on `flask.g`; mail list now 1.1 s.
+- D's review snapshot test assumed C's Email model was absent.
+- Railway web builds failed since the B merge with `EBUSY rmdir node_modules/.vite`: `npm ci` in the build command deleted Railpack's cache mount. Build command is now `npm run build` only.
+- Mobile: mail list grid `minmax(0, 1fr)`, goal-add form wraps.
+
+Known gaps: see docs/V2.md. Short version: recurring iCloud occurrences are read-only, the hours timer is browser-local, no thread grouping in Mail, Haiku prompt caching not yet effective, prices hardcoded, no automated browser tests.
+
+Open issues:
+- Local login for automated checks was done with an HS256 token minted from `SUPABASE_JWT_SECRET` (the API accepts it as the documented fallback); there is no Supabase user password in `.env`, so a Playwright login flow is not possible without one.
+- Calendar selection in Settings currently includes Reminders and Holidays; untick them once so all-day noise stays out of the Agenda.
+
+Production evidence (filled in after the 20 minute wait, see below).
+
+## Stream history
+
+The four stream sections below are the per-stream handover notes from the parallel build (BUILD.md). They are kept for reference; anything they list as "needs from E" is done.
 
 ## Stream A (local modules), 2026-09-14
 
