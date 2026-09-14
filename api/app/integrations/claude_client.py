@@ -362,3 +362,42 @@ def write_briefing(context: dict) -> str | None:
     answer = _call(feature="daily_briefing", switch="briefing", tier="smart", prompt="daily_briefing", payload=context, schema=BriefingAnswer, max_tokens=900)
     text = (answer.text or "").strip() if answer else ""
     return text or None
+
+
+class _FocusItem(BaseModel):
+    title: str
+    area: str | None = None
+    target_value: float | None = None
+    task_id: str | None = None
+    reason: str = ""
+
+
+class WeeklyReviewAnswer(BaseModel):
+    reflection: str
+    next_week_focus: list[_FocusItem] = []
+
+
+def review_week(stats: dict, max_goals: int = 5) -> dict | None:
+    """Reflection text plus next week's goal draft from a stats snapshot. See docs/AI_CONTRACTS.md 'review_week'."""
+    payload = {**stats, "max_goals": max_goals}
+    answer = _call(feature="weekly_review", switch="weekly_review", tier="smart", prompt="weekly_review", payload=payload, schema=WeeklyReviewAnswer, max_tokens=1400)
+    if answer is None or not answer.reflection.strip():
+        return None
+    allowed = {c.get("id") for c in stats.get("open_task_candidates", [])} | {d.get("task_id") for d in (stats.get("deadlines") or {}).get("upcoming", []) if d.get("task_id")}
+    focus = []
+    for item in answer.next_week_focus:
+        title = item.title.strip()
+        if not title:
+            continue
+        focus.append(
+            {
+                "title": title[:200],
+                "area": item.area.strip() if item.area else None,
+                "target_value": item.target_value,
+                "task_id": item.task_id if item.task_id in allowed else None,
+                "reason": item.reason.strip()[:300],
+            }
+        )
+        if len(focus) >= max_goals:
+            break
+    return {"reflection": answer.reflection.strip(), "next_week_focus": focus}
