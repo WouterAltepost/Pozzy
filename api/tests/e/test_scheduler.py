@@ -32,3 +32,9 @@ def test_briefing_cron_follows_settings(app, client, token_factory):
 def test_start_guard(app, monkeypatch):
     monkeypatch.setattr(sched, "_started", True)
     assert sched.start_scheduler(app) is False
+
+
+def test_health_reports_scheduler(client):
+    data = client.get("/api/health").get_json()["data"]
+    assert data["scheduler"]["running"] is False
+    assert isinstance(data["scheduler"]["jobs"], list)

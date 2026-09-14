@@ -21,4 +21,6 @@ def health():
         db.session.rollback()
         db_ok = False
     now = datetime.now(ZoneInfo(current_app.config["TZ"]))
-    return ok({"status": "ok", "db": db_ok, "time": now.isoformat()})
+    from ...scheduler import scheduler_status
+
+    return ok({"status": "ok", "db": db_ok, "time": now.isoformat(), "scheduler": scheduler_status()})
