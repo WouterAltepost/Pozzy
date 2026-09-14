@@ -8,3 +8,5 @@ node_modules/
 web/dist/
 .DS_Store
 .pytest_cache/
+.env.local
+*.local
