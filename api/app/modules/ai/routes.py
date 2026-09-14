@@ -34,3 +34,11 @@ def regenerate_briefing():
 def briefing_context():
     """The facts the briefing is built from. Handy for checking why a briefing said something."""
     return ok(briefing.build_context(_day_arg()))
+
+
+@bp.get("/spend")
+@require_auth
+def spend():
+    from . import spend as spend_service
+
+    return ok(spend_service.summary())
