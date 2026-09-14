@@ -5,7 +5,7 @@ Each widget under `web/src/components/home/` fetches its own data on mount and r
 | Order | Component | Data | Stream |
 |---|---|---|---|
 | 1 | `ThreeDosWidget.vue` | `GET /api/dos?date=today`, inline tick, add when fewer than 3 | A |
-| 2 | `TodayEventsWidget.vue` | calendar events today | B |
+| 2 | `TodayEventsWidget.vue` | `GET /api/calendar/events?start=today&end=tomorrow`, today's events (all-day first) plus scheduled tasks not yet on iCloud. Local mirror only, no CalDAV call. | B |
 | 3 | `TopEmailsWidget.vue` | top 5 unhandled emails by priority | C |
 | 4 | `TasksDueWidget.vue` | `GET /api/tasks?due=today_or_overdue`, inline complete | A |
 | 5 | `TrackerRowWidget.vue` | `GET /api/trackers/week`, one chip per daily_bool and weekly_count tracker, tap to tick today. Renders nothing when there are no such trackers. | A |
