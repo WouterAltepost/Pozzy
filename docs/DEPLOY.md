@@ -67,6 +67,12 @@ railway redeploy -s api -y
 railway redeploy -s web -y
 ```
 
+`MAIL_ACCOUNTS_JSON` contains quotes and spaces; `set -a && source .env` mangles it. Set that one from Python instead so the value never passes through a shell:
+
+```
+python3 -c "import subprocess; v=[l.split('=',1)[1].rstrip('\n') for l in open('.env') if l.startswith('MAIL_ACCOUNTS_JSON=')][0]; subprocess.run(['railway','variables','-s','api','--skip-deploys','--set','MAIL_ACCOUNTS_JSON='+v])"
+```
+
 `PORT` and `RAILWAY_ENVIRONMENT` are injected by Railway. `FLASK_ENV=production` or `RAILWAY_ENVIRONMENT` stops the API from loading a `.env` file.
 Dashboard alternative: service > **Variables** > **Raw Editor**, paste the same `KEY=value` lines.
 

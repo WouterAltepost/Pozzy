@@ -80,6 +80,13 @@ def upsert_accounts_from_env() -> list[MailAccount]:
         row.color = entry["color"]
         row.imap_host = entry["imap_host"]
         row.secret_ref = f"env:{entry['email']}"
+    # Rows whose address is no longer in the env (a typo fixed, an account removed) have no
+    # password to sync with; disable them so every job run does not report a failing account.
+    env_emails = {entry["email"] for entry in entries}
+    for email, row in existing.items():
+        if email not in env_emails and row.enabled:
+            row.enabled = False
+            row.last_error = "Not in MAIL_ACCOUNTS_JSON, disabled"
     db.session.commit()
     return list_accounts()
 

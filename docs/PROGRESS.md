@@ -43,6 +43,8 @@ Fixed during integration:
 - D's review snapshot test assumed C's Email model was absent.
 - Railway web builds failed since the B merge with `EBUSY rmdir node_modules/.vite`: `npm ci` in the build command deleted Railpack's cache mount. Build command is now `npm run build` only.
 - Mobile: mail list grid `minmax(0, 1fr)`, goal-add form wraps.
+- Production only: every scheduled job failed with psycopg `DuplicatePreparedStatement` / `InvalidSqlStatementName` because the Supabase transaction pooler (pgbouncer) does not support server-side prepared statements once connections are multiplexed. `config.py` now passes `prepare_threshold=None` to psycopg for Postgres URLs.
+- Production only: the Railway `MAIL_ACCOUNTS_JSON` variable was 342 characters of invalid JSON (the M1 `set -a; source .env` export mangled the quoted JSON), so every mail sync reported "No password for this account". Re-set from `.env` through a subprocess call with no shell, verified by hash. DEPLOY.md now says to set that variable that way.
 
 Known gaps: see docs/V2.md. Short version: recurring iCloud occurrences are read-only, the hours timer is browser-local, no thread grouping in Mail, Haiku prompt caching not yet effective, prices hardcoded, no automated browser tests.
 
