@@ -42,11 +42,13 @@ def create_app(overrides: dict | None = None) -> Flask:
     from .modules.health.routes import bp as health_bp
     from .modules.me.routes import bp as me_bp
     from .modules.settings.routes import bp as settings_bp
+    from .modules.tasks.routes import bp as tasks_bp
 
     app.register_blueprint(health_bp)
     app.register_blueprint(me_bp)
     app.register_blueprint(settings_bp)
     app.register_blueprint(areas_bp)
+    app.register_blueprint(tasks_bp)
 
     register_error_handlers(app)
     return app
