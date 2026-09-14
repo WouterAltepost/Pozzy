@@ -8,13 +8,14 @@ Stream E wires these into `web/src/router/index.js` and the nav in `App.vue`. Ev
 | 2 | `/agenda` | `agenda` | `views/AgendaView.vue` | Agenda | B |
 | 3 | `/tasks` | `tasks` | `views/TasksView.vue` | Tasks | A |
 | 4 | `/goals` | `goals` | `views/GoalsView.vue` | Goals | A |
+| 5 | `/mail` | `mail` | `views/MailView.vue` | Mail | C |
 | 6 | `/trackers` | `trackers` | `views/TrackersView.vue` | Tracking | A |
 | 7 | `/hours` | `hours` | `views/HoursView.vue` | Hours | A |
 | 9 | `/study` | `study` | `views/StudyView.vue` | Study | A |
 | 10 | `/notes` | `notes` | `views/NotesView.vue` | Notes | A |
 | 99 | `/settings` | `settings` | `views/SettingsView.vue` | Settings | A |
 
-Gaps in the order are reserved: 5 Mail (C), 8 Capture (D), 11 Weekly review (D).
+Gaps in the order are reserved: 8 Capture (D), 11 Weekly review (D).
 
 ## Stream A notes for E
 
@@ -28,3 +29,9 @@ Gaps in the order are reserved: 5 Mail (C), 8 Capture (D), 11 Weekly review (D).
 - Settings mount point `#settings-calendar-accounts`: replace with `<CalendarAccounts />` imported from `web/src/components/settings/CalendarAccounts.vue`. It is self-contained (own store, own API calls) and needs no props.
 - `web/src/stores/calendar.js` (`useCalendarStore`) is shared by the Agenda view, the settings component and the sync bar. `TodayEventsWidget` and `AgendaGrid` link to route names `agenda` and `tasks`.
 - The agenda does not depend on the sync running: it renders the local `calendar_events` mirror and shows "Not synced yet" until the job or the Sync now button has run.
+
+## Stream C notes for E
+
+- Settings mount point `#settings-mail-accounts`: replace with `<MailAccounts />` imported from `web/src/components/settings/MailAccounts.vue`. It uses `useMailStore` (`web/src/stores/mail.js`) and fetches its own data.
+- `MailView.vue` links to route names `settings` and `tasks`; `TopEmailsWidget.vue` links to `mail`.
+- Widget: `web/src/components/home/TopEmailsWidget.vue` (see WIDGETS.md order 3).
