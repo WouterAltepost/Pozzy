@@ -58,6 +58,10 @@ def test_rules_use_work_account_as_client_signal():
     assert mail_classify.classify_rules_one(item)["category"] == "other"
     item["from_email"] = "friend@gmail.com"
     assert mail_classify.classify_rules_one(item)["category"] == "personal"
+    promo = {"id": "y", "account_label": "Mail 1", "from_email": "hi@shop.example", "from_name": "Shop", "subject": "10% korting op alles"}
+    assert mail_classify.classify_rules_one(promo)["category"] == "newsletter"
+    legal = {"id": "z", "account_label": "Mail 1", "from_email": "x@pinterest.com", "from_name": "Pinterest", "subject": "We are updating our Terms of Service"}
+    assert mail_classify.classify_rules_one(legal)["category"] == "notification"
 
 
 def test_claude_results_are_validated_and_merged_with_rules(server, areas, monkeypatch):

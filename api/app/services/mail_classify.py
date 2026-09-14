@@ -37,13 +37,16 @@ NOTIFICATION_SENDERS = (
 NOTIFICATION_SUBJECTS = (
     "security alert", "verification code", "verify your", "password reset", "sign-in", "new login",
     "delivery status", "build failed", "deploy", "your order", "shipped", "receipt for your", "confirm your",
-    "2-step verification", "welcome to",
+    "2-step verification", "welcome to", "terms of service", "privacy policy", "privacybeleid",
 )
 NEWSLETTER_SENDERS = (
     "newsletter", "news@", "digest", "tldr", "substack", "medium.com", "mailchimp", "beehiiv", "list-",
     "updates@", "marketing", "promo", "hi@", "weekly", "campaign", "linkedin.com", "chess.com", "producthunt",
 )
-NEWSLETTER_SUBJECTS = ("newsletter", "digest", "this week", "weekly", "what you've missed", "unsubscribe", "top stories", "edition")
+NEWSLETTER_SUBJECTS = (
+    "newsletter", "digest", "this week", "weekly", "what you've missed", "unsubscribe", "top stories", "edition",
+    "% off", "% korting", "korting", "voordeel", "aanbieding", "sale", "deal", "offer", "new arrivals", "just dropped", "last chance",
+)
 FINANCE_SENDERS = (
     "bank", "ing.nl", "ing.com", "rabobank", "abnamro", "bunq", "revolut", "degiro", "trading212", "paypal", "tikkie",
     "belastingdienst", "duo.nl", "invoice", "billing", "payments", "mollie", "stripe", "wise.com", "coinbase", "ibkr", "interactivebrokers",
