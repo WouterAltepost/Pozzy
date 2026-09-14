@@ -149,7 +149,8 @@ li.done .title, li.done .goal-title { text-decoration: line-through; color: #9ca
 .title:focus { border-color: #d1d5db; background: #fff; }
 .warn { color: #b91c1c; font-size: 0.75rem; font-weight: 600; }
 .x { border: none; background: none; color: #9ca3af; font-size: 1.1rem; padding: 0 0.3rem; }
-.add { display: flex; gap: 0.4rem; margin-top: 0.5rem; }
+.add { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-top: 0.5rem; }
+.goal-add :deep(select) { flex: 1; min-width: 110px; }
 .add input[type='text'] { flex: 1; font: inherit; padding: 0.35rem; border: 1px solid #d1d5db; border-radius: 4px; }
 .goal-add input[type='number'] { width: 130px; font: inherit; padding: 0.35rem; border: 1px solid #d1d5db; border-radius: 4px; }
 .row { display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; margin-bottom: 0.5rem; }

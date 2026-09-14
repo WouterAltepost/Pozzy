@@ -107,7 +107,7 @@ function sync() {
 h1 { font-size: 1.3rem; margin: 0; }
 .head { display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center; margin-bottom: 0.75rem; }
 .small { font-size: 0.8rem; }
-.layout { display: grid; grid-template-columns: 1fr; gap: 1rem; margin-top: 0.75rem; align-items: start; }
+.layout { display: grid; grid-template-columns: minmax(0, 1fr); gap: 1rem; margin-top: 0.75rem; align-items: start; }
 @media (min-width: 900px) { .layout.split { grid-template-columns: minmax(0, 1fr) minmax(320px, 46%); } }
 .list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 0.3rem; }
 </style>
