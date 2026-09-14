@@ -70,7 +70,40 @@ def upgrade():
     op.create_index('ix_hours_logs_area_id', 'hours_logs', ['area_id'])
     op.create_index('ix_hours_logs_task_id', 'hours_logs', ['task_id'])
 
+    op.create_table(
+        'daily_dos',
+        *_base_columns(),
+        sa.Column('date', sa.Date(), nullable=False),
+        sa.Column('task_id', sa.Uuid(), nullable=True),
+        sa.Column('title', sa.String(length=200), nullable=False),
+        sa.Column('done', sa.Boolean(), nullable=False),
+        sa.Column('rolled_from_date', sa.Date(), nullable=True),
+        sa.Column('position', sa.Integer(), nullable=False),
+        sa.ForeignKeyConstraint(['task_id'], ['tasks.id'], ondelete='SET NULL'),
+        sa.PrimaryKeyConstraint('id'),
+    )
+    op.create_index('ix_daily_dos_date', 'daily_dos', ['date'])
+    op.create_index('ix_daily_dos_task_id', 'daily_dos', ['task_id'])
+
+    op.create_table(
+        'weekly_goals',
+        *_base_columns(),
+        sa.Column('week_start', sa.Date(), nullable=False),
+        sa.Column('title', sa.String(length=200), nullable=False),
+        sa.Column('area_id', sa.Uuid(), nullable=True),
+        sa.Column('target_value', sa.Float(), nullable=True),
+        sa.Column('current_value', sa.Float(), nullable=False),
+        sa.Column('done', sa.Boolean(), nullable=False),
+        sa.Column('notes', sa.Text(), nullable=True),
+        sa.ForeignKeyConstraint(['area_id'], ['areas.id']),
+        sa.PrimaryKeyConstraint('id'),
+    )
+    op.create_index('ix_weekly_goals_week_start', 'weekly_goals', ['week_start'])
+    op.create_index('ix_weekly_goals_area_id', 'weekly_goals', ['area_id'])
+
 
 def downgrade():
+    op.drop_table('weekly_goals')
+    op.drop_table('daily_dos')
     op.drop_table('hours_logs')
     op.drop_table('tasks')
