@@ -2,7 +2,7 @@
 
 Feature: `capture_parse`. Kill switch: `ai_enabled.capture`. Model: smart. Caller: `modules/captures/service.py::process_capture`.
 
-Input payload: `text` (what Wouter typed), `today`, `weekday`, `timezone`, `areas` (names), `trackers` (name and type), `courses` (names).
+Input payload: `text` (what Wouter typed), `today`, `weekday`, `timezone`, `upcoming_days` (weekday name to date for the next seven days), `tomorrow`, `next_monday`, `areas` (names), `trackers` (name and type), `courses` (names).
 
 Schema the model must return. `type` is one of task, event, goal, note, tracker. `fields` depends on the type; unknown fields are ignored, missing ones get defaults. Dates are `YYYY-MM-DD`, datetimes ISO 8601 with offset. `area` and `tracker` are names from the payload or null.
 
@@ -34,7 +34,7 @@ Types:
 - tracker: a habit or measurement log for a tracker in the list ("weight 82.4", "sauna done", "took creatine"). Fields: tracker (exact name from the list), date, value, note. Bool trackers use value 1.
 
 Rules:
-- Resolve relative dates from `today` and `weekday`: "tomorrow", "friday" (the next one), "next week" (that Monday), "end of month". Times are in `timezone`.
+- Resolve relative dates with the lookups given: a weekday name means the date in `upcoming_days`, "tomorrow" is `tomorrow`, "next week" is `next_monday`. Never count days yourself. "End of month" is the last day of the month of `today`. Times are in `timezone`; include the offset in datetimes.
 - Pick `area` only from the given names when the text clearly belongs there (course names imply Study; the tracker list carries its own area).
 - `urgent` when the text says asap, urgent, or the due date is within two days. `important` when it concerns a deadline, a client, an exam, or money.
 - Hashtags become tags without the hash. Keep titles short, drop the date words from the title.

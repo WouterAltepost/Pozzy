@@ -79,6 +79,10 @@ def parse_context(today: date | None = None) -> dict:
         "today": today.isoformat(),
         "weekday": WEEKDAYS[today.weekday()].capitalize(),
         "timezone": str(app_tz()),
+        # Precomputed so the model looks dates up instead of counting weekdays.
+        "upcoming_days": {WEEKDAYS[(today + timedelta(days=i)).weekday()].capitalize(): (today + timedelta(days=i)).isoformat() for i in range(1, 8)},
+        "tomorrow": (today + timedelta(days=1)).isoformat(),
+        "next_monday": (week_start_of(today) + timedelta(days=7)).isoformat(),
         "areas": _area_names(),
         "trackers": [{"name": t.name, "type": t.type, "unit": t.unit} for t in _tracker_rows()],
         "courses": [c.name for c in db.session.scalars(select(Course)).all()],

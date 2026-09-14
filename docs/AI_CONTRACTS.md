@@ -79,3 +79,30 @@ Field rules, enforced by the caller (`validate_item`), an item failing any of th
 - `one_line_summary`: non-empty string, one sentence, the caller trims it to 300 characters.
 
 Fallback: `mail_classify.classify_rules` (priority 3, or 4 for newsletter and notification; category from sender and subject heuristics; area from category; `needs_reply` false; summary is the subject). The caller writes only the raw columns `priority`, `category`, `area_id`, `needs_reply`, `summary`, `classifier` (`claude` or `rules`) and `classified_at`; manual overrides live in `priority_override`, `category_override`, `area_override_id` and are never written by classification.
+
+## Stream D (own functions)
+
+All implemented in `api/app/integrations/claude_client.py` through one helper `_call` that checks the kill switch, resolves the model tier, renders `api/app/prompts/<name>.md` (linked from `docs/prompts/`), parses JSON, validates with pydantic, writes `ai_calls`, and returns `None` on any failure. Prices are hardcoded in `PRICES` there. Under `TESTING` the client is never built; tests inject a fake via `app.extensions["pozzy_anthropic"]` (see `api/tests/d/conftest.py`).
+
+### `parse_capture(payload: dict) -> dict | None`
+
+Caller: `modules/captures/service.py::build_proposal`. Kill switch: `ai_enabled.capture`. Model: smart. Prompt `capture_parse`.
+
+Input: `{"text", "today", "weekday", "timezone", "areas": [names], "trackers": [{"name", "type", "unit"}], "courses": [names]}`.
+Output: `{"type": "task|event|goal|note|tracker", "confidence": 0..1, "reason": str, "fields": {...}}`. The `fields` sub-object per type is defined by the pydantic models in `modules/captures/schemas.py` (`TaskFields`, `EventFields`, `GoalFields`, `NoteFields`, `TrackerFields`); the caller re-validates against them and falls back to `parse_deterministic`.
+
+### `write_briefing(context: dict) -> str | None`
+
+Caller: `modules/ai/briefing.py::generate_briefing`. Kill switch: `ai_enabled.briefing`. Model: smart. Prompt `daily_briefing`.
+
+Input: the dict from `briefing.build_context(day)` (dos, tasks_due, scheduled_tasks, events, deadlines, application_steps, weekly_goals, trackers_open, hours, emails, yesterday). Output: the briefing text (plain, paragraphs separated by blank lines). Fallback: `briefing.deterministic_text`.
+
+### `review_week(stats: dict, max_goals: int = 5) -> dict | None`
+
+Caller: `modules/reviews/service.py::generate_review`. Kill switch: `ai_enabled.weekly_review`. Model: smart. Prompt `weekly_review`.
+
+Input: the snapshot from `services/review_stats.py::compute(week_start)`. Output: `{"reflection": str, "next_week_focus": [{"title", "area", "target_value", "task_id", "reason"}]}`; `task_id` is kept only when it is one of `open_task_candidates[].id` or `deadlines.upcoming[].task_id`. Fallback: `deterministic_reflection` and `deterministic_focus` in the same service.
+
+### `classify_emails(batch: list[dict]) -> list[dict] | None` (stream C's contract)
+
+C's contract lives in this file on branch `stream/C-mail` (read from that worktree on 2026-09-14, not yet pushed); E merges the two sections. Implemented as C specified: chunks of `mail_classify_batch` (max 15) on the fast model, system prompt marked `cache_control: ephemeral`, every item validated (id in batch, priority 1 to 4, category in the list, area in the four names or null, non-empty summary), duplicates dropped. Returns the results of every chunk that succeeded and `None` only when no chunk did. Note: Haiku 4.5 needs a 4096-token prefix before caching engages, so `cache_read_input_tokens` stays 0 until the system prompt grows past that; the marker is harmless.
