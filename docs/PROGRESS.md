@@ -94,3 +94,28 @@ Known gaps and how to test:
 - Sync speed is roughly 1 s per message on Gmail plus a few seconds login per account; the first 7 day backfill on a busy inbox runs over a few job cycles because of the 500 cap. Fine for a 15 min job.
 - Gmail labels are only present on messages that have one beyond INBOX (`\Important`, user labels). `\Inbox` itself is omitted by Gmail.
 - Manual test before merge: add the ROUTES.md row to the router, mount `MailAccounts`, `flask db upgrade c1000000mail`, then `POST /api/mail/sync` or the Settings "Sync now" button.
+
+## Stream D (AI), 2026-09-14
+
+Branch `stream/D-ai`, migration `d1000000ai` (down_revision `a1000000local`; tables `captures`, `daily_briefings`, `weekly_reviews`). 122 pytest tests green (`api/tests/d/` has 56). Smoke script `api/scripts/claude_smoke.py` ran against the real key: Haiku, 65 in / 32 out, $0.000225. Every prompt was also exercised once against the live models (11 calls, about 5 cents) and returned valid JSON.
+
+Built:
+- `integrations/claude_client.py`: one `_call` helper (kill switch from Settings `ai_enabled.<switch>` merged over defaults, model per tier from `CLAUDE_MODEL_FAST/SMART`, prompt file, JSON parse tolerant of fences, pydantic validation, `ai_calls` row with tokens and cost from a hardcoded `PRICES` table, never raises). Contracts: `rank_slots`, `suggest_dos` (A), `classify_emails` (C), plus D's `parse_capture`, `write_briefing`, `review_week`, `ping`. Under `TESTING` no real client is ever built.
+- Prompts in `api/app/prompts/*.md` (only `api/` deploys to Railway); `docs/prompts/` holds symlinks to them. Each file documents feature, switch, model and the JSON schema above `## System` and `## User`.
+- Capture: `POST /api/captures` stores at once, `/process` proposes (Claude or `parse_deterministic`: prefixes note:/goal:/event:, tracker names, relative dates, hashtags, area words), `/confirm` creates via A's services (`type` and `fields` may override the proposal; pydantic-validated), `/discard`. Event captures become scheduled tasks through A's `schedule_task` (reaches iCloud once B is merged). `CaptureView.vue`, `CaptureBar.vue`, `ProposalEditor.vue`, store, api.
+- Briefing: `modules/ai/briefing.py` builds context from A's tables (B's events and C's emails via guarded imports), Claude text or deterministic text, one `daily_briefings` row per day. `GET/POST /api/ai/briefing`, `GET /api/ai/briefing/context`, job `daily_briefing`, `BriefingWidget.vue`.
+- Weekly review: `services/review_stats.py::compute(week)` snapshot; `modules/reviews/` draft (Claude reflection and next-week focus, deterministic fallback), notes and focus edits, `finalize` creates next week's `weekly_goals` via A's goals service (idempotent on title). Job `weekly_review_draft`. `WeeklyReviewView.vue`.
+- Spend: `GET /api/ai/spend` (month vs Settings `ai_monthly_budget_usd`, today, 7 days, per feature and model, recent calls), job `ai_cost_rollup` into Settings `ai_spend_daily`, `AiSpendWidget.vue`.
+- Docs: `AI_CONTRACTS.md` (Stream D section), `JOBS.md` (3 jobs), `ROUTES.md` (orders 8 and 11, CaptureBar mount note), `WIDGETS.md` (rows 9 and 10).
+
+Needs from other streams / E:
+- C's contract was read from the local `pozzy-C` worktree (unpushed). E merges C's AI_CONTRACTS section; the implementation matches it exactly.
+- Blueprints `captures`, `ai`, `reviews` are registered in `app/__init__.py` and models in `models/__init__.py` (merge conflicts with B and C expected there, trivial).
+- Register the three jobs from JOBS.md; `daily_briefing` should read `briefing_time` from Settings.
+- `anthropic` and `pydantic` added to `api/requirements.txt`; Railway installs them on the next api deploy.
+
+Known gaps and how to test:
+- Views are compile-checked (Vite) but not clicked through, routes are wired by E. Manual test after E wires routes: type "call dentist tomorrow" in the top bar, confirm, check Tasks; open `/review`, Generate, edit focus, Finalize, check next week's Goals; Home shows Briefing and AI spend.
+- `_call` commits the SQLAlchemy session when it logs; callers must not hold uncommitted work they want rolled back (A's and D's callers do not).
+- Haiku 4.5 prompt caching needs a 4096-token prefix; the classify system prompt is well under that, so cache reads stay 0 until it grows. Harmless.
+- Prices are the September 2026 list rates; update `PRICES` in `claude_client.py` when Anthropic changes them or when `.env` switches to `claude-sonnet-5`.

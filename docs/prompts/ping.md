@@ -1,0 +1,1 @@
+../../api/app/prompts/ping.md

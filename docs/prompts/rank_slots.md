@@ -1,0 +1,1 @@
+../../api/app/prompts/rank_slots.md

@@ -37,6 +37,9 @@ DEFAULTS: dict = {
     "mail_max_per_sync": 500,
     "mail_classify_batch": 15,
     "mail_top_count": 5,
+    # Stream D (AI)
+    "ai_monthly_budget_usd": 10,
+    "ai_spend_daily": {},
 }
 
 

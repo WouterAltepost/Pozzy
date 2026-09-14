@@ -11,11 +11,13 @@ Stream E wires these into `web/src/router/index.js` and the nav in `App.vue`. Ev
 | 5 | `/mail` | `mail` | `views/MailView.vue` | Mail | C |
 | 6 | `/trackers` | `trackers` | `views/TrackersView.vue` | Tracking | A |
 | 7 | `/hours` | `hours` | `views/HoursView.vue` | Hours | A |
+| 8 | `/capture` | `capture` | `views/CaptureView.vue` | Capture | D |
 | 9 | `/study` | `study` | `views/StudyView.vue` | Study | A |
 | 10 | `/notes` | `notes` | `views/NotesView.vue` | Notes | A |
+| 11 | `/review` | `review` | `views/WeeklyReviewView.vue` | Review | D |
 | 99 | `/settings` | `settings` | `views/SettingsView.vue` | Settings | A |
 
-Gaps in the order are reserved: 8 Capture (D), 11 Weekly review (D).
+All nav orders 1 to 11 are taken; 99 is Settings.
 
 ## Stream A notes for E
 
@@ -35,3 +37,10 @@ Gaps in the order are reserved: 8 Capture (D), 11 Weekly review (D).
 - Settings mount point `#settings-mail-accounts`: replace with `<MailAccounts />` imported from `web/src/components/settings/MailAccounts.vue`. It uses `useMailStore` (`web/src/stores/mail.js`) and fetches its own data.
 - `MailView.vue` links to route names `settings` and `tasks`; `TopEmailsWidget.vue` links to `mail`.
 - Widget: `web/src/components/home/TopEmailsWidget.vue` (see WIDGETS.md order 3).
+
+## Stream D notes for E
+
+- `web/src/components/CaptureBar.vue` is the top-bar quick input. Mount it in `App.vue` inside the header, between the brand and the user block, only when `auth.isAuthenticated`: `<CaptureBar v-if="auth.isAuthenticated" />` with `import CaptureBar from './components/CaptureBar.vue'`. It is `position: relative` with a dropdown panel, so the header needs no changes. Its Edit link uses route name `capture`.
+- `CaptureView.vue` links to `tasks`, `goals`, `notes`, `trackers` by route name after a confirm. `WeeklyReviewView.vue` links to `goals` after finalize.
+- Settings kill switches: D reads `ai_enabled.capture`, `.briefing`, `.weekly_review`, `.mail_classify`, `.scheduling`, `.three_dos`. A's Settings page renders whatever keys are in `ai_enabled`; the seeded row lacks `three_dos`, so E may add it to `seeds.py` for the toggle to appear.
+- New Settings keys with defaults in `settings_defaults.py`: `ai_monthly_budget_usd` (10) and `ai_spend_daily` ({}).
