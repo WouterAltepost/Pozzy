@@ -11,7 +11,7 @@ Live URLs:
 
 - Supabase project with Auth (email + password) and the single user created.
 - Railway account linked to GitHub with access to the repo. Railway CLI installed and logged in (`railway whoami`).
-- Alembic migration applied to the Supabase database from your machine. Railway has no release step in M1:
+- Alembic migration applied to the Supabase database from your machine. Railway has no release step:
 
 ```
 cd api && source .venv/bin/activate
@@ -31,7 +31,7 @@ python seeds.py
 Build and start need no dashboard config, the repo carries them:
 - `api/.python-version` (3.12), `api/requirements.txt`, `api/Procfile`
   (`gunicorn "app:create_app()" --bind 0.0.0.0:$PORT --workers 1 --threads 4`), `api/railway.json` (healthcheck `/api/health`).
-- `web/railway.json`: build `npm ci && npm run build`, start `npm start` (`serve -s dist -l $PORT`).
+- `web/railway.json`: build `npm run build` only, start `npm start` (`serve -s dist -l $PORT`). Railpack already runs `npm install` from the lockfile in its own install step and mounts a cache inside `node_modules`; a `npm ci` in the build command deletes that mount and fails with `EBUSY rmdir node_modules/.vite` on every build.
 
 The first deploy of each service fails or crashes because the variables are not set yet. That is expected:
 `api` exits with `Missing required environment variables: ...` by design.
@@ -57,7 +57,8 @@ railway variables -s api --skip-deploys \
   --set "CLAUDE_MODEL_SMART=$CLAUDE_MODEL_SMART" \
   --set "ICLOUD_USERNAME=$ICLOUD_USERNAME" \
   --set "ICLOUD_APP_PASSWORD=$ICLOUD_APP_PASSWORD" \
-  --set "MAIL_ACCOUNTS_JSON=$MAIL_ACCOUNTS_JSON"
+  --set "MAIL_ACCOUNTS_JSON=$MAIL_ACCOUNTS_JSON" \
+  --set "RUN_SCHEDULER=1"
 railway variables -s web --skip-deploys \
   --set "VITE_SUPABASE_URL=$SUPABASE_URL" \
   --set "VITE_SUPABASE_ANON_KEY=$SUPABASE_ANON_KEY" \
@@ -85,6 +86,6 @@ Devtools > Network: requests go to the api domain with `Authorization: Bearer` a
 - `DATABASE_URL` must be the **Transaction pooler** string from Supabase > Connect (host `aws-1-eu-west-1.pooler.supabase.com`, port 6543, user `postgres.<ref>`). The direct host `db.<ref>.supabase.co` is IPv6 only and not reliable from Railway.
 - `WEB_ORIGIN` must match the browser origin exactly: scheme + host, no path, no trailing slash. Wrong value shows as CORS errors in the browser while curl still works.
 - `VITE_*` values are baked in at build time. Changing them needs a redeploy of `web`.
-- Changing the root directory in the dashboard triggers a deploy. Triggering a second build while one is running once failed the web build with `npm error EBUSY ... node_modules/.vite`. Let one build finish, then redeploy.
+- Changing the root directory in the dashboard triggers a deploy. The `npm error EBUSY ... node_modules/.vite` failure is not a race; it is `npm ci` colliding with Railpack's cache mount (see above).
 - Commits that only touch files outside `api/` or `web/` (docs) do not trigger deploys, because of the root directory setting.
 - The CLI link is stored per directory. `railway status` shows which project the folder points at; relink with `railway link -p pozzy`.
