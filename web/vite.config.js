@@ -1,10 +1,49 @@
 import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
+import { VitePWA } from 'vite-plugin-pwa'
 
 // Local dev: /api is proxied to Flask so the browser never deals with CORS
 // and VITE_API_BASE can stay empty. On Railway VITE_API_BASE points at the api service.
 export default defineConfig({
-  plugins: [vue()],
+  plugins: [
+    vue(),
+    VitePWA({
+      registerType: 'autoUpdate',
+      includeAssets: ['favicon.svg', 'apple-touch-icon.png'],
+      manifest: {
+        name: 'Pozzy',
+        short_name: 'Pozzy',
+        description: 'Personal operating system: agenda, mail triage, tasks, goals, tracking, hours, study.',
+        theme_color: '#111827',
+        background_color: '#f9fafb',
+        display: 'standalone',
+        start_url: '/',
+        scope: '/',
+        icons: [
+          { src: 'pwa-192.png', sizes: '192x192', type: 'image/png' },
+          { src: 'pwa-512.png', sizes: '512x512', type: 'image/png' },
+          { src: 'pwa-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+        ],
+      },
+      workbox: {
+        // App shell and built assets are precached (cache-first). API is network-first with a short fallback.
+        navigateFallback: '/index.html',
+        navigateFallbackDenylist: [/^\/api\//],
+        runtimeCaching: [
+          {
+            urlPattern: ({ url }) => url.pathname.startsWith('/api/'),
+            handler: 'NetworkFirst',
+            options: { cacheName: 'pozzy-api', networkTimeoutSeconds: 8, expiration: { maxEntries: 200, maxAgeSeconds: 60 * 60 * 24 } },
+          },
+          {
+            urlPattern: ({ url }) => /\.(?:png|svg|ico|woff2?)$/.test(url.pathname),
+            handler: 'CacheFirst',
+            options: { cacheName: 'pozzy-assets', expiration: { maxEntries: 60, maxAgeSeconds: 60 * 60 * 24 * 30 } },
+          },
+        ],
+      },
+    }),
+  ],
   server: {
     port: 5173,
     proxy: {
