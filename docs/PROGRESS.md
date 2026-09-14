@@ -52,7 +52,12 @@ Open issues:
 - Local login for automated checks was done with an HS256 token minted from `SUPABASE_JWT_SECRET` (the API accepts it as the documented fallback); there is no Supabase user password in `.env`, so a Playwright login flow is not possible without one.
 - Calendar selection in Settings currently includes Reminders and Holidays; untick them once so all-day noise stays out of the Agenda.
 
-Production evidence (filled in after the 20 minute wait, see below).
+Production evidence, `job_runs` on Supabase after the api restart with `RUN_SCHEDULER=1` at 21:43 CEST (scheduler confirmed running via `/api/health`):
+- calendar_sync 21:50 ok: 10/10 calendars, 2 inserted, 5 updated, 61 unchanged, 6 deleted.
+- calendar_sync 22:00 ok: 10/10 calendars, 68 unchanged.
+- mail_sync_and_classify 22:00 ok: 4 accounts, nothing new (backfill done earlier the same day: 355 emails, 354 classified by Claude).
+- Before the pooler fix every run since 17:15 had failed with the prepared-statement errors listed above; the first mail run after re-setting `MAIL_ACCOUNTS_JSON` (21:45) synced 14 new emails.
+- A stale `mail_accounts` row for the truncated address `wout@alpacaai` (from the M1 open issue) was disabled through `PATCH /api/mail/accounts/<id>`; the upsert now disables any row whose address leaves `MAIL_ACCOUNTS_JSON`.
 
 ## Stream history
 
