@@ -45,7 +45,7 @@ def test_compute_snapshot(client, headers, areas):
     assert s["hours"]["total_hours"] == 2.0 and any(a["area"] == "Work" and a["hours"] == 2.0 and a["target_hours"] == 16.0 for a in s["hours"]["areas"])
     assert s["trackers"][0]["name"] == "Creatine" and s["trackers"][0]["week_total"] == 1
     assert s["deadlines"]["upcoming"][0]["title"] == "Essay" and s["deadlines"]["upcoming"][0]["task_id"]
-    assert s["emails"] is None
+    assert s["emails"] == {"handled": 0, "open_urgent": 0, "received": 0}  # C merged: real stats, empty inbox
     assert [c["title"] for c in s["open_task_candidates"]][:1] == ["Urgent open"]
 
 
