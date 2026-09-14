@@ -135,7 +135,8 @@ def get_client():
     if CLIENT_EXTENSION_KEY in ext:
         return ext[CLIENT_EXTENSION_KEY]
     key = current_app.config.get("ANTHROPIC_API_KEY")
-    if not key:
+    if current_app.config.get("TESTING") or not key:
+        # pytest never reaches the network; tests inject a fake client explicitly.
         ext[CLIENT_EXTENSION_KEY] = None
         return None
     import anthropic
@@ -280,11 +281,62 @@ def ping(note: str = "hello") -> dict | None:
 # --- contracts (docs/AI_CONTRACTS.md) --------------------------------------------
 
 
+class _RankedSlot(BaseModel):
+    start: str
+    end: str
+    reason: str = ""
+
+
+class RankSlotsAnswer(BaseModel):
+    slots: list[_RankedSlot]
+
+
 def rank_slots(task: dict, candidates: list[dict], context: dict | None = None) -> list[dict] | None:
     """Rank candidate slots for a task. See AI_CONTRACTS.md 'rank_slots'."""
-    return None
+    if not candidates:
+        return None
+    limit = int((context or {}).get("limit") or 3)
+    payload = {"task": task, "candidates": candidates[:12], "limit": limit}
+    answer = _call(feature="rank_slots", switch="scheduling", tier="smart", prompt="rank_slots", payload=payload, schema=RankSlotsAnswer, max_tokens=600)
+    if answer is None:
+        return None
+    allowed = {(c["start"], c["end"]) for c in candidates}
+    out, seen = [], set()
+    for slot in answer.slots:
+        key = (slot.start, slot.end)
+        if key in allowed and key not in seen:
+            seen.add(key)
+            out.append({"start": slot.start, "end": slot.end, "reason": slot.reason.strip()[:300]})
+        if len(out) >= limit:
+            break
+    return out or None
+
+
+class _SuggestedDo(BaseModel):
+    title: str
+    task_id: str | None = None
+    reason: str = ""
+
+
+class SuggestDosAnswer(BaseModel):
+    dos: list[_SuggestedDo]
 
 
 def suggest_dos(candidates: dict, context: dict | None = None) -> list[dict] | None:
     """Pick three do's from tasks and deadlines. See AI_CONTRACTS.md 'suggest_dos'."""
-    return None
+    count = int((context or {}).get("count") or 3)
+    payload = {**candidates, "count": count}
+    answer = _call(feature="suggest_dos", switch="three_dos", tier="smart", prompt="suggest_dos", payload=payload, schema=SuggestDosAnswer, max_tokens=600)
+    if answer is None:
+        return None
+    allowed_ids = {t.get("id") for t in candidates.get("tasks", [])} | {d.get("task_id") for d in candidates.get("deadlines", []) if d.get("task_id")}
+    out = []
+    for item in answer.dos:
+        title = item.title.strip()
+        if not title:
+            continue
+        task_id = item.task_id if item.task_id in allowed_ids else None
+        out.append({"title": title[:200], "task_id": task_id, "reason": item.reason.strip()[:300]})
+        if len(out) >= count:
+            break
+    return out or None
