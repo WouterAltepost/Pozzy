@@ -20,6 +20,7 @@ OPTIONAL_DEFAULTS = {
     "CLAUDE_MODEL_SMART": "claude-sonnet-4-5",
     "ICLOUD_USERNAME": None,
     "ICLOUD_APP_PASSWORD": None,
+    "ICLOUD_CALDAV_URL": "https://caldav.icloud.com",
     "MAIL_ACCOUNTS_JSON": None,
 }
 

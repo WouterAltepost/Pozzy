@@ -47,3 +47,29 @@ Known gaps and how to test:
 - Vue views are compile-checked (all SFCs build) but not clicked through, because routes are wired by E. To test manually before merge: add the ROUTES.md entries to the router, run `flask --app app run --debug` and `npm run dev`, apply the migration with `flask db upgrade a1000000local` on the direct DB host.
 - The hours timer lives in the browser (localStorage), not the API. A server-side timer can come later if the Telegram bot needs it.
 - Task quick-add does not yet offer Claude parsing (that is D's capture flow).
+
+## Stream B (calendar), 2026-09-14
+
+Branch `stream/B-calendar`, migration `b1000000calendar` (down_revision M1 `722da3773e5d`, not applied to Supabase; E applies it). 42 pytest tests green under `api/tests/b/`, 108 in total after the rebase on A.
+
+Built:
+- `integrations/caldav_client.py`: pure `parse_occurrences` (local recurrence expansion with `recurring-ical-events`, RRULE/RDATE/EXDATE/RECURRENCE-ID overrides, all-day, DST, DURATION) and `build_ics` (single VEVENT with `X-POZZY-TASK-ID`), plus `CalDAVClient` (list, fetch with etags, create/update/delete by UID, 3 attempts with backoff on 5xx). Smoke script `api/scripts/caldav_smoke.py` ran against the real account: 10 calendars, 31 objects parsed, etags present. `--write` does a create/read/delete round trip, not yet run.
+- Models `CalendarAccount` (bootstrapped from `ICLOUD_*` env on first use, calendar selection, write calendar, cached discovery, last sync status) and `CalendarEvent` (one row per occurrence, unique on calendar_url+uid+recurrence_id, UTC).
+- `modules/calendar/service.py` + `jobs/calendar_sync.py` (every 10 min, `docs/JOBS.md`): window from Settings `calendar_sync_days_back/forward` (7/30), per-calendar commit, etag skip, stale occurrence deletion, one failing calendar marks the run failed but the others still land. Moved Pozzy events (`X-POZZY-TASK-ID`) push their new times back onto the task.
+- `services/calendar_read.get_events_between` and `calendar_write.{create,update,delete}_event` replace A's stubs with the same signatures. A's tests still pass unchanged; `POST /api/tasks/{id}/schedule` now creates the iCloud event end to end (tested with the fake client).
+- API `/api/calendar/*`: events in range (plus scheduled tasks), create/update/delete single events (iCloud first, then local mirror), sync now, account get/put/discover.
+- Vue: `AgendaView` (week and day grid, click empty space to create, click event to edit/delete, side panel form, sync bar), `TodayEventsWidget`, `settings/CalendarAccounts` (select calendars, choose write calendar, discover, sync now). `docs/ROUTES.md` and `docs/WIDGETS.md` updated.
+
+Decisions:
+- Recurrence is expanded locally, not by the server. iCloud server-side expansion drops overrides. The expander stamps RECURRENCE-ID on single events too, so "recurring" is decided from the source VEVENTs.
+- `get_events_between` excludes all-day events (deadlines and birthdays must not block a whole working day) and task-linked events (A already passes scheduled tasks, counting them twice would block a task's own slot on reschedule).
+- Occurrences of recurring events are read-only in Pozzy (409 `recurring_not_editable`). Writing overrides into a master VEVENT is v2.
+- The account row stores `secret_ref` (env var name), never the password.
+
+Needs from other streams: nothing. E must register `calendar_sync` in the scheduler, wire `/agenda`, mount `CalendarAccounts`, and apply the migration.
+
+Known gaps and how to test:
+- Vue views are compile-checked, not clicked through (routes are wired by E). To test manually: add the ROUTES.md row to the router, apply the migration, run the API and `npm run dev`, open Settings, click Discover calendars, untick Reminders and Holidays, save, then Sync now. The Agenda should show the synced week.
+- Wouter verifies the iPhone round trip: create an event in the Agenda, check it on the phone, move it on the phone, Sync now, check the Agenda. Then delete it from the Agenda. Or run `python scripts/caldav_smoke.py --write --calendar Taken` for a scripted version.
+- Manual `POST /api/calendar/sync` runs synchronously and does not write a `job_runs` row; only the scheduled job does.
+- Events created in the Agenda get `etag` null until the next sync fills it. Harmless: the next sync treats them as changed once.

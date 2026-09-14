@@ -1,6 +1,8 @@
 from .ai_call import AiCall
 from .application import Application
 from .area import Area
+from .calendar_account import CalendarAccount
+from .calendar_event import CalendarEvent
 from .course import Course
 from .daily_do import DailyDo
 from .deadline import Deadline
@@ -17,6 +19,8 @@ __all__ = [
     "AiCall",
     "Application",
     "Area",
+    "CalendarAccount",
+    "CalendarEvent",
     "Course",
     "DailyDo",
     "Deadline",
