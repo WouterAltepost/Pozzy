@@ -6,8 +6,10 @@ from .calendar_event import CalendarEvent
 from .course import Course
 from .daily_do import DailyDo
 from .deadline import Deadline
+from .email import Email
 from .hours_log import HoursLog
 from .job_run import JobRun
+from .mail_account import MailAccount
 from .note import Note
 from .setting import Setting
 from .task import Task
@@ -24,8 +26,10 @@ __all__ = [
     "Course",
     "DailyDo",
     "Deadline",
+    "Email",
     "HoursLog",
     "JobRun",
+    "MailAccount",
     "Note",
     "Setting",
     "Task",

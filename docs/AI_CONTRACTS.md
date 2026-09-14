@@ -34,3 +34,48 @@ Input `candidates`:
 Input `context`: `{"count": 3}`.
 
 Output: list of at most `count` items `{"title": str, "task_id": str | null, "reason": str}`. `task_id`, when set, must be one of `candidates.tasks[].id` or `candidates.deadlines[].task_id`; the caller drops others. Fallback: deterministic pick in `dos/service.py` (rolled over do's first, then due today or overdue, then quadrant `do`, then nearest deadline).
+
+## Stream C
+
+### `classify_emails(batch: list[dict]) -> list[dict] | None`
+
+Caller: `api/app/services/mail_classify.py::call_claude`, from the `mail_sync_and_classify` job and `POST /api/mail/emails/<id>/reclassify`. Kill switch: `ai_enabled.mail_classify` (the caller checks it too and skips the call when off). Model: fast (Haiku). Batch size: at most 15 (Settings `mail_classify_batch`). Use prompt caching for the system prompt.
+
+Input `batch`, one item per email, `snippet` is at most 1200 characters of the stored 2 KB snippet:
+```json
+[
+  {
+    "id": "6f1c...-uuid",
+    "account_label": "Work",
+    "from_name": "Alice Example",
+    "from_email": "alice@client.com",
+    "subject": "Invoice question",
+    "date": "2026-09-14T10:15:00+02:00",
+    "snippet": "Hi Wout, could you send the invoice for August? Thanks, Alice"
+  }
+]
+```
+
+Output: a list with one item per input id (missing ids are fine, they fall back to rules):
+```json
+[
+  {
+    "id": "6f1c...-uuid",
+    "priority": 2,
+    "category": "client",
+    "area": "Work",
+    "needs_reply": true,
+    "one_line_summary": "Alice asks for the August invoice."
+  }
+]
+```
+
+Field rules, enforced by the caller (`validate_item`), an item failing any of them is dropped and that email uses the rule fallback:
+- `id`: must be one of the input ids. Unknown ids are dropped.
+- `priority`: integer 1 (urgent), 2 (important), 3 (normal), 4 (low or noise).
+- `category`: one of `client`, `school`, `finance`, `personal`, `newsletter`, `notification`, `other`.
+- `area`: one of `Study`, `Work`, `Personal`, `Health`, or `null`. Any other string is treated as `null`.
+- `needs_reply`: boolean.
+- `one_line_summary`: non-empty string, one sentence, the caller trims it to 300 characters.
+
+Fallback: `mail_classify.classify_rules` (priority 3, or 4 for newsletter and notification; category from sender and subject heuristics; area from category; `needs_reply` false; summary is the subject). The caller writes only the raw columns `priority`, `category`, `area_id`, `needs_reply`, `summary`, `classifier` (`claude` or `rules`) and `classified_at`; manual overrides live in `priority_override`, `category_override`, `area_override_id` and are never written by classification.

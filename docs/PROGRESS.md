@@ -73,3 +73,24 @@ Known gaps and how to test:
 - Wouter verifies the iPhone round trip: create an event in the Agenda, check it on the phone, move it on the phone, Sync now, check the Agenda. Then delete it from the Agenda. Or run `python scripts/caldav_smoke.py --write --calendar Taken` for a scripted version.
 - Manual `POST /api/calendar/sync` runs synchronously and does not write a `job_runs` row; only the scheduled job does.
 - Events created in the Agenda get `etag` null until the next sync fills it. Harmless: the next sync treats them as changed once.
+
+## Stream C (mail), 2026-09-14
+
+Branch `stream/C-mail`, migration `c1000000mail` (down_revision `a1000000local`, not applied to Supabase; E applies it). 103 pytest tests green, 37 of them in `api/tests/c/`. New dependency `imap-tools`.
+
+Built:
+- `integrations/imap_client.py`: read-only IMAP (imap-tools, `imap.gmail.com`, INBOX only, BODY.PEEK, no STORE/COPY/MOVE/EXPUNGE anywhere). UID incremental fetch, 7 day backfill on first run, per-run cap (`mail_max_per_sync`, 500) that drains a backlog over several runs, 2 KB snippet from text/plain with stripped-html fallback, attachments flagged but never downloaded, best effort `X-GM-LABELS`.
+- Models `MailAccount`, `Email`. Accounts are upserted by email from `MAIL_ACCOUNTS_JSON` on every sync and on `GET /api/mail/accounts`; passwords stay in the env (`secret_ref = env:<email>`). Emails are unique on `(account_id, uid)`; manual overrides live in `priority_override`, `category_override`, `area_override_id` and classification never writes them.
+- `jobs/mail_sync.py` (`mail_sync_and_classify`, `*/15`, listed in JOBS.md): sync every enabled account, one failing account is recorded on `mail_accounts.last_error` and does not stop the others; then classify. Job fails only when every account fails.
+- `services/mail_classify.py`: batches of 15, calls `claude_client.classify_emails` via `getattr` (D adds the function; `claude_client.py` was not edited to avoid a merge conflict), validates each item against the contract in `docs/AI_CONTRACTS.md` (Stream C), rule fallback for everything else. Rules: notification and newsletter get priority 4, finance/school/client/personal by sender and subject heuristics, area from category, `needs_reply` false.
+- API `/api/mail`: `emails` (filters account, category, area, needs_reply, handled, priority, q; sorted effective priority then date), `emails/<id>` (with snippet and linked task id), `PATCH` overrides and handled, `emails/<id>/task` (A's `tasks.service.create_task`, `source=email`, `source_ref=<email id>`, idempotent), `emails/<id>/reclassify`, `top`, `counts`, `accounts` (+ `PATCH`, `test`), `sync`.
+- Vue: `MailView.vue` (filters, rows with account colour and priority badge, detail panel with snippet, Gmail link from `message_id`, mark handled, overrides, create task), `components/mail/*`, `stores/mail.js`, `api/mail.js`, `home/TopEmailsWidget.vue`, `settings/MailAccounts.vue`. All SFCs compile; not clicked through because routes are wired by E. ROUTES.md (order 5) and WIDGETS.md (order 3) updated.
+
+Verified against the real accounts: `scripts/imap_smoke.py` logs in to all four and lists the newest subjects. A full job run into a scratch SQLite DB synced 94 emails from the four accounts, a second run added only the new ones, all classified by rules. The Work address in `.env` is complete (`wout@alpacaai.nl`); the M1 open issue about it was a display artefact.
+
+Needs from other streams: D implements `classify_emails` (contract written). E wires the route, widget, `MailAccounts` mount, and registers the job.
+
+Known gaps and how to test:
+- Sync speed is roughly 1 s per message on Gmail plus a few seconds login per account; the first 7 day backfill on a busy inbox runs over a few job cycles because of the 500 cap. Fine for a 15 min job.
+- Gmail labels are only present on messages that have one beyond INBOX (`\Important`, user labels). `\Inbox` itself is omitted by Gmail.
+- Manual test before merge: add the ROUTES.md row to the router, mount `MailAccounts`, `flask db upgrade c1000000mail`, then `POST /api/mail/sync` or the Settings "Sync now" button.
