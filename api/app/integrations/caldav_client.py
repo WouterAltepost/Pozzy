@@ -268,7 +268,17 @@ class CalDAVClient:
 
         return _with_retry("list_calendars", go)
 
+    def _ensure_home(self):
+        """Resolve the calendar home once. iCloud redirects from caldav.icloud.com to a
+        pNN-caldav host; caldav.DAVClient only updates its base URL during that lookup, and
+        without it any request for a stored pNN calendar URL fails with "can't be joined"."""
+        if not getattr(self, "_home_resolved", False):
+            principal = self._get_principal()
+            _with_retry("calendar_home", lambda: principal.calendar_home_set)
+            self._home_resolved = True
+
     def _calendar(self, calendar_url: str):
+        self._ensure_home()
         return self._client.calendar(url=calendar_url)
 
     # -- read ---------------------------------------------------------------
