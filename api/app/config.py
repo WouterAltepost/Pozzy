@@ -71,7 +71,13 @@ def build_config(overrides: dict | None = None) -> dict:
     cfg["ENV_NAME"] = "production" if is_production(env) else "development"
 
     cfg["SQLALCHEMY_DATABASE_URI"] = _sqlalchemy_url(cfg["DATABASE_URL"])
-    cfg["SQLALCHEMY_ENGINE_OPTIONS"] = {"pool_pre_ping": True}
+    engine_options = {"pool_pre_ping": True}
+    if cfg["SQLALCHEMY_DATABASE_URI"].startswith("postgresql+psycopg://"):
+        # Supabase transaction pooler (pgbouncer) does not support server-side prepared
+        # statements; psycopg 3 would otherwise emit "prepared statement _pg3_N already
+        # exists / does not exist" once connections are multiplexed.
+        engine_options["connect_args"] = {"prepare_threshold": None}
+    cfg["SQLALCHEMY_ENGINE_OPTIONS"] = engine_options
     cfg["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
     cfg["JSON_SORT_KEYS"] = False
     return cfg

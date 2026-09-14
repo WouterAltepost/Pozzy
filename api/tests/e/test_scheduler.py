@@ -38,3 +38,12 @@ def test_health_reports_scheduler(client):
     data = client.get("/api/health").get_json()["data"]
     assert data["scheduler"]["running"] is False
     assert isinstance(data["scheduler"]["jobs"], list)
+
+
+def test_postgres_engine_disables_prepared_statements():
+    from app.config import build_config
+
+    cfg = build_config({"DATABASE_URL": "postgresql://u:p@h:6543/db", "SUPABASE_URL": "x", "SUPABASE_JWT_SECRET": "x", "SECRET_KEY": "x", "TZ": "UTC"})
+    assert cfg["SQLALCHEMY_ENGINE_OPTIONS"]["connect_args"] == {"prepare_threshold": None}
+    cfg = build_config({"DATABASE_URL": "sqlite:///:memory:", "SUPABASE_URL": "x", "SUPABASE_JWT_SECRET": "x", "SECRET_KEY": "x", "TZ": "UTC"})
+    assert "connect_args" not in cfg["SQLALCHEMY_ENGINE_OPTIONS"]
