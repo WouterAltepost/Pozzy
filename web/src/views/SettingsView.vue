@@ -4,7 +4,8 @@ import { formatDateTime } from '../lib/dates'
 import { useAreasStore } from '../stores/areas'
 import { useSettingsStore } from '../stores/settings'
 
-// TODO(stream E): mount <CalendarAccounts /> (stream B) and <MailAccounts /> (stream C) in the integration section below.
+import CalendarAccounts from '../components/settings/CalendarAccounts.vue'
+import MailAccounts from '../components/settings/MailAccounts.vue'
 
 const store = useSettingsStore()
 const areas = useAreasStore()
@@ -119,9 +120,8 @@ async function save() {
 
     <section class="card">
       <h2>Integrations</h2>
-      <p class="muted small">Calendar accounts (stream B) and mail accounts (stream C) are mounted here by stream E.</p>
-      <div id="settings-calendar-accounts"></div>
-      <div id="settings-mail-accounts"></div>
+      <CalendarAccounts />
+      <MailAccounts />
     </section>
 
     <section class="card">

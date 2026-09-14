@@ -51,3 +51,23 @@ ul.areas { list-style: none; padding: 0; margin: 0; }
 ul.areas li { display: flex; align-items: center; gap: 0.5rem; padding: 0.25rem 0; }
 .swatch { width: 12px; height: 12px; border-radius: 3px; display: inline-block; }
 pre { background: #f3f4f6; padding: 0.5rem; border-radius: 4px; overflow-x: auto; font-size: 0.85rem; }
+
+/* Stream E: top bar with capture, nav, mobile menu */
+.topbar { display: block; padding: 0; }
+.topbar-row { display: flex; align-items: center; gap: 0.75rem; padding: 0.6rem 1rem; }
+.topbar-capture { flex: 1; min-width: 0; }
+.topbar-email { font-size: 0.85rem; }
+.menu-toggle { display: none; font-size: 1.1rem; padding: 0.2rem 0.5rem; }
+.mainnav { display: flex; flex-wrap: wrap; gap: 0.15rem; padding: 0 0.75rem 0.4rem; background: #111827; }
+.mainnav a { color: #d1d5db; text-decoration: none; font-size: 0.88rem; padding: 0.3rem 0.55rem; border-radius: 4px; }
+.mainnav a:hover { color: #fff; background: #1f2937; }
+.mainnav a.active { color: #fff; background: #374151; }
+.page { max-width: 1100px; }
+@media (max-width: 720px) {
+  .topbar-email { display: none; }
+  .menu-toggle { display: inline-block; }
+  .mainnav { display: none; flex-direction: column; }
+  .mainnav.open { display: flex; }
+  .mainnav a { padding: 0.55rem 0.6rem; }
+  .page { padding: 1rem 0.9rem; }
+}

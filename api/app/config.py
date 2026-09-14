@@ -22,6 +22,7 @@ OPTIONAL_DEFAULTS = {
     "ICLOUD_APP_PASSWORD": None,
     "ICLOUD_CALDAV_URL": "https://caldav.icloud.com",
     "MAIL_ACCOUNTS_JSON": None,
+    "RUN_SCHEDULER": None,
 }
 
 

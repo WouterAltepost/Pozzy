@@ -5,7 +5,8 @@ from flask_cors import CORS
 
 from .config import build_config, load_root_dotenv
 from .errors import register_error_handlers
-from .extensions import db, migrate, scheduler
+from .extensions import db, migrate
+from .extensions import scheduler as scheduler_ext  # app.scheduler is also a submodule
 
 API_ROOT = Path(__file__).resolve().parents[1]
 
@@ -34,8 +35,7 @@ def create_app(overrides: dict | None = None) -> Flask:
 
     db.init_app(app)
     migrate.init_app(app, db, directory=str(API_ROOT / "migrations"))
-    # Wired only. Jobs are registered and the scheduler is started in a later milestone.
-    scheduler.configure(timezone=app.config["TZ"])
+    scheduler_ext.configure(timezone=app.config["TZ"])
 
     from . import models  # noqa: F401  (registers all tables on the metadata)
     from .modules.ai.routes import bp as ai_bp
@@ -73,4 +73,9 @@ def create_app(overrides: dict | None = None) -> Flask:
     app.register_blueprint(reviews_bp)
 
     register_error_handlers(app)
+
+    from .scheduler import scheduler_enabled, start_scheduler
+
+    if scheduler_enabled(app):
+        start_scheduler(app)
     return app
