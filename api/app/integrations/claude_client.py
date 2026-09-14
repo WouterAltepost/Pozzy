@@ -340,3 +340,14 @@ def suggest_dos(candidates: dict, context: dict | None = None) -> list[dict] | N
         if len(out) >= count:
             break
     return out or None
+
+
+# --- stream D's own features -------------------------------------------------------
+
+
+def parse_capture(payload: dict) -> dict | None:
+    """Propose what a quick-capture line is. See docs/AI_CONTRACTS.md 'parse_capture'."""
+    from ..modules.captures.schemas import CaptureProposal
+
+    answer = _call(feature="capture_parse", switch="capture", tier="smart", prompt="capture_parse", payload=payload, schema=CaptureProposal, max_tokens=700)
+    return answer.model_dump() if answer else None

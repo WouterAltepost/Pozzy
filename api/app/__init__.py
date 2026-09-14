@@ -39,6 +39,7 @@ def create_app(overrides: dict | None = None) -> Flask:
 
     from . import models  # noqa: F401  (registers all tables on the metadata)
     from .modules.areas.routes import bp as areas_bp
+    from .modules.captures.routes import bp as captures_bp
     from .modules.health.routes import bp as health_bp
     from .modules.me.routes import bp as me_bp
     from .modules.settings.routes import bp as settings_bp
@@ -65,6 +66,7 @@ def create_app(overrides: dict | None = None) -> Flask:
     app.register_blueprint(study_bp)
     app.register_blueprint(calendar_bp)
     app.register_blueprint(mail_bp)
+    app.register_blueprint(captures_bp)
 
     register_error_handlers(app)
     return app

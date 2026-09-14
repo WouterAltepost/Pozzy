@@ -59,3 +59,13 @@ def fake_claude(app):
 @pytest.fixture
 def headers(token_factory):
     return bearer(token_factory())
+
+
+@pytest.fixture
+def areas(app):
+    from sqlalchemy import select
+
+    from app.extensions import db
+    from app.models import Area
+
+    return {a.name: str(a.id) for a in db.session.scalars(select(Area)).all()}
