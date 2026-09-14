@@ -4,20 +4,24 @@ from sqlalchemy import select
 from ...auth import require_auth
 from ...errors import fail, ok
 from ...extensions import db
-from ...models import Setting
+from ...models import JobRun, Setting
+from ...settings_defaults import DEFAULTS, get_all_settings
+from ...utils.dates import iso
 
 bp = Blueprint("settings", __name__, url_prefix="/api")
-
-
-def _all_settings() -> dict:
-    rows = db.session.scalars(select(Setting).order_by(Setting.key)).all()
-    return {row.key: row.value for row in rows}
 
 
 @bp.get("/settings")
 @require_auth
 def get_settings():
-    return ok(_all_settings())
+    """Stored values merged over settings_defaults.DEFAULTS, so every known key is always present."""
+    return ok(get_all_settings())
+
+
+@bp.get("/settings/defaults")
+@require_auth
+def get_defaults():
+    return ok(DEFAULTS)
 
 
 @bp.put("/settings")
@@ -37,4 +41,18 @@ def put_settings():
         else:
             row.value = value
     db.session.commit()
-    return ok(_all_settings())
+    return ok(get_all_settings())
+
+
+@bp.get("/settings/job-runs")
+@require_auth
+def job_runs():
+    """Latest background job runs (plan section 7: failures must be visible in Settings)."""
+    limit = max(1, min(request.args.get("limit", type=int) or 50, 500))
+    rows = db.session.scalars(select(JobRun).order_by(JobRun.started_at.desc()).limit(limit)).all()
+    return ok(
+        [
+            {"id": str(r.id), "name": r.name, "started_at": iso(r.started_at), "finished_at": iso(r.finished_at), "ok": r.ok, "message": r.message}
+            for r in rows
+        ]
+    )
