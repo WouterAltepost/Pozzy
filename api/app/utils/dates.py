@@ -20,13 +20,20 @@ def today_local(now: datetime | None = None) -> date:
     return (now or now_utc()).astimezone(app_tz()).date()
 
 
+def as_utc(value: datetime | None) -> datetime | None:
+    """Normalise a datetime read from the DB. SQLite drops tzinfo; stored values are always UTC."""
+    if value is None:
+        return None
+    if value.tzinfo is None:
+        return value.replace(tzinfo=timezone.utc)
+    return value.astimezone(timezone.utc)
+
+
 def iso(value: datetime | None) -> str | None:
     """Serialise a stored datetime as ISO 8601 in the app timezone."""
     if value is None:
         return None
-    if value.tzinfo is None:  # SQLite drops tzinfo; stored values are always UTC
-        value = value.replace(tzinfo=timezone.utc)
-    return value.astimezone(app_tz()).isoformat()
+    return as_utc(value).astimezone(app_tz()).isoformat()
 
 
 def week_start_of(day: date) -> date:

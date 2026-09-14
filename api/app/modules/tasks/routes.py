@@ -96,3 +96,44 @@ def move_task(task_id):
         return fail("validation_error", "'quadrant' must be one of: " + ", ".join(QUADRANTS), 400)
     urgent, important = QUADRANTS[quadrant]
     return ok(service.update_task(task, {"urgent": urgent, "important": important}).to_dict())
+
+
+@bp.post("/<task_id>/suggest-slot")
+@require_auth
+def suggest_slot(task_id):
+    from ...utils.validation import parse_datetime
+    from . import scheduling
+
+    task = service.get_task(task_id)
+    if task is None:
+        return _not_found()
+    body = require_object(request.get_json(silent=True) or {})
+    duration = parse_int(body, "duration_minutes", min_value=5, max_value=24 * 60)
+    from_dt = parse_datetime(body, "from")
+    return ok(scheduling.suggest_slots(task, duration_min=duration, from_dt=from_dt))
+
+
+@bp.post("/<task_id>/schedule")
+@require_auth
+def schedule(task_id):
+    from ...utils.validation import parse_datetime
+    from . import scheduling
+
+    task = service.get_task(task_id)
+    if task is None:
+        return _not_found()
+    body = require_object(request.get_json(silent=True))
+    start = parse_datetime(body, "start", required=True)
+    end = parse_datetime(body, "end")
+    return ok(scheduling.schedule_task(task, start, end).to_dict())
+
+
+@bp.post("/<task_id>/unschedule")
+@require_auth
+def unschedule(task_id):
+    from . import scheduling
+
+    task = service.get_task(task_id)
+    if task is None:
+        return _not_found()
+    return ok(scheduling.unschedule_task(task).to_dict())
