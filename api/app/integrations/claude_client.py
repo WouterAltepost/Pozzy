@@ -401,3 +401,83 @@ def review_week(stats: dict, max_goals: int = 5) -> dict | None:
         if len(focus) >= max_goals:
             break
     return {"reflection": answer.reflection.strip(), "next_week_focus": focus}
+
+
+# --- stream C's contract ---------------------------------------------------------
+
+EMAIL_CATEGORIES = ("client", "school", "finance", "personal", "newsletter", "notification", "other")
+AREA_NAMES = ("Study", "Work", "Personal", "Health")
+DEFAULT_MAIL_BATCH = 15
+
+
+class _EmailResult(BaseModel):
+    id: str
+    priority: int
+    category: str
+    area: str | None = None
+    needs_reply: bool = False
+    one_line_summary: str = ""
+
+
+class ClassifyEmailsAnswer(BaseModel):
+    results: list[_EmailResult]
+
+
+def _clean_email_result(item: _EmailResult, allowed_ids: set[str]) -> dict | None:
+    if item.id not in allowed_ids or item.priority not in (1, 2, 3, 4):
+        return None
+    category = item.category.strip().lower()
+    if category not in EMAIL_CATEGORIES:
+        return None
+    summary = item.one_line_summary.strip()
+    if not summary:
+        return None
+    area = item.area.strip().capitalize() if item.area else None
+    return {
+        "id": item.id,
+        "priority": item.priority,
+        "category": category,
+        "area": area if area in AREA_NAMES else None,
+        "needs_reply": bool(item.needs_reply),
+        "one_line_summary": summary[:300],
+    }
+
+
+def classify_emails(batch: list[dict]) -> list[dict] | None:
+    """Classify emails in chunks on the fast model. See AI_CONTRACTS.md 'classify_emails' (stream C).
+
+    Returns the results of every chunk that succeeded; None when nothing succeeded.
+    Emails missing from the result fall back to C's rules.
+    """
+    if not batch:
+        return None
+    try:
+        size = int(get_setting("mail_classify_batch") or DEFAULT_MAIL_BATCH)
+    except Exception:
+        size = DEFAULT_MAIL_BATCH
+    size = max(1, min(size, DEFAULT_MAIL_BATCH))
+    out: list[dict] = []
+    any_ok = False
+    for i in range(0, len(batch), size):
+        chunk = batch[i : i + size]
+        allowed = {str(e.get("id")) for e in chunk if e.get("id")}
+        answer = _call(
+            feature="classify_emails",
+            switch="mail_classify",
+            tier="fast",
+            prompt="classify_emails",
+            payload={"emails": chunk},
+            schema=ClassifyEmailsAnswer,
+            max_tokens=160 * len(chunk) + 200,
+            cache_system=True,
+        )
+        if answer is None:
+            continue
+        any_ok = True
+        seen: set[str] = set()
+        for item in answer.results:
+            cleaned = _clean_email_result(item, allowed)
+            if cleaned and cleaned["id"] not in seen:
+                seen.add(cleaned["id"])
+                out.append(cleaned)
+    return out if any_ok else None
