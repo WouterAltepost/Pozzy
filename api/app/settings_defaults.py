@@ -32,6 +32,11 @@ DEFAULTS: dict = {
     # Stream B (calendar)
     "calendar_sync_days_back": 7,
     "calendar_sync_days_forward": 30,
+    # Stream C (mail)
+    "mail_backfill_days": 7,
+    "mail_max_per_sync": 500,
+    "mail_classify_batch": 15,
+    "mail_top_count": 5,
 }
 
 
