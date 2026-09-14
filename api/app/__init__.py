@@ -38,6 +38,7 @@ def create_app(overrides: dict | None = None) -> Flask:
     scheduler.configure(timezone=app.config["TZ"])
 
     from . import models  # noqa: F401  (registers all tables on the metadata)
+    from .modules.ai.routes import bp as ai_bp
     from .modules.areas.routes import bp as areas_bp
     from .modules.captures.routes import bp as captures_bp
     from .modules.health.routes import bp as health_bp
@@ -67,6 +68,7 @@ def create_app(overrides: dict | None = None) -> Flask:
     app.register_blueprint(calendar_bp)
     app.register_blueprint(mail_bp)
     app.register_blueprint(captures_bp)
+    app.register_blueprint(ai_bp)
 
     register_error_handlers(app)
     return app

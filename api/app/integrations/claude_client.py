@@ -351,3 +351,14 @@ def parse_capture(payload: dict) -> dict | None:
 
     answer = _call(feature="capture_parse", switch="capture", tier="smart", prompt="capture_parse", payload=payload, schema=CaptureProposal, max_tokens=700)
     return answer.model_dump() if answer else None
+
+
+class BriefingAnswer(BaseModel):
+    text: str
+
+
+def write_briefing(context: dict) -> str | None:
+    """Morning briefing text from a context dict. See docs/AI_CONTRACTS.md 'write_briefing'."""
+    answer = _call(feature="daily_briefing", switch="briefing", tier="smart", prompt="daily_briefing", payload=context, schema=BriefingAnswer, max_tokens=900)
+    text = (answer.text or "").strip() if answer else ""
+    return text or None

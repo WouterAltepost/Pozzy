@@ -1,0 +1,1 @@
+../../api/app/prompts/daily_briefing.md
