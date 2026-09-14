@@ -50,6 +50,7 @@ def create_app(overrides: dict | None = None) -> Flask:
     from .modules.trackers.routes import bp as trackers_bp
     from .modules.tasks.routes import bp as tasks_bp
     from .modules.calendar.routes import bp as calendar_bp
+    from .modules.mail.routes import bp as mail_bp
 
     app.register_blueprint(health_bp)
     app.register_blueprint(me_bp)
@@ -63,6 +64,7 @@ def create_app(overrides: dict | None = None) -> Flask:
     app.register_blueprint(notes_bp)
     app.register_blueprint(study_bp)
     app.register_blueprint(calendar_bp)
+    app.register_blueprint(mail_bp)
 
     register_error_handlers(app)
     return app
