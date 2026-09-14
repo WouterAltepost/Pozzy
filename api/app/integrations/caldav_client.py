@@ -120,7 +120,14 @@ def parse_occurrences(
     """
     tz = ZoneInfo(default_tz)
     cal = ICalendar.from_ical(ics_text)
-    # recurring_ical_events wants aware datetimes in a consistent zone.
+    # The expander stamps RECURRENCE-ID on every occurrence, single events
+    # included, so decide "recurring" from the source components instead.
+    recurring_uids: set[str] = set()
+    for source in cal.walk("VEVENT"):
+        source_uid = _text(source, "UID")
+        if source_uid and any(source.get(k) is not None for k in ("RRULE", "RDATE", "RECURRENCE-ID")):
+            recurring_uids.add(source_uid)
+
     query = recurring_ical_events.of(cal, keep_recurrence_attributes=True, skip_bad_series=False)
     out: list[Occurrence] = []
     for component in query.between(window_start, window_end):
@@ -145,8 +152,7 @@ def parse_occurrences(
         if end <= start:
             end = start + (timedelta(days=1) if all_day else timedelta(0))
 
-        is_recurring = component.get("RRULE") is not None or component.get("RDATE") is not None
-        recurrence_id = _recurrence_key(component) if (is_recurring or component.get("RECURRENCE-ID") is not None) else None
+        recurrence_id = _recurrence_key(component) if uid in recurring_uids else None
 
         out.append(
             Occurrence(
