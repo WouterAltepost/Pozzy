@@ -6,7 +6,21 @@ from ..settings_defaults import get_setting
 
 
 def app_tz() -> ZoneInfo:
+    """Timezone from Settings, cached on flask.g for the current request or app context.
+
+    iso() calls this for every serialised datetime; without the cache a 200 row
+    list issued 400 Settings queries (22 s against Supabase).
+    """
     try:
+        from flask import g, has_app_context
+
+        if has_app_context():
+            cached = getattr(g, "_pozzy_tz", None)
+            if cached is not None:
+                return cached
+            tz = ZoneInfo(get_setting("timezone"))
+            g._pozzy_tz = tz
+            return tz
         return ZoneInfo(get_setting("timezone"))
     except Exception:
         return ZoneInfo("Europe/Amsterdam")
