@@ -1,4 +1,5 @@
 <script setup>
+import { useLoadTask } from '../../composables/useReady'
 import { useWidgetLink } from '../../composables/useWidgetLink'
 import { onMounted, ref } from 'vue'
 import { PhCalendarBlank } from '@phosphor-icons/vue'
@@ -7,6 +8,8 @@ import { addDays, formatTime, today } from '../../lib/dates'
 import { dayStartIso } from '../../stores/calendar'
 import UiBadge from '../ui/UiBadge.vue'
 import UiEmpty from '../ui/UiEmpty.vue'
+
+const settle = useLoadTask()
 
 // Today's calendar events plus scheduled tasks, from the local mirror only.
 // Renders nothing when the API call fails (BUILD.md widget contract).
@@ -29,7 +32,7 @@ async function load() {
   }
 }
 
-onMounted(load)
+onMounted(() => load().finally(settle))
 const link = useWidgetLink('agenda')
 </script>
 

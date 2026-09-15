@@ -1,9 +1,12 @@
 <script setup>
+import { useLoadTask } from '../../composables/useReady'
 import { useWidgetLink } from '../../composables/useWidgetLink'
 import { computed, onMounted, ref } from 'vue'
 import { PhCheck } from '@phosphor-icons/vue'
 import { tickTracker, trackerWeek } from '../../api/trackers'
 import { today } from '../../lib/dates'
+
+const settle = useLoadTask()
 
 const week = ref(null)
 const failed = ref(false)
@@ -32,7 +35,7 @@ async function tick(t) {
   }
 }
 
-onMounted(load)
+onMounted(() => load().finally(settle))
 const link = useWidgetLink('trackers')
 </script>
 

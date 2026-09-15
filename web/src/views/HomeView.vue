@@ -10,6 +10,10 @@ import TodayEventsWidget from '../components/home/TodayEventsWidget.vue'
 import TopEmailsWidget from '../components/home/TopEmailsWidget.vue'
 import TrackerRowWidget from '../components/home/TrackerRowWidget.vue'
 import WeeklyGoalsWidget from '../components/home/WeeklyGoalsWidget.vue'
+import UiLoadGate from '../components/ui/UiLoadGate.vue'
+import { useLoadGateHost } from '../composables/useReady'
+
+const ready = useLoadGateHost()
 
 const now = new Date()
 const weekday = now.toLocaleDateString('en-GB', { weekday: 'long' })
@@ -19,6 +23,7 @@ const date = now.toLocaleDateString('en-GB', { day: 'numeric', month: 'long' })
 <template>
   <div class="home">
     <h1 class="display"><span class="weekday">{{ weekday }}</span> <span class="date">{{ date }}</span></h1>
+    <UiLoadGate :ready="ready" label="Loading your day">
     <div class="widgets">
       <ThreeDosWidget />
       <TodayEventsWidget />
@@ -31,6 +36,7 @@ const date = now.toLocaleDateString('en-GB', { day: 'numeric', month: 'long' })
       <BriefingWidget class="span" />
       <AiSpendWidget />
     </div>
+    </UiLoadGate>
   </div>
 </template>
 

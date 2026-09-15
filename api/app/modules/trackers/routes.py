@@ -71,6 +71,17 @@ def week():
     return ok(service.week_grid(start, include))
 
 
+@bp.get("/series")
+@require_auth
+def series():
+    """Every tracker over one range, for the live chart on the Tracking page."""
+    include_inactive = request.args.get("include_inactive") in ("1", "true")
+    if request.args.get("weeks") == "all":
+        return ok(service.series(None, include_inactive))
+    weeks = request.args.get("weeks", type=int) or 12
+    return ok(service.series(max(1, min(weeks, 104)), include_inactive))
+
+
 @bp.patch("/<tracker_id>")
 @require_auth
 def update_tracker(tracker_id):

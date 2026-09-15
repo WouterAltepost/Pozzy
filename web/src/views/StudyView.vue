@@ -1,13 +1,14 @@
 <script setup>
-import { onMounted, reactive, ref } from 'vue'
+import { reactive, ref } from 'vue'
 import { PhGraduationCap, PhX } from '@phosphor-icons/vue'
 import PageHeader from '../components/ui/PageHeader.vue'
 import UiBadge from '../components/ui/UiBadge.vue'
 import UiButton from '../components/ui/UiButton.vue'
 import UiEmpty from '../components/ui/UiEmpty.vue'
 import UiField from '../components/ui/UiField.vue'
-import UiSheet from '../components/ui/UiSheet.vue'
-import { useMediaQuery } from '../composables/useMediaQuery'
+import UiLoadGate from '../components/ui/UiLoadGate.vue'
+import UiModal from '../components/ui/UiModal.vue'
+import { useReady } from '../composables/useReady'
 import { daysUntil, formatDateTime, formatDay } from '../lib/dates'
 import { APPLICATION_STATUSES, useStudyStore } from '../stores/study'
 
@@ -19,9 +20,8 @@ const appForm = reactive({ company: '', role: '', link: '' })
 const editingApp = ref(null)
 const dragOver = ref(null)
 const lifting = ref(null)
-const narrow = useMediaQuery('(max-width: 899px)')
 
-onMounted(() => store.load())
+const ready = useReady(() => store.load())
 
 async function run(fn) {
   error.value = ''
@@ -99,6 +99,7 @@ function removeApp(a) {
   <div class="study">
     <PageHeader title="Study" />
     <p v-if="error || store.error" class="error">{{ error || store.error }}</p>
+    <UiLoadGate :ready="ready" label="Loading study">
 
     <section class="card">
       <div class="card-head">
@@ -214,27 +215,11 @@ function removeApp(a) {
         </div>
       </div>
 
-      <div v-if="editingApp && !narrow" class="app-edit">
-        <h3>{{ editingApp.company }}</h3>
-        <form class="app-form" @submit.prevent="saveApp">
-          <UiField label="Company"><input v-model="editingApp.company" type="text" required /></UiField>
-          <UiField label="Role"><input v-model="editingApp.role" type="text" /></UiField>
-          <UiField label="Link"><input v-model="editingApp.link" type="url" /></UiField>
-          <UiField label="Applied on"><input v-model="editingApp.applied_at" type="date" /></UiField>
-          <UiField label="Next step"><input v-model="editingApp.next_step" type="text" /></UiField>
-          <UiField label="Next step date"><input v-model="editingApp.next_step_date" type="date" /></UiField>
-          <UiField label="Notes" class="wide"><textarea v-model="editingApp.notes" rows="3"></textarea></UiField>
-          <div class="actions wide">
-            <UiButton type="submit" variant="primary">Save</UiButton>
-            <UiButton @click="editingApp = null">Cancel</UiButton>
-            <a v-if="editingApp.link" :href="editingApp.link" target="_blank" rel="noopener" class="small">Open link</a>
-            <UiButton variant="danger" class="push" @click="removeApp(editingApp); editingApp = null">Delete</UiButton>
-          </div>
-        </form>
-      </div>
     </section>
 
-    <UiSheet :open="Boolean(editingApp) && narrow" :title="editingApp?.company || 'Application'" @close="editingApp = null">
+    </UiLoadGate>
+
+    <UiModal :open="Boolean(editingApp)" :title="editingApp?.company || 'Application'" size="md" @close="editingApp = null">
       <form v-if="editingApp" class="app-form" @submit.prevent="saveApp">
         <UiField label="Company"><input v-model="editingApp.company" type="text" required /></UiField>
         <UiField label="Role"><input v-model="editingApp.role" type="text" /></UiField>
@@ -246,10 +231,11 @@ function removeApp(a) {
         <div class="actions wide">
           <UiButton type="submit" variant="primary">Save</UiButton>
           <UiButton @click="editingApp = null">Cancel</UiButton>
+          <a v-if="editingApp.link" :href="editingApp.link" target="_blank" rel="noopener" class="small">Open link</a>
           <UiButton variant="danger" class="push" @click="removeApp(editingApp); editingApp = null">Delete</UiButton>
         </div>
       </form>
-    </UiSheet>
+    </UiModal>
   </div>
 </template>
 
@@ -273,8 +259,6 @@ function removeApp(a) {
 .company { font-weight: 500; }
 .next { color: var(--ink-2); margin-top: 2px; }
 .next.soon { color: var(--warn); font-weight: 500; }
-.app-edit { border-top: 1px solid var(--line); margin-top: var(--sp-4); padding-top: var(--sp-4); }
-.app-edit h3 { margin-bottom: var(--sp-3); }
 .app-form { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-3); }
 .wide { grid-column: 1 / -1; }
 .actions { display: flex; gap: var(--sp-2); align-items: center; }

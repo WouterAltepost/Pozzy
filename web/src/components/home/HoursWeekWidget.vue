@@ -1,8 +1,11 @@
 <script setup>
+import { useLoadTask } from '../../composables/useReady'
 import { useWidgetLink } from '../../composables/useWidgetLink'
 import { onMounted, ref } from 'vue'
 import { hoursWeek } from '../../api/hours'
 import { minutesToHours } from '../../lib/dates'
+
+const settle = useLoadTask()
 
 const summary = ref(null)
 const failed = ref(false)
@@ -12,6 +15,8 @@ onMounted(async () => {
     summary.value = await hoursWeek()
   } catch {
     failed.value = true
+  } finally {
+    settle()
   }
 })
 

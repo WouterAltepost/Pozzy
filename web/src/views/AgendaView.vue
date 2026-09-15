@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, ref } from 'vue'
+import { computed, ref } from 'vue'
 import { PhCaretLeft, PhCaretRight } from '@phosphor-icons/vue'
 import AgendaGrid from '../components/agenda/AgendaGrid.vue'
 import EventForm from '../components/agenda/EventForm.vue'
@@ -8,9 +8,10 @@ import SyncBar from '../components/agenda/SyncBar.vue'
 import PageHeader from '../components/ui/PageHeader.vue'
 import UiButton from '../components/ui/UiButton.vue'
 import UiSegmented from '../components/ui/UiSegmented.vue'
-import UiSheet from '../components/ui/UiSheet.vue'
-import UiSkeleton from '../components/ui/UiSkeleton.vue'
+import UiLoadGate from '../components/ui/UiLoadGate.vue'
+import UiModal from '../components/ui/UiModal.vue'
 import { useMediaQuery } from '../composables/useMediaQuery'
+import { useReady } from '../composables/useReady'
 import { formatDay, mondayOf, today } from '../lib/dates'
 import { useCalendarStore } from '../stores/calendar'
 
@@ -28,10 +29,7 @@ const VIEWS = [
 ]
 const view = computed({ get: () => store.view, set: (v) => store.setView(v) })
 
-onMounted(() => {
-  store.load()
-  store.loadAccount()
-})
+const ready = useReady(() => Promise.all([store.load(), store.loadAccount()]))
 
 function openEvent(event) {
   formError.value = ''
@@ -119,9 +117,8 @@ function pickDay(evt) {
       <p v-if="store.error" class="error">{{ store.error }}</p>
     </div>
 
-    <div class="body" :class="{ split: panel && !narrow }">
+    <UiLoadGate :ready="ready" label="Loading your week">
       <div class="gridwrap">
-        <UiSkeleton v-if="store.loading && !store.events.length" height="240px" />
         <div class="gridpos">
           <AgendaGrid :days="store.days" :events="store.events" :tasks="store.tasks" :draft="draft" @select-event="openEvent" @create="onSlot" />
           <Transition name="pop">
@@ -143,24 +140,9 @@ function pickDay(evt) {
           <span class="sw task"></span> scheduled task (not yet on iCloud)
         </p>
       </div>
-      <Transition name="panel">
-        <aside v-if="panel && !narrow" class="card panel">
-          <EventForm
-            :event="panel.event || null"
-            :defaults="panel.defaults || {}"
-            :calendars="store.selectedCalendars"
-            :default-calendar-url="store.account?.write_calendar_url || ''"
-            :saving="saving"
-            :error="formError"
-            @save="save"
-            @delete="remove"
-            @close="closePanel"
-          />
-        </aside>
-      </Transition>
-    </div>
+    </UiLoadGate>
 
-    <UiSheet :open="Boolean(panel) && narrow" :title="panel?.event ? 'Event' : 'New event'" @close="closePanel">
+    <UiModal :open="Boolean(panel)" :title="panel?.event ? 'Event' : 'New event'" size="md" @close="closePanel">
       <EventForm
         v-if="panel"
         :event="panel.event || null"
@@ -173,7 +155,7 @@ function pickDay(evt) {
         @delete="remove"
         @close="closePanel"
       />
-    </UiSheet>
+    </UiModal>
   </div>
 </template>
 
@@ -181,24 +163,16 @@ function pickDay(evt) {
 .nav { display: flex; align-items: center; gap: 4px; }
 .nav input[type='date'] { margin-left: 4px; }
 .status { display: flex; align-items: center; gap: var(--sp-3); flex-wrap: wrap; margin: calc(var(--sp-5) * -1) 0 var(--sp-3); }
-.body { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--sp-5); align-items: start; }
-@media (min-width: 900px) { .body.split { grid-template-columns: minmax(0, 1fr) 340px; } }
 .gridwrap { min-width: 0; }
 .gridpos { position: relative; }
 .pop-enter-active { transition: opacity var(--dur-ui) var(--ease-out), transform var(--dur-ui) var(--ease-out); }
 .pop-leave-active { transition: opacity var(--dur-hover) ease, transform var(--dur-hover) ease; }
 .pop-enter-from, .pop-leave-to { opacity: 0; transform: scale(0.97); }
 @media (prefers-reduced-motion: reduce) { .pop-enter-from, .pop-leave-to { transform: none; } }
-.panel { position: sticky; top: calc(var(--bar-h) + var(--sp-4)); margin: 0; }
 .legend { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; margin: var(--sp-2) 0 0; }
 .sw { display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin-left: 6px; }
 .sw.event { background: var(--info-soft); border: 1px solid color-mix(in srgb, var(--info) 35%, transparent); }
 .sw.recurring { background: var(--surface-2); border: 1px solid color-mix(in srgb, var(--ink-3) 35%, transparent); }
 .sw.linked { background: var(--ok-soft); border: 1px solid color-mix(in srgb, var(--ok) 35%, transparent); }
 .sw.task { border: 1px dashed var(--ok); }
-.panel-enter-active { transition: opacity var(--dur-panel) var(--ease-out), transform var(--dur-panel) var(--ease-out); }
-.panel-leave-active { transition: opacity var(--dur-hover) ease; }
-.panel-enter-from { opacity: 0; transform: translateX(8px); }
-.panel-leave-to { opacity: 0; }
-@media (prefers-reduced-motion: reduce) { .panel-enter-from { transform: none; } }
 </style>

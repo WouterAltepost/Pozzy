@@ -1,4 +1,5 @@
 <script setup>
+import { useLoadTask } from '../../composables/useReady'
 import { useWidgetLink } from '../../composables/useWidgetLink'
 import { onMounted, ref } from 'vue'
 import { PhTray } from '@phosphor-icons/vue'
@@ -6,6 +7,8 @@ import { topEmails, updateEmail } from '../../api/mail'
 import PriorityBadge from '../mail/PriorityBadge.vue'
 import UiBadge from '../ui/UiBadge.vue'
 import UiEmpty from '../ui/UiEmpty.vue'
+
+const settle = useLoadTask()
 
 const emails = ref(null)
 const failed = ref(false)
@@ -28,7 +31,7 @@ async function handled(e) {
   }
 }
 
-onMounted(load)
+onMounted(() => load().finally(settle))
 const link = useWidgetLink('mail')
 </script>
 

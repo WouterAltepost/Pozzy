@@ -15,3 +15,4 @@ export const trackerHistory = (id, weeks = 8) => api(`/api/trackers/${id}/histor
 export const upsertEntry = (id, body) => api(`/api/trackers/${id}/entries`, { method: 'PUT', body })
 export const deleteEntry = (id, date) => api(`/api/trackers/${id}/entries/${date}`, { method: 'DELETE' })
 export const tickTracker = (id, date) => api(`/api/trackers/${id}/tick`, { method: 'POST', body: date ? { date } : {} })
+export const trackerSeries = (weeks = 12, includeInactive = false) => api(`/api/trackers/series?weeks=${weeks}${includeInactive ? '&include_inactive=1' : ''}`)

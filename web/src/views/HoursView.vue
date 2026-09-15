@@ -6,6 +6,8 @@ import AreaSelect from '../components/shared/AreaSelect.vue'
 import TagsInput from '../components/shared/TagsInput.vue'
 import WeekNav from '../components/shared/WeekNav.vue'
 import PageHeader from '../components/ui/PageHeader.vue'
+import UiLoadGate from '../components/ui/UiLoadGate.vue'
+import { useReady } from '../composables/useReady'
 import UiButton from '../components/ui/UiButton.vue'
 import UiField from '../components/ui/UiField.vue'
 import { formatDay, minutesToHours, today, weekDays } from '../lib/dates'
@@ -37,8 +39,8 @@ const byDay = computed(() => {
   return map
 })
 
+const ready = useReady(() => store.load())
 onMounted(() => {
-  store.load()
   ticker = setInterval(() => (now.value = Date.now()), 1000)
 })
 onBeforeUnmount(() => clearInterval(ticker))
@@ -82,6 +84,7 @@ function pct(row) {
       <WeekNav :week-start="store.weekStart" @change="run(() => store.setWeek($event))" />
     </PageHeader>
     <p v-if="error || store.error" class="error">{{ error || store.error }}</p>
+    <UiLoadGate :ready="ready" label="Loading hours">
 
     <section class="card timer" :class="{ running: store.timerRunning }">
       <div class="timer-row">
@@ -145,6 +148,7 @@ function pct(row) {
         <p v-else class="muted small nothing">Nothing logged.</p>
       </div>
     </section>
+    </UiLoadGate>
   </div>
 </template>
 

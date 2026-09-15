@@ -1,4 +1,5 @@
 <script setup>
+import { useLoadTask } from '../../composables/useReady'
 // The briefing plus a reply box. Wouter writes a note, Claude rewrites the briefing and proposes
 // changes to his data; nothing is applied until he ticks the ones he wants. Reply column sits on the
 // right from 900px, and opens as a sheet below that.
@@ -10,6 +11,8 @@ import { useToast } from '../../composables/useToast'
 import { formatDateTime } from '../../lib/dates'
 import UiButton from '../ui/UiButton.vue'
 import UiSheet from '../ui/UiSheet.vue'
+
+const settle = useLoadTask()
 
 const data = ref(null)
 const failed = ref(false)
@@ -99,7 +102,7 @@ function onKey(e) {
   if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) send()
 }
 
-onMounted(load)
+onMounted(() => load().finally(settle))
 </script>
 
 <template>

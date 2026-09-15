@@ -1,8 +1,10 @@
 <script setup>
-import { onMounted, ref } from 'vue'
+import { ref } from 'vue'
 import { PhLightning, PhX } from '@phosphor-icons/vue'
 import ProposalEditor from '../components/capture/ProposalEditor.vue'
 import PageHeader from '../components/ui/PageHeader.vue'
+import UiLoadGate from '../components/ui/UiLoadGate.vue'
+import { useReady } from '../composables/useReady'
 import UiBadge from '../components/ui/UiBadge.vue'
 import UiButton from '../components/ui/UiButton.vue'
 import UiEmpty from '../components/ui/UiEmpty.vue'
@@ -16,7 +18,7 @@ const error = ref('')
 const showHandled = ref(false)
 const lastCreated = ref(null)
 
-onMounted(() => store.load())
+const ready = useReady(() => store.load())
 
 async function run(fn) {
   error.value = ''
@@ -68,6 +70,7 @@ function resultLink(ref) {
       </div>
     </form>
     <p v-if="error || store.error" class="error">{{ error || store.error }}</p>
+    <UiLoadGate :ready="ready" label="Loading inbox">
     <p v-if="lastCreated" class="ok small created">
       Created {{ lastCreated.type }} "{{ lastCreated.title }}".
       <RouterLink v-if="resultLink(lastCreated.ref)" :to="resultLink(lastCreated.ref)">Open</RouterLink>
@@ -108,6 +111,7 @@ function resultLink(ref) {
         <li v-if="!store.handled.length" class="muted small">Nothing handled yet.</li>
       </ul>
     </div>
+    </UiLoadGate>
   </div>
 </template>
 

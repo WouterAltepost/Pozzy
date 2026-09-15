@@ -1,9 +1,12 @@
 <script setup>
+import { useLoadTask } from '../../composables/useReady'
 import { useWidgetLink } from '../../composables/useWidgetLink'
 import { onMounted, ref } from 'vue'
 import { upcoming } from '../../api/study'
 import { daysUntil, formatDateTime, formatDay } from '../../lib/dates'
 import UiBadge from '../ui/UiBadge.vue'
+
+const settle = useLoadTask()
 
 const data = ref(null)
 const failed = ref(false)
@@ -13,6 +16,8 @@ onMounted(async () => {
     data.value = await upcoming(14)
   } catch {
     failed.value = true
+  } finally {
+    settle()
   }
 })
 

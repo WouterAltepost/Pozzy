@@ -4,7 +4,7 @@ import PageHeader from '../components/ui/PageHeader.vue'
 import UiBadge from '../components/ui/UiBadge.vue'
 import UiButton from '../components/ui/UiButton.vue'
 import UiField from '../components/ui/UiField.vue'
-import UiSkeleton from '../components/ui/UiSkeleton.vue'
+import UiLoadGate from '../components/ui/UiLoadGate.vue'
 import { useToast } from '../composables/useToast'
 import { formatDateTime } from '../lib/dates'
 import { useAreasStore } from '../stores/areas'
@@ -76,7 +76,7 @@ async function save() {
   <div class="settings">
     <PageHeader title="Settings" />
     <p v-if="store.error" class="error">{{ store.error }}</p>
-    <div v-if="!ready && !store.error" class="card"><UiSkeleton :lines="5" /></div>
+    <UiLoadGate :ready="Boolean(ready) || Boolean(store.error)" label="Loading settings">
 
     <form v-if="ready" @submit.prevent="save">
       <section class="card">
@@ -149,6 +149,7 @@ async function save() {
         </table>
       </div>
     </section>
+    </UiLoadGate>
   </div>
 </template>
 

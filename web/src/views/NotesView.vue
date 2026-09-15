@@ -1,10 +1,12 @@
 <script setup>
-import { computed, onMounted, reactive, ref } from 'vue'
+import { computed, reactive, ref } from 'vue'
 import { PhNote, PhPushPin } from '@phosphor-icons/vue'
 import AreaDot from '../components/shared/AreaDot.vue'
 import AreaSelect from '../components/shared/AreaSelect.vue'
 import TagsInput from '../components/shared/TagsInput.vue'
 import PageHeader from '../components/ui/PageHeader.vue'
+import UiLoadGate from '../components/ui/UiLoadGate.vue'
+import { useReady } from '../composables/useReady'
 import UiButton from '../components/ui/UiButton.vue'
 import UiEmpty from '../components/ui/UiEmpty.vue'
 import UiField from '../components/ui/UiField.vue'
@@ -19,7 +21,7 @@ const form = reactive({ title: '', body: '', area_id: null, tags: [], pinned: fa
 
 const selected = computed(() => store.items.find((n) => n.id === selectedId.value) || null)
 
-onMounted(() => store.load())
+const ready = useReady(() => store.load())
 
 async function run(fn) {
   error.value = ''
@@ -105,6 +107,7 @@ function renderMarkdown(text) {
       <UiButton variant="primary" @click="startNew">New note</UiButton>
     </PageHeader>
     <p v-if="error || store.error" class="error">{{ error || store.error }}</p>
+    <UiLoadGate :ready="ready" label="Loading notes">
 
     <div class="layout">
       <ul class="list">
@@ -143,6 +146,7 @@ function renderMarkdown(text) {
         </UiEmpty>
       </div>
     </div>
+    </UiLoadGate>
   </div>
 </template>
 

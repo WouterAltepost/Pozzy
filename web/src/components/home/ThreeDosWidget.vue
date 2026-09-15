@@ -1,4 +1,5 @@
 <script setup>
+import { useLoadTask } from '../../composables/useReady'
 import { useWidgetLink } from '../../composables/useWidgetLink'
 import { onMounted, ref } from 'vue'
 import { PhCheckSquare } from '@phosphor-icons/vue'
@@ -7,6 +8,8 @@ import { formatDay, today } from '../../lib/dates'
 import UiBadge from '../ui/UiBadge.vue'
 import UiButton from '../ui/UiButton.vue'
 import UiEmpty from '../ui/UiEmpty.vue'
+
+const settle = useLoadTask()
 
 // Self-contained: fetches its own data, renders nothing on failure (BUILD.md).
 const dos = ref(null)
@@ -43,7 +46,7 @@ async function add() {
   }
 }
 
-onMounted(load)
+onMounted(() => load().finally(settle))
 const link = useWidgetLink('goals')
 </script>
 

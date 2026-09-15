@@ -1,4 +1,5 @@
 <script setup>
+import { useLoadTask } from '../../composables/useReady'
 import { useWidgetLink } from '../../composables/useWidgetLink'
 import { onMounted, ref } from 'vue'
 import { PhCheckSquare } from '@phosphor-icons/vue'
@@ -7,6 +8,8 @@ import { daysUntil, formatDay } from '../../lib/dates'
 import AreaDot from '../shared/AreaDot.vue'
 import UiBadge from '../ui/UiBadge.vue'
 import UiEmpty from '../ui/UiEmpty.vue'
+
+const settle = useLoadTask()
 
 const tasks = ref(null)
 const failed = ref(false)
@@ -29,7 +32,7 @@ async function complete(t) {
   }
 }
 
-onMounted(load)
+onMounted(() => load().finally(settle))
 const link = useWidgetLink('tasks')
 </script>
 

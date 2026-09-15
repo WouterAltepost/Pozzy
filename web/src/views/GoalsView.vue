@@ -1,10 +1,12 @@
 <script setup>
-import { computed, onMounted, ref } from 'vue'
+import { computed, ref } from 'vue'
 import { PhTarget, PhX } from '@phosphor-icons/vue'
 import AreaDot from '../components/shared/AreaDot.vue'
 import AreaSelect from '../components/shared/AreaSelect.vue'
 import WeekNav from '../components/shared/WeekNav.vue'
 import PageHeader from '../components/ui/PageHeader.vue'
+import UiLoadGate from '../components/ui/UiLoadGate.vue'
+import { useReady } from '../composables/useReady'
 import UiBadge from '../components/ui/UiBadge.vue'
 import UiButton from '../components/ui/UiButton.vue'
 import UiEmpty from '../components/ui/UiEmpty.vue'
@@ -22,7 +24,7 @@ const days = computed(() => [
   { key: tomorrow(), label: 'Tomorrow', date: formatDay(tomorrow()) },
 ])
 
-onMounted(() => store.load())
+const ready = useReady(() => store.load())
 
 async function run(fn) {
   error.value = ''
@@ -71,6 +73,7 @@ function acceptSuggestion(s) {
   <div class="goals">
     <PageHeader title="Goals" />
     <p v-if="error || store.error" class="error">{{ error || store.error }}</p>
+    <UiLoadGate :ready="ready" label="Loading goals">
 
     <section class="dos">
       <div v-for="d in days" :key="d.key" class="card day">
@@ -147,6 +150,7 @@ function acceptSuggestion(s) {
         <UiButton type="submit">Add</UiButton>
       </form>
     </section>
+    </UiLoadGate>
   </div>
 </template>
 

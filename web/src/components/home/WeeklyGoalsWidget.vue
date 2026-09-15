@@ -1,4 +1,5 @@
 <script setup>
+import { useLoadTask } from '../../composables/useReady'
 import { useWidgetLink } from '../../composables/useWidgetLink'
 import { onMounted, ref } from 'vue'
 import { PhTarget } from '@phosphor-icons/vue'
@@ -6,6 +7,8 @@ import { addGoalProgress, listGoals, updateGoal } from '../../api/goals'
 import AreaDot from '../shared/AreaDot.vue'
 import UiButton from '../ui/UiButton.vue'
 import UiEmpty from '../ui/UiEmpty.vue'
+
+const settle = useLoadTask()
 
 const data = ref(null)
 const failed = ref(false)
@@ -40,7 +43,7 @@ async function bump(g) {
   }
 }
 
-onMounted(load)
+onMounted(() => load().finally(settle))
 const link = useWidgetLink('goals')
 </script>
 

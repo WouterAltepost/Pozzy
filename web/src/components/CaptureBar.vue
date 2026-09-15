@@ -1,26 +1,31 @@
 <script setup>
-// Top-bar quick input. Submit stores the text immediately; the proposal shows in a
-// popover under the field with Confirm / Edit / Discard.
-import { ref } from 'vue'
-import { PhLightning, PhX } from '@phosphor-icons/vue'
+// Capture lives behind one button in the top bar (or Cmd/Ctrl plus K). The dialog holds the
+// whole flow: write, Pozzy proposes what it is, adjust, confirm. Nothing is created until
+// Confirm. Stored first, so the text is safe even if the proposal fails.
+import { onBeforeUnmount, onMounted, ref } from 'vue'
+import { PhLightning } from '@phosphor-icons/vue'
 import { useCapturesStore } from '../stores/captures'
+import { useToast } from '../composables/useToast'
+import ProposalEditor from './capture/ProposalEditor.vue'
 import UiButton from './ui/UiButton.vue'
+import UiModal from './ui/UiModal.vue'
 
 const store = useCapturesStore()
+const toast = useToast()
+const open = ref(false)
 const text = ref('')
 const busy = ref(false)
 const current = ref(null)
 const message = ref('')
+const modKey = /Mac|iPhone|iPad/.test(navigator.platform) ? '\u2318' : 'Ctrl'
 
-function summary(p) {
-  if (!p) return ''
-  const f = p.fields || {}
-  const bits = [p.type, f.title || f.tracker]
-  if (f.due_date) bits.push('due ' + f.due_date)
-  if (f.start) bits.push(new Date(f.start).toLocaleString('en-GB', { weekday: 'short', hour: '2-digit', minute: '2-digit' }))
-  if (f.area) bits.push(f.area)
-  if (p.type === 'tracker') bits.push(String(f.value))
-  return bits.filter(Boolean).join(', ')
+function show() {
+  open.value = true
+  current.value = null
+  message.value = ''
+}
+function close() {
+  open.value = false
 }
 
 async function submit() {
@@ -31,7 +36,7 @@ async function submit() {
   try {
     current.value = await store.submit(t)
     text.value = ''
-    if (!current.value.proposal) message.value = 'Saved to the capture inbox.'
+    if (!current.value.proposal) message.value = 'Saved to the capture inbox. AI is off or did not answer, so decide there what it is.'
   } catch (err) {
     message.value = err.message
   } finally {
@@ -39,13 +44,14 @@ async function submit() {
   }
 }
 
-async function confirm() {
+async function confirm(body) {
   if (!current.value) return
   busy.value = true
   try {
-    const out = await store.confirm(current.value.id)
-    message.value = `Created ${out.capture.parsed_type}.`
+    const out = await store.confirm(current.value.id, body)
+    toast.success(`Created ${out.capture.parsed_type}: ${out.created.title || out.created.tracker || ''}`.trim())
     current.value = null
+    close()
   } catch (err) {
     message.value = err.message
   } finally {
@@ -63,47 +69,61 @@ async function discard() {
   current.value = null
 }
 
-function dismiss() {
-  current.value = null
-  message.value = ''
+function onKey(e) {
+  if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+    e.preventDefault()
+    open.value ? close() : show()
+  }
 }
+onMounted(() => document.addEventListener('keydown', onKey))
+onBeforeUnmount(() => document.removeEventListener('keydown', onKey))
 </script>
 
 <template>
   <div class="capture-bar">
-    <form class="field" @submit.prevent="submit">
-      <PhLightning class="bolt" aria-hidden="true" />
-      <input v-model="text" type="text" placeholder="Capture anything" aria-label="Capture" :disabled="busy" @keydown.esc="dismiss" />
-    </form>
-    <Transition name="pop">
-      <div v-if="current?.proposal || message" class="panel" role="status">
-        <template v-if="current?.proposal">
-          <div class="summary">{{ summary(current.proposal) }}</div>
-          <div class="actions">
-            <UiButton size="sm" variant="primary" :loading="busy" @click="confirm">Confirm</UiButton>
-            <RouterLink :to="{ name: 'capture' }" class="link-btn" @click="dismiss">Edit</RouterLink>
-            <UiButton size="sm" variant="ghost" :disabled="busy" @click="discard">Discard</UiButton>
-          </div>
-        </template>
-        <div v-else class="summary msg">{{ message }} <button type="button" class="icon-btn" aria-label="Dismiss" @click="dismiss"><PhX /></button></div>
+    <button type="button" class="capture-btn" title="Capture anything (Cmd or Ctrl plus K)" @click="show">
+      <PhLightning class="bolt" weight="fill" aria-hidden="true" />
+      <span class="label">Capture</span>
+      <kbd class="kbd" aria-hidden="true">{{ modKey }} K</kbd>
+    </button>
+
+    <UiModal :open="open" title="Capture" size="md" @close="close">
+      <form v-if="!current?.proposal" class="entry" @submit.prevent="submit">
+        <textarea v-model="text" rows="3" placeholder="Anything: 'call dentist tomorrow', 'note: ...', 'goal: run 3x next week', 'weight 82.4', 'event: standup tue 09:00'" aria-label="Capture text" :disabled="busy" @keydown.enter.exact.prevent="submit"></textarea>
+        <div class="entry-row">
+          <UiButton type="submit" variant="primary" :loading="busy" :disabled="!text.trim()">Capture</UiButton>
+          <span class="muted small">Stored first, then Pozzy proposes what it is. Nothing is created until you confirm.</span>
+        </div>
+      </form>
+      <div v-else class="proposal">
+        <p class="raw">"{{ current.raw_text }}"</p>
+        <ProposalEditor :proposal="current.proposal" @confirm="confirm" @discard="discard" />
       </div>
-    </Transition>
+      <p v-if="message" class="msg small" role="status">
+        {{ message }} <RouterLink :to="{ name: 'capture' }" @click="close">Open inbox</RouterLink>
+      </p>
+    </UiModal>
   </div>
 </template>
 
 <style scoped>
-.capture-bar { position: relative; width: 100%; max-width: 480px; }
-.field { position: relative; display: flex; align-items: center; }
-.bolt { position: absolute; left: 12px; width: 15px; height: 15px; color: var(--ink-3); pointer-events: none; }
-.capture-bar input { width: 100%; height: 34px; padding-left: 34px; border-radius: var(--r-pill); background: var(--surface-2); border-color: transparent; }
-.capture-bar input:hover { border-color: var(--line-2); }
-.capture-bar input:focus-visible { background: var(--surface); border-color: var(--line-2); }
-.panel { position: absolute; top: calc(100% + 6px); left: 0; right: 0; z-index: var(--z-sheet); background: var(--surface); color: var(--ink); border: 1px solid var(--line); border-radius: var(--r-lg); padding: var(--sp-3); box-shadow: var(--shadow-2); font-size: var(--fs-md); transform-origin: top center; }
-.summary { margin-bottom: var(--sp-2); }
-.summary.msg { margin: 0; display: flex; align-items: center; justify-content: space-between; gap: var(--sp-2); }
-.actions { display: flex; gap: var(--sp-2); align-items: center; }
-.pop-enter-active { transition: opacity var(--dur-ui) var(--ease-out), transform var(--dur-ui) var(--ease-out); }
-.pop-leave-active { transition: opacity var(--dur-hover) ease, transform var(--dur-hover) ease; }
-.pop-enter-from, .pop-leave-to { opacity: 0; transform: scale(0.97); }
-@media (prefers-reduced-motion: reduce) { .pop-enter-from, .pop-leave-to { transform: none; } }
+.capture-bar { display: flex; justify-content: center; }
+.capture-btn {
+  display: inline-flex; align-items: center; gap: 8px;
+  height: 34px; padding: 0 12px 0 12px;
+  border: 1px solid transparent; border-radius: var(--r-pill);
+  background: var(--surface-2); color: var(--ink-2); font: inherit; font-size: var(--fs-md); font-weight: 500;
+  cursor: pointer;
+  transition: background-color var(--dur-hover) ease, border-color var(--dur-hover) ease, color var(--dur-hover) ease, transform var(--dur-press) var(--ease-out);
+}
+.capture-btn:active { transform: scale(0.97); }
+@media (hover: hover) and (pointer: fine) { .capture-btn:hover { border-color: var(--line-2); color: var(--ink); } }
+.bolt { width: 15px; height: 15px; color: var(--brand); }
+.kbd { font: inherit; font-size: var(--fs-xs); color: var(--ink-3); border: 1px solid var(--line-2); border-radius: 4px; padding: 0 5px; line-height: 16px; }
+@media (max-width: 720px) { .label, .kbd { display: none; } .capture-btn { width: 34px; padding: 0; justify-content: center; } }
+.entry { display: flex; flex-direction: column; gap: var(--sp-3); }
+.entry textarea { width: 100%; font-size: var(--fs-base); }
+.entry-row { display: flex; flex-wrap: wrap; gap: var(--sp-3); align-items: center; }
+.raw { font-weight: 500; margin-bottom: var(--sp-3); color: var(--ink-2); }
+.msg { margin-top: var(--sp-3); color: var(--ink-2); }
 </style>

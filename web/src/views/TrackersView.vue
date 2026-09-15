@@ -1,13 +1,15 @@
 <script setup>
-import { onMounted, ref } from 'vue'
+import { ref } from 'vue'
 import { PhCaretDown, PhChartLineUp, PhCheck } from '@phosphor-icons/vue'
 import LineChart from '../components/trackers/LineChart.vue'
 import TrackerForm from '../components/trackers/TrackerForm.vue'
+import TrackerSeriesChart from '../components/trackers/TrackerSeriesChart.vue'
+import UiLoadGate from '../components/ui/UiLoadGate.vue'
+import { useReady } from '../composables/useReady'
 import WeekNav from '../components/shared/WeekNav.vue'
 import PageHeader from '../components/ui/PageHeader.vue'
 import UiButton from '../components/ui/UiButton.vue'
 import UiEmpty from '../components/ui/UiEmpty.vue'
-import UiSkeleton from '../components/ui/UiSkeleton.vue'
 import { shortDay, today } from '../lib/dates'
 import { useTrackersStore } from '../stores/trackers'
 
@@ -16,7 +18,7 @@ const error = ref('')
 const editing = ref(null) // null | 'new' | tracker
 const charts = ref({})
 
-onMounted(() => store.load())
+const ready = useReady(() => store.load())
 
 async function run(fn) {
   error.value = ''
@@ -112,13 +114,14 @@ function remove(t) {
       <UiButton variant="primary" @click="editing = 'new'">New tracker</UiButton>
     </PageHeader>
     <p v-if="error || store.error" class="error">{{ error || store.error }}</p>
+    <UiLoadGate :ready="ready" label="Loading trackers">
+    <TrackerSeriesChart v-if="store.trackers.length" :refresh-key="store.week" />
     <div v-if="editing" class="card">
       <div class="card-head"><h2>{{ editing === 'new' ? 'New tracker' : 'Edit tracker' }}</h2></div>
       <TrackerForm :tracker="editing === 'new' ? null : editing" @save="save" @cancel="editing = null" />
     </div>
 
-    <div v-if="store.loading && !store.week" class="card"><UiSkeleton :lines="4" /></div>
-    <div v-else-if="!store.trackers.length" class="card">
+    <div v-if="!store.trackers.length" class="card">
       <UiEmpty title="No trackers yet" hint="Creatine, vitamins, sauna, weight, sleep: anything you want to see per week.">
         <template #icon><PhChartLineUp /></template>
         <template #action><UiButton variant="primary" @click="editing = 'new'">New tracker</UiButton></template>
@@ -186,6 +189,7 @@ function remove(t) {
         </table>
       </div>
     </section>
+    </UiLoadGate>
   </div>
 </template>
 

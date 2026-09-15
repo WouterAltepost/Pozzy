@@ -43,6 +43,8 @@ function onDragStart(event) {
         <AreaDot :area-id="task.area_id" label />
         <UiBadge v-if="task.due_date" :tone="dueTone(task)" class="num">{{ formatDay(task.due_date) }}</UiBadge>
         <span v-if="task.estimated_minutes" class="muted small num">{{ task.estimated_minutes }} min</span>
+        <UiBadge v-if="task.urgent" tone="danger">urgent</UiBadge>
+        <UiBadge v-if="task.important" tone="warn">important</UiBadge>
         <UiBadge v-if="task.status === 'scheduled'" tone="ok">scheduled</UiBadge>
         <UiBadge v-if="task.status === 'inbox'" tone="info">inbox</UiBadge>
         <span v-for="tag in task.tags" :key="tag" class="tag">{{ tag }}</span>

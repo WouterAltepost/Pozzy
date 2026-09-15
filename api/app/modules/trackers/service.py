@@ -192,3 +192,32 @@ def history(tracker: Tracker, weeks: int | None = 8) -> dict:
         vals = [e.value for d, e in by_date.items() if ws <= d < ws + timedelta(days=7)]
         weekly.append({"week_start": ws.isoformat(), "sum": sum(vals), "avg": (sum(vals) / len(vals)) if vals else None, "count": len(vals)})
     return {"tracker": tracker.to_dict(), "from": start.isoformat(), "to": today.isoformat(), "weeks": weeks, "points": points, "weekly": weekly}
+
+
+def series(weeks: int | None = 12, include_inactive: bool = False) -> dict:
+    """One call for the live chart: every tracker's daily points and weekly rows over the same
+    range. weeks=None spans back to the oldest tracker or entry."""
+    trackers = list_trackers(include_inactive)
+    today = today_local()
+    if weeks is None:
+        origins = [t.created_at.date() for t in trackers if t.created_at]
+        first_entry = db.session.scalar(select(func.min(TrackerEntry.date)).where(TrackerEntry.tracker_id.in_([t.id for t in trackers]))) if trackers else None
+        if first_entry:
+            origins.append(first_entry)
+        origin = min(origins) if origins else today
+        weeks = max(1, (week_start_of(today) - week_start_of(origin)).days // 7 + 1)
+    start = week_start_of(today) - timedelta(days=7 * (weeks - 1))
+    by_tracker = entries_between([t.id for t in trackers], start, today) if trackers else {}
+    out = []
+    for t in trackers:
+        by_date = by_tracker.get(t.id, {})
+        points = [{"date": d.isoformat(), "value": e.value} for d, e in sorted(by_date.items())]
+        weekly = []
+        for i in range(weeks):
+            ws = start + timedelta(days=7 * i)
+            days = [(d, e) for d, e in by_date.items() if ws <= d < ws + timedelta(days=7)]
+            vals = [e.value for _, e in days]
+            met = sum(1 for _, e in days if _met(t, e.value)) if t.type == "daily_bool" else None
+            weekly.append({"week_start": ws.isoformat(), "sum": sum(vals), "avg": (sum(vals) / len(vals)) if vals else None, "count": len(vals), "met_days": met})
+        out.append({"tracker": t.to_dict(), "points": points, "weekly": weekly})
+    return {"from": start.isoformat(), "to": today.isoformat(), "weeks": weeks, "series": out}

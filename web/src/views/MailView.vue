@@ -1,5 +1,5 @@
 <script setup>
-import { onMounted, ref } from 'vue'
+import { ref } from 'vue'
 import { PhTray } from '@phosphor-icons/vue'
 import EmailDetail from '../components/mail/EmailDetail.vue'
 import EmailRow from '../components/mail/EmailRow.vue'
@@ -7,9 +7,9 @@ import MailFilters from '../components/mail/MailFilters.vue'
 import PageHeader from '../components/ui/PageHeader.vue'
 import UiButton from '../components/ui/UiButton.vue'
 import UiEmpty from '../components/ui/UiEmpty.vue'
-import UiSheet from '../components/ui/UiSheet.vue'
-import UiSkeleton from '../components/ui/UiSkeleton.vue'
-import { useMediaQuery } from '../composables/useMediaQuery'
+import UiLoadGate from '../components/ui/UiLoadGate.vue'
+import UiModal from '../components/ui/UiModal.vue'
+import { useReady } from '../composables/useReady'
 import { useAreasStore } from '../stores/areas'
 import { useMailStore } from '../stores/mail'
 
@@ -18,9 +18,7 @@ const areas = useAreasStore()
 const error = ref('')
 const notice = ref('')
 const busy = ref(false)
-const narrow = useMediaQuery('(max-width: 899px)')
-
-onMounted(() => Promise.all([store.load(), store.loadAccounts(), areas.load()]))
+const ready = useReady(() => Promise.all([store.load(), store.loadAccounts(), areas.load()]))
 
 async function run(fn) {
   error.value = ''
@@ -82,10 +80,9 @@ function sync() {
     <p v-if="error || store.error" class="error notice">{{ error || store.error }}</p>
     <p v-if="notice" class="muted small notice">{{ notice }}</p>
 
-    <div class="layout" :class="{ split: store.selected && !narrow }">
+    <UiLoadGate :ready="ready" label="Loading mail">
       <ul class="list">
-        <li v-if="store.loading && !store.items.length"><UiSkeleton :lines="6" /></li>
-        <li v-else-if="!store.items.length">
+        <li v-if="!store.items.length">
           <UiEmpty title="No emails match" :hint="store.accounts.length ? 'Change the filters or sync.' : 'No mail accounts are configured (MAIL_ACCOUNTS_JSON).'">
             <template #icon><PhTray /></template>
           </UiEmpty>
@@ -99,28 +96,15 @@ function sync() {
           @handled="setHandled"
         />
       </ul>
-      <Transition name="panel">
-        <aside v-if="store.selected && !narrow" class="card detail-panel">
-          <EmailDetail :email="store.selected" :busy="busy" @close="store.close()" @update="update" @task="createTask" @reclassify="reclassify" />
-        </aside>
-      </Transition>
-    </div>
+    </UiLoadGate>
 
-    <UiSheet :open="Boolean(store.selected) && narrow" title="Email" @close="store.close()">
+    <UiModal :open="Boolean(store.selected)" size="lg" @close="store.close()">
       <EmailDetail v-if="store.selected" :email="store.selected" :busy="busy" @close="store.close()" @update="update" @task="createTask" @reclassify="reclassify" />
-    </UiSheet>
+    </UiModal>
   </div>
 </template>
 
 <style scoped>
 .notice { margin-top: var(--sp-3); }
-.layout { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--sp-5); margin-top: var(--sp-4); align-items: start; }
-@media (min-width: 900px) { .layout.split { grid-template-columns: minmax(0, 1fr) minmax(340px, 44%); } }
-.list { display: flex; flex-direction: column; gap: var(--sp-2); min-width: 0; }
-.detail-panel { position: sticky; top: calc(var(--bar-h) + var(--sp-4)); margin: 0; }
-.panel-enter-active { transition: opacity var(--dur-panel) var(--ease-out), transform var(--dur-panel) var(--ease-out); }
-.panel-leave-active { transition: opacity var(--dur-hover) ease; }
-.panel-enter-from { opacity: 0; transform: translateX(8px); }
-.panel-leave-to { opacity: 0; }
-@media (prefers-reduced-motion: reduce) { .panel-enter-from { transform: none; } }
+.list { display: flex; flex-direction: column; gap: var(--sp-2); min-width: 0; margin-top: var(--sp-4); }
 </style>

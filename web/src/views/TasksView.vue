@@ -1,5 +1,7 @@
 <script setup>
-import { computed, onMounted, ref } from 'vue'
+// Tasks as one list grouped by when they are due. Urgent and important show as chips on the
+// row instead of as boxes on a board. The editor opens in a dialog.
+import { computed, ref } from 'vue'
 import { PhCheckSquare } from '@phosphor-icons/vue'
 import SlotPanel from '../components/tasks/SlotPanel.vue'
 import TaskCard from '../components/tasks/TaskCard.vue'
@@ -8,32 +10,69 @@ import AreaSelect from '../components/shared/AreaSelect.vue'
 import PageHeader from '../components/ui/PageHeader.vue'
 import UiButton from '../components/ui/UiButton.vue'
 import UiEmpty from '../components/ui/UiEmpty.vue'
+import UiLoadGate from '../components/ui/UiLoadGate.vue'
+import UiModal from '../components/ui/UiModal.vue'
 import UiSegmented from '../components/ui/UiSegmented.vue'
-import UiSheet from '../components/ui/UiSheet.vue'
-import UiSkeleton from '../components/ui/UiSkeleton.vue'
-import { useMediaQuery } from '../composables/useMediaQuery'
-import { QUADRANTS, useTasksStore } from '../stores/tasks'
+import { useReady } from '../composables/useReady'
+import { addDays, daysUntil, today } from '../lib/dates'
+import { useTasksStore } from '../stores/tasks'
 
 const store = useTasksStore()
-const mode = ref('board') // board | list
 const selectedId = ref(null)
 const creating = ref(false)
 const showSlots = ref(false)
 const quickTitle = ref('')
 const busy = ref(false)
 const error = ref('')
-const dragOver = ref(null)
-const narrow = useMediaQuery('(max-width: 899px)')
+const focus = ref('all') // all | urgent | important
+const ready = useReady(() => store.load())
 
 const selected = computed(() => (selectedId.value ? store.byId(selectedId.value) : null))
-const listItems = computed(() => (store.filters.include_closed ? store.items : store.open))
-const panelOpen = computed(() => creating.value || Boolean(selected.value))
-const MODES = [
-  { value: 'board', label: 'Board' },
-  { value: 'list', label: 'List' },
+const editorOpen = computed(() => creating.value || Boolean(selected.value))
+const FOCUS = [
+  { value: 'all', label: 'All' },
+  { value: 'urgent', label: 'Urgent' },
+  { value: 'important', label: 'Important' },
 ]
 
-onMounted(() => store.load())
+const visible = computed(() => {
+  const items = store.filters.include_closed ? store.items : store.open
+  if (focus.value === 'urgent') return items.filter((t) => t.urgent)
+  if (focus.value === 'important') return items.filter((t) => t.important)
+  return items
+})
+
+// Sections by due date. Within a section: urgent and important first, then earliest due.
+const SECTIONS = [
+  { key: 'overdue', label: 'Overdue' },
+  { key: 'today', label: 'Today' },
+  { key: 'tomorrow', label: 'Tomorrow' },
+  { key: 'week', label: 'Next seven days' },
+  { key: 'later', label: 'Later' },
+  { key: 'none', label: 'No date' },
+  { key: 'done', label: 'Done' },
+]
+function sectionOf(t) {
+  if (t.status === 'done' || t.status === 'dropped') return 'done'
+  const d = daysUntil(t.due_date)
+  if (d === null) return 'none'
+  if (d < 0) return 'overdue'
+  if (d === 0) return 'today'
+  if (d === 1) return 'tomorrow'
+  if (d <= 7) return 'week'
+  return 'later'
+}
+function rank(t) {
+  return (t.urgent && t.important ? 0 : t.important ? 1 : t.urgent ? 2 : 3)
+}
+const sections = computed(() => {
+  const buckets = Object.fromEntries(SECTIONS.map((s) => [s.key, []]))
+  for (const t of visible.value) buckets[sectionOf(t)].push(t)
+  return SECTIONS.map((s) => ({
+    ...s,
+    tasks: buckets[s.key].sort((a, b) => rank(a) - rank(b) || String(a.due_date || '9').localeCompare(String(b.due_date || '9')) || a.title.localeCompare(b.title)),
+  })).filter((s) => s.tasks.length)
+})
 
 async function quickAdd() {
   const title = quickTitle.value.trim()
@@ -51,7 +90,7 @@ function select(task) {
   showSlots.value = false
 }
 
-function closePanel() {
+function closeEditor() {
   creating.value = false
   selectedId.value = null
   showSlots.value = false
@@ -60,11 +99,11 @@ function closePanel() {
 async function save(body) {
   await run(async () => {
     if (creating.value) {
-      const task = await store.create(body)
-      selectedId.value = task.id
+      await store.create(body)
       creating.value = false
     } else if (selected.value) {
       await store.update(selected.value.id, body)
+      closeEditor()
     }
   })
 }
@@ -93,18 +132,6 @@ async function removeSelected() {
   })
 }
 
-function onDragStart(task, event) {
-  event.dataTransfer.setData('text/plain', task.id)
-  event.dataTransfer.effectAllowed = 'move'
-}
-
-async function onDrop(quadrant, event) {
-  const id = event.dataTransfer.getData('text/plain')
-  dragOver.value = null
-  if (!id) return
-  await run(() => store.move(id, quadrant))
-}
-
 async function run(fn) {
   busy.value = true
   error.value = ''
@@ -116,6 +143,12 @@ async function run(fn) {
     busy.value = false
   }
 }
+
+function dueLabel(key) {
+  if (key === 'today') return today()
+  if (key === 'tomorrow') return addDays(today(), 1)
+  return ''
+}
 </script>
 
 <template>
@@ -126,7 +159,7 @@ async function run(fn) {
         <input v-model="quickTitle" type="text" placeholder="Quick add to inbox" aria-label="Quick add to inbox" />
         <UiButton type="submit" :disabled="busy || !quickTitle.trim()">Add</UiButton>
       </form>
-      <UiSegmented v-model="mode" :options="MODES" />
+      <UiSegmented v-model="focus" :options="FOCUS" />
       <AreaSelect v-model="store.filters.area_id" aria-label="Area" @update:model-value="store.load()" />
       <input v-model="store.filters.q" type="search" placeholder="Search" aria-label="Search tasks" class="search" @change="store.load()" />
       <label class="check"><input v-model="store.filters.include_closed" type="checkbox" @change="store.load()" /> Show done</label>
@@ -135,76 +168,32 @@ async function run(fn) {
     <p v-if="error" class="error">{{ error }}</p>
     <p v-if="store.error" class="error">{{ store.error }}</p>
 
-    <div class="layout" :class="{ split: panelOpen && !narrow }">
-      <div class="main">
-        <div v-if="mode === 'board'" class="board">
-          <section
-            v-for="q in QUADRANTS"
-            :key="q.key"
-            class="quadrant"
-            :class="[q.key, { over: dragOver === q.key }]"
-            @dragover.prevent="dragOver = q.key"
-            @dragleave="dragOver = null"
-            @drop.prevent="onDrop(q.key, $event)"
-          >
-            <header>
-              <h2>{{ q.label }}</h2>
-              <span class="muted small">{{ q.hint }}</span>
-            </header>
-            <p v-if="!store.byQuadrant(q.key).length" class="muted small empty">Drop tasks here</p>
-            <TaskCard
-              v-for="t in store.byQuadrant(q.key)"
-              :key="t.id"
-              :task="t"
-              :selected="t.id === selectedId"
-              @select="select"
-              @complete="complete"
-              @dragstart="onDragStart"
-            />
-          </section>
-        </div>
-
-        <div v-else class="list">
-          <UiSkeleton v-if="store.loading" :lines="4" />
-          <UiEmpty v-else-if="!listItems.length" title="No tasks" hint="Quick add one above, or capture it from the top bar.">
-            <template #icon><PhCheckSquare /></template>
-          </UiEmpty>
-          <TaskCard
-            v-for="t in listItems"
-            :key="t.id"
-            :task="t"
-            :selected="t.id === selectedId"
-            :draggable="false"
-            @select="select"
-            @complete="complete"
-          />
-        </div>
+    <UiLoadGate :ready="ready" label="Loading tasks">
+      <div v-if="!sections.length" class="card">
+        <UiEmpty title="No tasks" hint="Quick add one above, or press Cmd or Ctrl plus K to capture it.">
+          <template #icon><PhCheckSquare /></template>
+        </UiEmpty>
       </div>
+      <section v-for="s in sections" :key="s.key" class="section" :class="s.key">
+        <header class="section-head">
+          <h2>{{ s.label }}</h2>
+          <span class="muted small num">{{ s.tasks.length }}</span>
+          <span v-if="dueLabel(s.key)" class="muted small num">{{ dueLabel(s.key) }}</span>
+        </header>
+        <div class="list">
+          <TaskCard v-for="t in s.tasks" :key="t.id" :task="t" :selected="t.id === selectedId" :draggable="false" @select="select" @complete="complete" />
+        </div>
+      </section>
+    </UiLoadGate>
 
-      <Transition name="panel">
-        <aside v-if="panelOpen && !narrow" class="side card">
-          <div class="card-head">
-            <h2>{{ creating ? 'New task' : 'Edit task' }}</h2>
-            <span class="meta"><button type="button" class="link-btn" @click="closePanel">Close</button></span>
-          </div>
-          <TaskForm :task="creating ? null : selected" :busy="busy" @save="save" @cancel="closePanel" @delete="removeSelected" />
-          <div v-if="selected" class="side-actions">
-            <UiButton @click="showSlots = !showSlots">{{ showSlots ? 'Hide slots' : 'Suggest a slot' }}</UiButton>
-            <span v-if="selected.source !== 'manual'" class="muted small">source: {{ selected.source }}</span>
-          </div>
-          <SlotPanel v-if="selected && showSlots" :task="selected" @scheduled="showSlots = false" @close="showSlots = false" />
-        </aside>
-      </Transition>
-    </div>
-
-    <UiSheet :open="panelOpen && narrow" :title="creating ? 'New task' : 'Edit task'" @close="closePanel">
-      <TaskForm :task="creating ? null : selected" :busy="busy" @save="save" @cancel="closePanel" @delete="removeSelected" />
+    <UiModal :open="editorOpen" :title="creating ? 'New task' : 'Edit task'" size="md" @close="closeEditor">
+      <TaskForm :task="creating ? null : selected" :busy="busy" @save="save" @cancel="closeEditor" @delete="removeSelected" />
       <div v-if="selected" class="side-actions">
         <UiButton @click="showSlots = !showSlots">{{ showSlots ? 'Hide slots' : 'Suggest a slot' }}</UiButton>
         <span v-if="selected.source !== 'manual'" class="muted small">source: {{ selected.source }}</span>
       </div>
       <SlotPanel v-if="selected && showSlots" :task="selected" @scheduled="showSlots = false" @close="showSlots = false" />
-    </UiSheet>
+    </UiModal>
   </div>
 </template>
 
@@ -213,38 +202,11 @@ async function run(fn) {
 .quick input { flex: 1; }
 .search { width: 130px; }
 .check { display: flex; align-items: center; gap: 6px; font-size: var(--fs-md); white-space: nowrap; }
-.layout { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--sp-5); align-items: start; }
-@media (min-width: 900px) { .layout.split { grid-template-columns: minmax(0, 1fr) 360px; } }
-.board { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--sp-3); }
-@media (min-width: 640px) { .board { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } }
-.quadrant {
-  --q: var(--ink-3);
-  position: relative;
-  background: var(--surface-2);
-  border: 1px solid transparent;
-  border-top: 2px solid var(--q);
-  border-radius: var(--r-lg);
-  padding: var(--sp-3);
-  min-height: 180px;
-  display: flex;
-  flex-direction: column;
-  gap: var(--sp-2);
-  transition: background-color var(--dur-hover) ease, border-color var(--dur-hover) ease;
-}
-.quadrant.do { --q: var(--danger); }
-.quadrant.schedule { --q: var(--info); }
-.quadrant.delegate { --q: var(--warn); }
-.quadrant.eliminate { --q: var(--ink-3); }
-.quadrant.over { background: var(--surface-3); border-color: var(--ink); }
-.quadrant header { display: flex; justify-content: space-between; align-items: baseline; gap: var(--sp-2); margin-bottom: 2px; }
-.quadrant h2 { font-size: var(--fs-base); }
-.empty { text-align: center; padding: var(--sp-4) 0; margin: auto 0; }
+.section { margin-bottom: var(--sp-5); }
+.section-head { display: flex; align-items: baseline; gap: var(--sp-2); margin-bottom: var(--sp-2); }
+.section-head h2 { font-size: var(--fs-md); font-weight: 600; letter-spacing: 0.01em; color: var(--ink-2); text-transform: uppercase; }
+.section.overdue .section-head h2 { color: var(--danger); }
+.section.today .section-head h2 { color: var(--ink); }
 .list { display: flex; flex-direction: column; gap: var(--sp-2); }
-.side { align-self: start; position: sticky; top: calc(var(--bar-h) + var(--sp-4)); margin: 0; }
 .side-actions { display: flex; gap: var(--sp-2); align-items: center; margin-top: var(--sp-4); }
-.panel-enter-active { transition: opacity var(--dur-panel) var(--ease-out), transform var(--dur-panel) var(--ease-out); }
-.panel-leave-active { transition: opacity var(--dur-hover) ease; }
-.panel-enter-from { opacity: 0; transform: translateX(8px); }
-.panel-leave-to { opacity: 0; }
-@media (prefers-reduced-motion: reduce) { .panel-enter-from { transform: none; } }
 </style>

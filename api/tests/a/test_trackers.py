@@ -92,3 +92,21 @@ def test_week_grid_completion_and_streaks(client, headers, monkeypatch):
     client.put(f"/api/trackers/{n['id']}/entries", json={"date": "2026-06-03", "value": 5}, headers=headers)
     hist = client.get(f"/api/trackers/{n['id']}/history?all=1", headers=headers).get_json()["data"]
     assert hist["from"] == "2026-06-01" and hist["points"][0]["value"] == 5 and hist["weeks"] == len(hist["weekly"]) >= 15
+
+
+def test_series_covers_every_tracker_on_one_range(client, headers):
+    b = client.post("/api/trackers", json={"name": "Sauna", "type": "daily_bool"}, headers=headers).get_json()["data"]
+    w = client.post("/api/trackers", json={"name": "Weight", "type": "numeric", "unit": "kg", "target_value": 80, "target_period": "day"}, headers=headers).get_json()["data"]
+    client.post(f"/api/trackers/{b['id']}/tick", json={"date": "2026-09-14"}, headers=headers)
+    client.put(f"/api/trackers/{w['id']}/entries", json={"date": "2026-09-14", "value": 81.5}, headers=headers)
+    client.put(f"/api/trackers/{w['id']}/entries", json={"date": "2026-07-01", "value": 84}, headers=headers)
+    data = client.get("/api/trackers/series?weeks=2", headers=headers).get_json()["data"]
+    assert data["weeks"] == 2 and {s["tracker"]["name"] for s in data["series"]} == {"Sauna", "Weight"}
+    sauna = next(s for s in data["series"] if s["tracker"]["name"] == "Sauna")
+    assert sauna["weekly"][-1]["met_days"] == 1 and len(sauna["weekly"]) == 2
+    weight = next(s for s in data["series"] if s["tracker"]["name"] == "Weight")
+    assert [p["value"] for p in weight["points"]] == [81.5] and weight["weekly"][-1]["met_days"] is None
+    data = client.get("/api/trackers/series?weeks=all", headers=headers).get_json()["data"]
+    assert data["from"] <= "2026-06-29" and data["weeks"] >= 11
+    weight = next(s for s in data["series"] if s["tracker"]["name"] == "Weight")
+    assert [p["value"] for p in weight["points"]] == [84, 81.5]

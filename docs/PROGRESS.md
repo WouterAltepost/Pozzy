@@ -1,5 +1,17 @@
 # Pozzy progress
 
+## Capture dialog, tasks list, dialogs everywhere, loading gate, live habits chart, 2026-09-15 (deployed)
+
+Five notes from Wouter.
+
+- Capture is a button in the top bar (and Cmd or Ctrl plus K) that opens a dialog with the whole flow: write, proposal, adjust, confirm. The Capture page keeps the inbox. `components/CaptureBar.vue` rewritten, uses `ProposalEditor` inside `UiModal`.
+- Tasks is one list grouped by due date (Overdue, Today, Tomorrow, Next seven days, Later, No date, Done) with an All / Urgent / Important switch and urgent and important chips on each row. Board, quadrant drag and drop and the side panel are gone (docs/V2.md records how to get the board back). Editor in a dialog.
+- New `UiModal` (centred dialog from 700px, sheet below) replaces the side panels on Tasks, Agenda, Mail and Study. Softer motion: dialogs settle on a spring curve, route changes fade and rise, new tokens `--dur-modal`, `--dur-route`, `--ease-spring`. Motion spec updated in docs/briefs/DESIGN.md.
+- `UiLoadGate` plus `useReady` / `useLoadGateHost` / `useLoadTask` in `composables/useReady.js`: the homepage waits for all ten widgets and reveals them together behind a breathing mark; Agenda, Tasks, Goals, Mail, Tracking, Hours, Capture, Study, Notes, Review and Settings gate on their first loads. Skeletons on those pages are replaced. An 8 second guard opens the gate regardless.
+- Tracking: `GET /api/trackers/series?weeks=N|all` returns every tracker's daily points and weekly rows (with `met_days` for daily habits) on one range. `TrackerSeriesChart.vue` sits at the top of the page: percent of target per week, one colour per habit, legend toggles persisted in localStorage, range 4w / 12w / 26w / All, hover tooltip with real values. It refetches whenever the week grid reloads (ticks, entries). Test in `api/tests/a/test_trackers.py` (215 green).
+
+Verification: Playwright on the local stack against Supabase. Home shows the figure with content hidden, then reveals nine rendered widgets together (the tenth has nothing to show). Capture dialog opens from the button and from Cmd plus K, focuses the textarea, closes on Escape. Task, event and mail dialogs open; tasks group into sections. Live chart renders in both themes, a legend chip hides its series, the tooltip follows the pointer. Phone: capture opens as a sheet, no overflow. Zero console errors, zero failed API calls. Screenshots: docs/design-screens/home-loading-*, capture-dialog-*, capture-sheet-*, tasks-*, tasks-dialog-*, agenda-dialog-*, mail-dialog-*, trackers-desktop-*.
+
 ## Tracker charts, agenda drag-to-create, spend rounding, 2026-09-15 (deployed)
 
 - Tracking: clicking a habit name opens its chart for the whole run. `GET /api/trackers/<id>/history?all=1` starts at the week of the tracker's creation or its earliest entry, whichever is older, and returns `weeks` alongside `points` and `weekly`. Value trackers plot daily values, bool and count trackers plot weekly totals against the weekly target (7 for daily habits). LineChart now sizes its viewBox to the container instead of stretching. Test in `api/tests/a/test_trackers.py`.

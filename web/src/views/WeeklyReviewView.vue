@@ -1,8 +1,10 @@
 <script setup>
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { PhX } from '@phosphor-icons/vue'
 import WeekNav from '../components/shared/WeekNav.vue'
 import PageHeader from '../components/ui/PageHeader.vue'
+import UiLoadGate from '../components/ui/UiLoadGate.vue'
+import { useReady } from '../composables/useReady'
 import UiButton from '../components/ui/UiButton.vue'
 import UiField from '../components/ui/UiField.vue'
 import { formatDateTime } from '../lib/dates'
@@ -29,10 +31,7 @@ watch(review, (r) => {
   createdGoals.value = []
 }, { immediate: true })
 
-onMounted(() => {
-  areas.load()
-  store.load()
-})
+const ready = useReady(() => Promise.all([areas.load(), store.load()]))
 
 async function run(fn) {
   error.value = ''
@@ -80,6 +79,7 @@ function finalize() {
       <WeekNav :week-start="store.week" @change="changeWeek" />
     </PageHeader>
     <p v-if="error || store.error" class="error">{{ error || store.error }}</p>
+    <UiLoadGate :ready="ready" label="Loading review">
 
     <div v-if="!review && !store.loading" class="card">
       <p class="muted">No review for this week yet. The draft job runs Sunday 18:00, or generate it now.</p>
@@ -160,6 +160,7 @@ function finalize() {
         <p v-if="createdGoals.length" class="ok small created">Created {{ createdGoals.length }} goal(s) for next week. <RouterLink :to="{ name: 'goals' }">Open goals</RouterLink></p>
       </section>
     </template>
+    </UiLoadGate>
   </div>
 </template>
 

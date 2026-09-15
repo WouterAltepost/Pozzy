@@ -1,7 +1,10 @@
 <script setup>
+import { useLoadTask } from '../../composables/useReady'
 import { useWidgetLink } from '../../composables/useWidgetLink'
 import { computed, onMounted, ref } from 'vue'
 import { getSpend } from '../../api/ai'
+
+const settle = useLoadTask()
 
 const data = ref(null)
 const failed = ref(false)
@@ -20,7 +23,7 @@ async function load() {
   }
 }
 
-onMounted(load)
+onMounted(() => load().finally(settle))
 const link = useWidgetLink('settings')
 </script>
 

@@ -86,7 +86,11 @@ watch(() => route.fullPath, () => (menuOpen.value = false))
         </RouterLink>
       </nav>
       <main class="page">
-        <RouterView />
+        <RouterView v-slot="{ Component }">
+          <Transition name="route" mode="out-in">
+            <component :is="Component" :key="route.name" />
+          </Transition>
+        </RouterView>
       </main>
     </div>
 
@@ -110,6 +114,11 @@ watch(() => route.fullPath, () => (menuOpen.value = false))
 
 <style scoped>
 .shell { min-height: 100dvh; display: flex; flex-direction: column; }
+.route-enter-active { transition: opacity var(--dur-route) var(--ease-out), transform var(--dur-route) var(--ease-spring); }
+.route-leave-active { transition: opacity 90ms ease; }
+.route-enter-from { opacity: 0; transform: translateY(8px); }
+.route-leave-to { opacity: 0; }
+@media (prefers-reduced-motion: reduce) { .route-enter-from { transform: none; } }
 .topbar {
   position: sticky;
   top: 0;
