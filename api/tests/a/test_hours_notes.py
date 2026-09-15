@@ -6,9 +6,10 @@ from app.utils import dates
 def test_hours_crud_and_week_summary(client, headers, areas, monkeypatch):
     today = date(2026, 9, 16)
     monkeypatch.setattr(dates, "today_local", lambda now=None: today)
-    from app.modules.hours import service
+    from app.modules.hours import routes, service
 
     monkeypatch.setattr(service, "today_local", lambda now=None: today)
+    monkeypatch.setattr(routes, "today_local", lambda now=None: today)  # the route defaults a missing date too
 
     res = client.post("/api/hours", json={"date": "2026-09-14", "minutes": 120, "area_id": areas["Work"], "tags": ["UDefine"]}, headers=headers)
     assert res.status_code == 201, res.get_json()

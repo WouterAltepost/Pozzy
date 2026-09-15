@@ -21,7 +21,7 @@ OWN-WORLD: stone housing (#F2F1ED) with raised bone panels (#FBFAF8) in light; g
 
 STORY: open the app, the date and today's three do's read first, then what the calendar and inbox demand; every control looks the same everywhere so nothing needs relearning; failures and empty states say what they are.
 
-FIRST VIEWPORT (desktop 1440): a 56px top bar with the red mark and wordmark left, the capture field centred at 480px, the user and log out right. A 232px left rail with the twelve routes (icon plus label) under the bar. Content at max 1180px: the display date as the only h1, then the widget grid, two columns, three do's top left and today's events top right, each widget a bone panel with a hairline title row.
+FIRST VIEWPORT: at desktop 1440, a 56px top bar with the red mark and wordmark left, the capture field centred at 480px, the user and log out right. A 232px left rail with the twelve routes (icon plus label) under the bar. Content at max 1180px: the display date as the only h1, then the widget grid, two columns, three do's top left and today's events top right, each widget a bone panel with a hairline title row.
 
 FORM: a Rams-era desk instrument fused with a paper week planner; position 1 of 7 on the derived list (rubber stamp, bullet journal, Swiss timetable, school agenda, switchboard, mission console, Rams panel); concept-seed roll skipped per the kickoff brief (option 3, no decision page).
 

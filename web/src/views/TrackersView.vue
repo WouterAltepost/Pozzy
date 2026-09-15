@@ -183,8 +183,7 @@ tr.inactive { opacity: 0.55; }
 }
 .tick.value { width: 48px; }
 .tick:active { transform: scale(0.94); }
-.mark { width: 14px; height: 14px; animation: pop var(--dur-press) var(--ease-out); }
-@keyframes pop { from { transform: scale(0.85); } to { transform: scale(1); } }
+.mark { width: 14px; height: 14px; }
 .cell.has .tick { color: var(--ink); background: var(--surface-2); }
 .cell.met .tick { background: var(--ok-soft); border-color: transparent; color: var(--ok); }
 .cell.today .tick { border-color: var(--brand); }
@@ -195,5 +194,4 @@ tr.inactive { opacity: 0.55; }
 .link-btn.danger { color: var(--danger); }
 .chart-row td { padding: var(--sp-3) 0 var(--sp-4); text-align: left; }
 .sums { display: flex; flex-wrap: wrap; gap: var(--sp-2); margin-top: 4px; }
-@media (prefers-reduced-motion: reduce) { .mark { animation: none; } }
 </style>

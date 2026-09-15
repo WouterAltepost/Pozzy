@@ -209,9 +209,9 @@ async function run(fn) {
 </template>
 
 <style scoped>
-.quick { display: flex; gap: var(--sp-2); flex: 1 1 260px; min-width: 200px; }
+.quick { display: flex; gap: var(--sp-2); flex: 0 1 240px; min-width: 180px; }
 .quick input { flex: 1; }
-.search { width: 150px; }
+.search { width: 130px; }
 .check { display: flex; align-items: center; gap: 6px; font-size: var(--fs-md); white-space: nowrap; }
 .layout { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--sp-5); align-items: start; }
 @media (min-width: 900px) { .layout.split { grid-template-columns: minmax(0, 1fr) 360px; } }

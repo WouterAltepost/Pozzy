@@ -1,5 +1,32 @@
 # Pozzy progress
 
+## Design pass, 2026-09-15 (branch main, not yet deployed)
+
+Presentation only: no API, store, router, logic or data changes. Spec in docs/briefs/DESIGN.md, product record in PRODUCT.md, direction contract in the impeccable surface brief for web/src/App.vue. Backend suite 209 green, `npm run build` green, `impeccable detect` reports only the deliberate Geist choice.
+
+What changed:
+- Tokens in `web/src/style.css` (colour light and dark, type scale, spacing, radii, shadows, motion, layers), Geist self-hosted from `web/public/fonts`, Phosphor icons (`@phosphor-icons/vue`, the one new dependency).
+- Shared components under `web/src/components/ui/`: UiButton, UiField, UiCard, UiBadge, UiEmpty, UiSkeleton, UiSegmented, UiSheet (bottom sheet with drag to dismiss), UiToast plus `useToast`, PageHeader, and `useMediaQuery`. Every view uses them; the 47 hard-coded colours and the six competing toolbar and header patterns are gone.
+- App shell: 56px top bar with the mark, the capture field and the user; a 232px rail from 1024px; a nav sheet below that. Editors (task, event, mail detail, application) are a sticky side panel on desktop and a sheet on the phone.
+- All twelve views and the login screen rewritten onto the vocabulary; ten homepage widgets share one card frame with a title row and a compact empty state.
+- Motion: press feedback, hover on fine pointers only, popover from the capture field, side panel slide, sheet on the drawer curve, drag lift on the Eisenhower board and application kanban, toast. All transform and opacity, all under 300ms except the sheet, reduced motion honoured everywhere.
+- PWA: icons rendered from Group.png on the bone field, favicon from favicon-svg.svg, manifest and theme colours from the tokens.
+
+Decisions taken at the (skipped) image gate, option 3:
+- Both colour schemes, following the system, no toggle.
+- Comfortable density, closer to compact than the inspo.
+- Plain CSS tokens and shared components; one dependency for icons, no UI library.
+- Desktop first with a 390px pass on every view.
+- Brand red reserved for the logo, the today marker, the current time line, the running timer lamp and the focus ring; interactive accent is ink. Reason: the seeded Work area is red.
+- Geist as the single self-hosted family. The impeccable detector flags it as overused; kept because this is an Operate surface where a workhorse sans with tabular figures is the right tool and the character comes from the logo and layout.
+- Asset discrepancy: `Branding/pozzy-svg.svg` is green (#2E7338) while the other three assets are red. The UI uses favicon-svg.svg and pozzy.png; the SVG wordmark is unused until confirmed.
+
+Verification: 52 screenshots in docs/design-screens (12 routes plus login, 1440 and 390, light and dark) captured with Playwright against the local API and real Supabase data. No horizontal scroll at 390 on any route, zero console errors, zero failed API calls, keyboard focus visible on the first eight tab stops of the shell. Animation review against the review-animations standard: one finding (a keyframe on the tracker tick toggle) fixed; verdict approve.
+
+Deferred to docs/V2.md: replacing window.prompt and window.confirm with inline confirms (logic change), a theme toggle, the Work area colour, the wordmark SVG.
+
+Deployment: waiting for the go after the screenshot review.
+
 ## v1 released, 2026-09-14
 
 Live:
