@@ -67,7 +67,7 @@ export const useTrackersStore = defineStore('trackers', {
       await this.load()
       delete this.histories[id]
     },
-    async history(id, weeks = 8) {
+    async history(id, weeks = 'all') {
       if (!this.histories[id]) this.histories[id] = await trackersApi.trackerHistory(id, weeks)
       return this.histories[id]
     },

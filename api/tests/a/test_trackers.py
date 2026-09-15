@@ -88,3 +88,7 @@ def test_week_grid_completion_and_streaks(client, headers, monkeypatch):
     hist = client.get(f"/api/trackers/{n['id']}/history?weeks=2", headers=headers).get_json()["data"]
     assert [p["value"] for p in hist["points"]] == [7.5, 6]
     assert len(hist["weekly"]) == 2 and hist["weekly"][1]["avg"] == 6.75
+    # Whole run: an entry backdated far before creation widens the range to that week.
+    client.put(f"/api/trackers/{n['id']}/entries", json={"date": "2026-06-03", "value": 5}, headers=headers)
+    hist = client.get(f"/api/trackers/{n['id']}/history?all=1", headers=headers).get_json()["data"]
+    assert hist["from"] == "2026-06-01" and hist["points"][0]["value"] == 5 and hist["weeks"] == len(hist["weekly"]) >= 15

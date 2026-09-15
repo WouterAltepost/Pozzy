@@ -1,6 +1,6 @@
 <script setup>
 import { onMounted, ref } from 'vue'
-import { PhChartLineUp, PhCheck } from '@phosphor-icons/vue'
+import { PhCaretDown, PhChartLineUp, PhCheck } from '@phosphor-icons/vue'
 import LineChart from '../components/trackers/LineChart.vue'
 import TrackerForm from '../components/trackers/TrackerForm.vue'
 import WeekNav from '../components/shared/WeekNav.vue'
@@ -39,14 +39,41 @@ async function save(body) {
   })
 }
 
+// Clicking a habit opens its chart for the whole run since it was created.
 async function toggleChart(t) {
   if (charts.value[t.id]) {
     delete charts.value[t.id]
     return
   }
   await run(async () => {
-    charts.value[t.id] = await store.history(t.id, 8)
+    charts.value[t.id] = await store.history(t.id, 'all')
   })
+}
+
+// Value trackers plot the daily values; bool and count trackers plot the weekly totals once
+// there are at least three weeks, and the daily values before that so a young habit still shows a line.
+function weeklyChart(t, h) {
+  return isGrid(t) && h.weeks >= 3
+}
+function chartPoints(t, h) {
+  if (weeklyChart(t, h)) return h.weekly.map((w) => ({ date: w.week_start, value: w.sum }))
+  return h.points
+}
+function chartTarget(t, h) {
+  if (weeklyChart(t, h)) return t.type === 'daily_bool' ? 7 : t.target_value || null
+  return t.target_period === 'day' ? t.target_value : null
+}
+function chartSummary(t, h) {
+  const n = h.points.length
+  const since = h.from
+  if (t.type === 'daily_bool') {
+    const done = h.points.filter((p) => p.value >= 1).length
+    return `${done} of ${n} days done since ${since}, ${h.weeks} weeks`
+  }
+  const total = h.points.reduce((a, p) => a + (p.value || 0), 0)
+  const avg = n ? Math.round((total / n) * 10) / 10 : 0
+  if (t.type === 'weekly_count') return `${Math.round(total * 10) / 10} total since ${since}, ${h.weeks} weeks`
+  return `${n} entries since ${since}, average ${avg}${t.unit ? ' ' + t.unit : ''}`
 }
 
 function promptValue(t, day) {
@@ -58,7 +85,7 @@ function promptValue(t, day) {
   if (Number.isNaN(value)) return
   run(async () => {
     await store.setEntry(t.id, day.date, value)
-    if (charts.value[t.id]) charts.value[t.id] = await store.history(t.id, 8)
+    if (charts.value[t.id]) charts.value[t.id] = await store.history(t.id, 'all')
   })
 }
 
@@ -117,7 +144,9 @@ function remove(t) {
             <template v-for="t in group.trackers" :key="t.id">
               <tr :class="{ inactive: !t.active }">
                 <td class="name">
-                  <div class="tname">{{ t.name }}</div>
+                  <button type="button" class="tname" :aria-expanded="Boolean(charts[t.id])" :title="charts[t.id] ? 'Hide chart' : 'Show chart since created'" @click="toggleChart(t)">
+                    {{ t.name }}<PhCaretDown class="caret" :class="{ open: charts[t.id] }" aria-hidden="true" />
+                  </button>
                   <div class="muted xs">
                     {{ t.type.replace('_', ' ') }}<span v-if="t.target_value && t.type !== 'daily_bool'">, target {{ t.target_value }}{{ t.unit ? ' ' + t.unit : '' }} per {{ t.target_period }}</span>
                   </div>
@@ -135,7 +164,7 @@ function remove(t) {
                 </td>
                 <td class="num">{{ t.streak }}</td>
                 <td class="actions">
-                  <button v-if="!isGrid(t)" type="button" class="link-btn" @click="toggleChart(t)">{{ charts[t.id] ? 'hide chart' : 'chart' }}</button>
+                  <button type="button" class="link-btn" @click="toggleChart(t)">{{ charts[t.id] ? 'hide chart' : 'chart' }}</button>
                   <button type="button" class="link-btn" @click="editing = t">edit</button>
                   <button type="button" class="link-btn" @click="archive(t)">{{ t.active ? 'archive' : 'restore' }}</button>
                   <button type="button" class="link-btn danger" @click="remove(t)">delete</button>
@@ -143,9 +172,12 @@ function remove(t) {
               </tr>
               <tr v-if="charts[t.id]" class="chart-row">
                 <td :colspan="11">
-                  <LineChart :points="charts[t.id].points" :target="t.target_period === 'day' ? t.target_value : null" :unit="t.unit || ''" />
-                  <div class="muted xs sums">Last 8 weeks, weekly sums:
-                    <span v-for="w in charts[t.id].weekly" :key="w.week_start" class="num">{{ w.week_start.slice(5) }}: {{ Math.round(w.sum * 10) / 10 }}</span>
+                  <LineChart :points="chartPoints(t, charts[t.id])" :target="chartTarget(t, charts[t.id])" :unit="weeklyChart(t, charts[t.id]) ? 'per week' : t.unit || ''" />
+                  <div class="muted xs sums">
+                    <span>{{ chartSummary(t, charts[t.id]) }}</span>
+                    <span v-if="!isGrid(t)" class="weeks">Weekly sums:
+                      <span v-for="w in charts[t.id].weekly.slice(-8)" :key="w.week_start" class="num">{{ w.week_start.slice(5) }}: {{ Math.round(w.sum * 10) / 10 }}</span>
+                    </span>
                   </div>
                 </td>
               </tr>
@@ -165,7 +197,10 @@ function remove(t) {
 .grid th.today { color: var(--brand); }
 .grid td { text-align: center; padding: 6px 4px; }
 .grid td.name { text-align: left; min-width: 150px; padding-left: 0; }
-.tname { font-weight: 500; }
+.tname { font: inherit; font-weight: 500; color: var(--ink); background: none; border: 0; padding: 0; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; text-align: left; }
+.caret { width: 12px; height: 12px; color: var(--ink-3); transition: transform var(--dur-hover) var(--ease-out); }
+.caret.open { transform: rotate(180deg); }
+@media (hover: hover) and (pointer: fine) { .tname:hover { text-decoration: underline; text-underline-offset: 3px; } }
 tr.inactive { opacity: 0.55; }
 .tick {
   width: 34px;
@@ -193,5 +228,6 @@ tr.inactive { opacity: 0.55; }
 .actions .link-btn { margin-left: var(--sp-2); }
 .link-btn.danger { color: var(--danger); }
 .chart-row td { padding: var(--sp-3) 0 var(--sp-4); text-align: left; }
-.sums { display: flex; flex-wrap: wrap; gap: var(--sp-2); margin-top: 4px; }
+.sums { display: flex; flex-wrap: wrap; gap: var(--sp-3); margin-top: 4px; }
+.weeks { display: inline-flex; flex-wrap: wrap; gap: var(--sp-2); }
 </style>

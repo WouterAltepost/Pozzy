@@ -1,7 +1,7 @@
 """Trackers: habits per area, weekly grid, streaks, history for charts."""
 from datetime import date, timedelta
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 
 from ...extensions import db
 from ...models import Area, Tracker, TrackerEntry
@@ -174,8 +174,15 @@ def week_grid(week_start: date | None = None, include_inactive: bool = False) ->
     return {"week_start": start.isoformat(), "week_end": end.isoformat(), "today": today.isoformat(), "trackers": rows}
 
 
-def history(tracker: Tracker, weeks: int = 8) -> dict:
+def history(tracker: Tracker, weeks: int | None = 8) -> dict:
+    """Daily points and weekly sums. weeks=None means since the tracker was created
+    (or its earliest entry, whichever is older), so the chart shows the whole run."""
     today = today_local()
+    if weeks is None:
+        first_entry = db.session.scalar(select(func.min(TrackerEntry.date)).where(TrackerEntry.tracker_id == tracker.id))
+        created = tracker.created_at.date() if tracker.created_at else today
+        origin = min([d for d in (created, first_entry) if d is not None])
+        weeks = max(1, (week_start_of(today) - week_start_of(origin)).days // 7 + 1)
     start = week_start_of(today) - timedelta(days=7 * (weeks - 1))
     by_date = entries_between([tracker.id], start, today).get(tracker.id, {})
     points = [{"date": d.isoformat(), "value": e.value, "note": e.note} for d, e in sorted(by_date.items())]
@@ -184,4 +191,4 @@ def history(tracker: Tracker, weeks: int = 8) -> dict:
         ws = start + timedelta(days=7 * i)
         vals = [e.value for d, e in by_date.items() if ws <= d < ws + timedelta(days=7)]
         weekly.append({"week_start": ws.isoformat(), "sum": sum(vals), "avg": (sum(vals) / len(vals)) if vals else None, "count": len(vals)})
-    return {"tracker": tracker.to_dict(), "from": start.isoformat(), "to": today.isoformat(), "points": points, "weekly": weekly}
+    return {"tracker": tracker.to_dict(), "from": start.isoformat(), "to": today.isoformat(), "weeks": weeks, "points": points, "weekly": weekly}

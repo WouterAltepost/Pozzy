@@ -1,5 +1,13 @@
 # Pozzy progress
 
+## Tracker charts, agenda drag-to-create, spend rounding, 2026-09-15 (deployed)
+
+- Tracking: clicking a habit name opens its chart for the whole run. `GET /api/trackers/<id>/history?all=1` starts at the week of the tracker's creation or its earliest entry, whichever is older, and returns `weeks` alongside `points` and `weekly`. Value trackers plot daily values, bool and count trackers plot weekly totals against the weekly target (7 for daily habits). LineChart now sizes its viewBox to the container instead of stretching. Test in `api/tests/a/test_trackers.py`.
+- Agenda: press and drag on empty grid selects a range in 15 minute steps and opens a quick popover (`components/agenda/EventPopover.vue`) beside the column with title, day, start, end, calendar and Create; "More options" opens the full side panel with the same values. A plain click gives a one hour slot from the nearest half hour as before. Touch keeps the tap-to-sheet flow. Existing events still open in the side panel. Store, API and the calendar write path are unchanged.
+- AI spend: every amount shows two decimals.
+
+Verification: Playwright against the local API and Supabase data. Drag from 18:00 to 19:30 on a free column produced a ghost "18:00 to 19:30" and a popover with those times; a click at 14:10 gave 14:00 to 15:00; the popover flips left on the last column, clamps inside the grid at the bottom, closes on Escape, and "More options" carries the title into the side panel. A tap at 390px opens the sheet, not the popover. Tracker chart row opens on the habit name in light and dark. Spend widget reads "$0.58 this month of $10.00, $0.06 today". No console errors, no failed API calls, backend 214 green. Screenshots: docs/design-screens/agenda-drag-popover-*, agenda-more-panel-*, agenda-popover-bottom-*, trackers-chart-*.
+
 ## Briefing replies, glass cards, widget links, 2026-09-15 (deployed)
 
 Three notes from Wouter after the design pass.

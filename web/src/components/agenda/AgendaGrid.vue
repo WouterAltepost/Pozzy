@@ -1,16 +1,20 @@
 <script setup>
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { formatTime, shortDay, today } from '../../lib/dates'
 
 // Week and day views share this grid: one column per day, an all-day row on top,
 // timed events absolutely positioned between HOUR_START and HOUR_END. Scheduled
-// tasks are overlaid as dashed blocks. HOUR_PX and the click-to-create math are unchanged.
+// tasks are overlaid as dashed blocks. Press and drag on empty space (mouse or pen)
+// selects a range in 15 minute steps and emits `create` with start and end; a plain
+// click or a tap creates a one hour slot at the 30 minute mark. `draft` keeps the
+// selection visible while the parent shows its popover.
 const props = defineProps({
   days: { type: Array, required: true },
   events: { type: Array, default: () => [] },
   tasks: { type: Array, default: () => [] },
   hourStart: { type: Number, default: 6 },
   hourEnd: { type: Number, default: 23 },
+  draft: { type: Object, default: null }, // { day, from, to } in minutes from midnight
 })
 const emit = defineEmits(['select-event', 'create'])
 
@@ -94,12 +98,82 @@ function blockStyle(b) {
   return { top: `${b.top}px`, height: `${b.height}px`, left: `${b.lane * width}%`, width: `calc(${width}% - 2px)` }
 }
 
+let suppressClick = false
+
 function onEmptyClick(evt, day) {
+  if (suppressClick) {
+    suppressClick = false
+    return
+  }
   if (evt.target !== evt.currentTarget) return
   const minutes = props.hourStart * 60 + (evt.offsetY / HOUR_PX) * 60
   const hour = Math.floor(minutes / 60)
   const minute = Math.floor((minutes % 60) / 30) * 30
-  emit('create', { day, hour, minute })
+  emit('create', { day, hour, minute, endHour: Math.min(props.hourEnd, hour + 1), endMinute: minute, anchor: anchorFor(evt.currentTarget, ((hour - props.hourStart) * 60 + minute) / 60 * HOUR_PX) })
+}
+
+// Drag selection. Snaps to 15 minutes; a press without movement behaves like a click.
+const drag = ref(null) // { day, origin, from, to }
+const SNAP = 15
+
+function snap(minutes) {
+  return Math.round(minutes / SNAP) * SNAP
+}
+function minutesAt(evt, col) {
+  const y = evt.clientY - col.getBoundingClientRect().top
+  const minutes = props.hourStart * 60 + (y / HOUR_PX) * 60
+  return Math.max(props.hourStart * 60, Math.min(props.hourEnd * 60, minutes))
+}
+function anchorFor(col, top) {
+  // Position relative to the grid element, so the parent can place a popover next to the selection.
+  const grid = col.closest('.grid')
+  const g = grid.getBoundingClientRect()
+  const c = col.getBoundingClientRect()
+  return { left: c.left - g.left, right: c.right - g.left, top: c.top - g.top + top, gridWidth: g.width, gridHeight: g.height }
+}
+
+function onPointerDown(evt, day) {
+  if (evt.pointerType === 'touch' || evt.button !== 0 || evt.target !== evt.currentTarget) return
+  const at = snap(minutesAt(evt, evt.currentTarget))
+  drag.value = { day, origin: at, from: at, to: at, moved: false }
+  evt.currentTarget.setPointerCapture(evt.pointerId)
+}
+function onPointerMove(evt) {
+  if (!drag.value) return
+  const at = snap(minutesAt(evt, evt.currentTarget))
+  const d = drag.value
+  if (at !== d.origin) d.moved = true
+  d.from = Math.min(d.origin, at)
+  d.to = Math.max(d.origin, at)
+}
+function onPointerUp(evt) {
+  const d = drag.value
+  if (!d) return
+  drag.value = null
+  suppressClick = true
+  let from = d.from
+  let to = d.to
+  if (!d.moved || to - from < SNAP) {
+    // Plain press: one hour from the nearest half hour, same as a click.
+    from = Math.floor(d.origin / 30) * 30
+    to = Math.min(props.hourEnd * 60, from + 60)
+  }
+  const top = ((from - props.hourStart * 60) / 60) * HOUR_PX
+  emit('create', { day: d.day, hour: Math.floor(from / 60), minute: from % 60, endHour: Math.floor(to / 60), endMinute: to % 60, anchor: anchorFor(evt.currentTarget, top) })
+}
+function onPointerCancel() {
+  drag.value = null
+}
+
+function ghost(day) {
+  const d = drag.value?.day === day && drag.value.moved ? drag.value : props.draft?.day === day ? props.draft : null
+  if (!d || d.to <= d.from) return null
+  const top = ((d.from - props.hourStart * 60) / 60) * HOUR_PX
+  const height = Math.max(((d.to - d.from) / 60) * HOUR_PX, 12)
+  return { top: `${top}px`, height: `${height}px`, label: `${timeOf(d.from)} to ${timeOf(d.to)}` }
+}
+function timeOf(minutes) {
+  return `${String(Math.floor(minutes / 60)).padStart(2, '0')}:${String(minutes % 60).padStart(2, '0')}`
 }
 
 function timeLabel(h) {
@@ -127,8 +201,13 @@ function timeLabel(h) {
       :class="{ today: c.isToday }"
       :style="{ height: gridHeight + 'px' }"
       @click="onEmptyClick($event, c.day)"
+      @pointerdown="onPointerDown($event, c.day)"
+      @pointermove="onPointerMove"
+      @pointerup="onPointerUp"
+      @pointercancel="onPointerCancel"
     >
       <div v-for="h in hours" :key="h" class="hour-line" :style="{ top: (h - hourStart) * HOUR_PX + 'px' }"></div>
+      <div v-if="ghost(c.day)" class="ghost" :style="{ top: ghost(c.day).top, height: ghost(c.day).height }"><span class="num">{{ ghost(c.day).label }}</span></div>
       <div v-if="c.isToday && nowLine !== null" class="now" :style="{ top: nowLine + 'px' }"></div>
       <template v-for="b in c.timed" :key="b.key">
         <button v-if="b.kind === 'event'" type="button" class="block event" :class="{ linked: b.item.task_id, recurring: b.item.recurrence_id }" :style="blockStyle(b)" :title="b.item.title" @click.stop="emit('select-event', b.item)">
@@ -164,7 +243,8 @@ function timeLabel(h) {
 .chip { font: inherit; font-size: var(--fs-xs); font-weight: 500; text-align: left; border: 0; border-radius: var(--r-sm); padding: 2px 6px; background: var(--surface-3); color: var(--ink); overflow: hidden; white-space: nowrap; text-overflow: ellipsis; cursor: pointer; }
 .gutter { position: relative; }
 .hour-label { font-size: var(--fs-xs); color: var(--ink-3); text-align: right; padding-right: 6px; transform: translateY(-0.5em); }
-.col { position: relative; border-left: 1px solid var(--line); cursor: crosshair; }
+.col { position: relative; border-left: 1px solid var(--line); cursor: crosshair; touch-action: pan-y; user-select: none; }
+.ghost { position: absolute; left: 1px; right: 1px; z-index: 2; border-radius: var(--r-sm); background: color-mix(in srgb, var(--ink) 10%, transparent); border: 1px dashed var(--ink-3); padding: 2px 6px; font-size: var(--fs-xs); color: var(--ink-2); pointer-events: none; overflow: hidden; }
 .col.today { background: color-mix(in srgb, var(--brand-soft) 30%, transparent); }
 .hour-line { position: absolute; left: 0; right: 0; border-top: 1px solid var(--line); opacity: 0.7; pointer-events: none; }
 .now { position: absolute; left: 0; right: 0; border-top: 2px solid var(--brand); z-index: 3; pointer-events: none; }

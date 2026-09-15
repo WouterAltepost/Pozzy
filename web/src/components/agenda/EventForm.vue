@@ -8,7 +8,7 @@ import UiField from '../ui/UiField.vue'
 // inputs and sent as ISO strings with the browser offset.
 const props = defineProps({
   event: { type: Object, default: null },
-  defaults: { type: Object, default: () => ({}) }, // { day, hour, minute, allDay }
+  defaults: { type: Object, default: () => ({}) }, // { day, hour, minute, endHour, endMinute, allDay }
   calendars: { type: Array, default: () => [] }, // [{ name, url }]
   defaultCalendarUrl: { type: String, default: '' },
   saving: { type: Boolean, default: false },
@@ -50,12 +50,12 @@ function reset() {
     const day = d.day || toDay(new Date())
     const hour = d.hour ?? 9
     const minute = d.minute ?? 0
-    form.title = ''
+    form.title = d.title || ''
     form.all_day = !!d.allDay
     form.startDay = day
     form.endDay = day
     form.startTime = `${pad(hour)}:${pad(minute)}`
-    const endMinutes = hour * 60 + minute + 60
+    const endMinutes = d.endHour != null ? d.endHour * 60 + (d.endMinute ?? 0) : hour * 60 + minute + 60
     form.endTime = `${pad(Math.min(23, Math.floor(endMinutes / 60)))}:${pad(endMinutes % 60)}`
     form.location = ''
     form.description = ''

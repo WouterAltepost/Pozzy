@@ -1,15 +1,28 @@
 <script setup>
-import { computed } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 
 // Tiny inline SVG line chart. points: [{ date, value }]. No library, per BUILD.md.
-// Geometry is unchanged from v1; only colours moved to tokens.
+// The viewBox follows the container width so text and dots never stretch.
 const props = defineProps({
   points: { type: Array, default: () => [] },
   target: { type: Number, default: null },
   unit: { type: String, default: '' },
-  width: { type: Number, default: 520 },
   height: { type: Number, default: 140 },
 })
+
+const wrap = ref(null)
+const width = ref(520)
+let observer = null
+onMounted(() => {
+  if (!wrap.value) return
+  width.value = Math.max(240, wrap.value.clientWidth || 520)
+  observer = new ResizeObserver((entries) => {
+    const w = entries[0]?.contentRect?.width
+    if (w) width.value = Math.max(240, Math.round(w))
+  })
+  observer.observe(wrap.value)
+})
+onBeforeUnmount(() => observer?.disconnect())
 
 const pad = { l: 36, r: 8, t: 8, b: 20 }
 
@@ -26,21 +39,23 @@ const geometry = computed(() => {
   const span = maxY - minY
   minY -= span * 0.1
   maxY += span * 0.1
-  const w = props.width - pad.l - pad.r
+  const w = width.value - pad.l - pad.r
   const h = props.height - pad.t - pad.b
   const sx = (x) => pad.l + (maxX === minX ? w / 2 : ((x - minX) / (maxX - minX)) * w)
   const sy = (y) => pad.t + h - ((y - minY) / (maxY - minY)) * h
   const coords = pts.map((p, i) => ({ x: sx(xs[i]), y: sy(p.value), ...p }))
   const path = coords.map((c, i) => `${i ? 'L' : 'M'}${c.x.toFixed(1)},${c.y.toFixed(1)}`).join(' ')
   const ticks = [minY + span * 0.1, (minY + maxY) / 2, maxY - span * 0.1].map((v) => ({ v, y: sy(v) }))
-  return { coords, path, targetY: props.target != null ? sy(props.target) : null, ticks, first: pts[0].date, last: pts[pts.length - 1].date }
+  const mid = pts.length > 2 ? pts[Math.floor(pts.length / 2)].date : null
+  return { coords, path, targetY: props.target != null ? sy(props.target) : null, ticks, first: pts[0].date, mid: mid !== pts[0].date && mid !== pts[pts.length - 1].date ? mid : null, last: pts[pts.length - 1].date }
 })
 
 const fmt = (v) => (Math.abs(v) >= 100 ? Math.round(v) : Math.round(v * 10) / 10)
 </script>
 
 <template>
-  <svg :viewBox="`0 0 ${width} ${height}`" class="chart" preserveAspectRatio="none" role="img" :aria-label="points.length ? `${points.length} entries` : 'No entries yet'">
+  <div ref="wrap" class="wrap">
+  <svg :viewBox="`0 0 ${width} ${height}`" class="chart" :style="{ height: height + 'px' }" role="img" :aria-label="points.length ? `${points.length} entries` : 'No entries yet'">
     <template v-if="geometry">
       <g class="grid">
         <line v-for="t in geometry.ticks" :key="t.v" :x1="pad.l" :x2="width - pad.r" :y1="t.y" :y2="t.y" />
@@ -52,14 +67,17 @@ const fmt = (v) => (Math.abs(v) >= 100 ? Math.round(v) : Math.round(v * 10) / 10
         <title>{{ c.date }}: {{ c.value }} {{ unit }}</title>
       </circle>
       <text :x="pad.l" :y="height - 4" class="axis">{{ geometry.first }}</text>
+      <text v-if="geometry.mid" :x="pad.l + (width - pad.l - pad.r) / 2" :y="height - 4" class="axis" text-anchor="middle">{{ geometry.mid }}</text>
       <text :x="width - pad.r" :y="height - 4" class="axis" text-anchor="end">{{ geometry.last }}</text>
     </template>
     <text v-else :x="width / 2" :y="height / 2" text-anchor="middle" class="axis">No entries yet</text>
   </svg>
+  </div>
 </template>
 
 <style scoped>
-.chart { width: 100%; height: 140px; display: block; }
+.wrap { width: 100%; min-width: 0; }
+.chart { width: 100%; display: block; }
 .grid line { stroke: var(--line); stroke-width: 1; }
 .grid text, .axis { font-size: 10px; fill: var(--ink-3); font-variant-numeric: tabular-nums; }
 .target { stroke: var(--brand); stroke-dasharray: 4 3; stroke-width: 1; }

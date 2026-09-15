@@ -99,6 +99,8 @@ def history(tracker_id):
     tracker, err = _load(tracker_id)
     if err:
         return err
+    if request.args.get("all") in ("1", "true"):
+        return ok(service.history(tracker, None))
     weeks = request.args.get("weeks", type=int) or 8
     return ok(service.history(tracker, max(1, min(weeks, 52))))
 

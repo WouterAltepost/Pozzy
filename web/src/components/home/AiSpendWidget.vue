@@ -7,7 +7,7 @@ const data = ref(null)
 const failed = ref(false)
 const open = ref(false)
 
-const usd = (v) => '$' + Number(v || 0).toFixed(v >= 1 ? 2 : 3)
+const usd = (v) => '$' + Number(v || 0).toFixed(2)
 const budgetPct = computed(() => (data.value?.budget_usd ? Math.min(100, Math.round((data.value.month.cost / data.value.budget_usd) * 100)) : null))
 const maxDay = computed(() => Math.max(0.0001, ...(data.value?.last_7_days || []).map((d) => d.cost)))
 

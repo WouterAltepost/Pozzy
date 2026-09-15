@@ -3,6 +3,7 @@ import { computed, onMounted, ref } from 'vue'
 import { PhCaretLeft, PhCaretRight } from '@phosphor-icons/vue'
 import AgendaGrid from '../components/agenda/AgendaGrid.vue'
 import EventForm from '../components/agenda/EventForm.vue'
+import EventPopover from '../components/agenda/EventPopover.vue'
 import SyncBar from '../components/agenda/SyncBar.vue'
 import PageHeader from '../components/ui/PageHeader.vue'
 import UiButton from '../components/ui/UiButton.vue'
@@ -15,6 +16,7 @@ import { useCalendarStore } from '../stores/calendar'
 
 const store = useCalendarStore()
 const panel = ref(null) // null | { event } | { defaults }
+const quick = ref(null) // { day, hour, minute, endHour, endMinute, anchor } for the popover
 const saving = ref(false)
 const formError = ref('')
 const narrow = useMediaQuery('(max-width: 899px)')
@@ -37,10 +39,33 @@ function openEvent(event) {
 }
 function openNew(defaults = {}) {
   formError.value = ''
+  quick.value = null
   panel.value = { defaults }
 }
 function closePanel() {
   panel.value = null
+}
+
+// A slot picked on the grid: popover beside it on desktop, the sheet on the phone.
+function onSlot(defaults) {
+  if (defaults.allDay || narrow.value) return openNew(defaults)
+  formError.value = ''
+  panel.value = null
+  quick.value = defaults
+}
+const draft = computed(() => (quick.value ? { day: quick.value.day, from: quick.value.hour * 60 + quick.value.minute, to: quick.value.endHour * 60 + quick.value.endMinute } : null))
+
+async function quickSave(body) {
+  saving.value = true
+  formError.value = ''
+  try {
+    await store.createEvent(body)
+    quick.value = null
+  } catch (err) {
+    formError.value = err.message
+  } finally {
+    saving.value = false
+  }
 }
 
 async function save(body) {
@@ -97,7 +122,22 @@ function pickDay(evt) {
     <div class="body" :class="{ split: panel && !narrow }">
       <div class="gridwrap">
         <UiSkeleton v-if="store.loading && !store.events.length" height="240px" />
-        <AgendaGrid :days="store.days" :events="store.events" :tasks="store.tasks" @select-event="openEvent" @create="openNew" />
+        <div class="gridpos">
+          <AgendaGrid :days="store.days" :events="store.events" :tasks="store.tasks" :draft="draft" @select-event="openEvent" @create="onSlot" />
+          <Transition name="pop">
+            <EventPopover
+              v-if="quick"
+              :defaults="quick"
+              :calendars="store.selectedCalendars"
+              :default-calendar-url="store.account?.write_calendar_url || ''"
+              :saving="saving"
+              :error="formError"
+              @save="quickSave"
+              @more="openNew"
+              @close="quick = null"
+            />
+          </Transition>
+        </div>
         <p class="legend muted xs">
           <span class="sw event"></span> event <span class="sw recurring"></span> recurring <span class="sw linked"></span> Pozzy task event
           <span class="sw task"></span> scheduled task (not yet on iCloud)
@@ -144,6 +184,11 @@ function pickDay(evt) {
 .body { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--sp-5); align-items: start; }
 @media (min-width: 900px) { .body.split { grid-template-columns: minmax(0, 1fr) 340px; } }
 .gridwrap { min-width: 0; }
+.gridpos { position: relative; }
+.pop-enter-active { transition: opacity var(--dur-ui) var(--ease-out), transform var(--dur-ui) var(--ease-out); }
+.pop-leave-active { transition: opacity var(--dur-hover) ease, transform var(--dur-hover) ease; }
+.pop-enter-from, .pop-leave-to { opacity: 0; transform: scale(0.97); }
+@media (prefers-reduced-motion: reduce) { .pop-enter-from, .pop-leave-to { transform: none; } }
 .panel { position: sticky; top: calc(var(--bar-h) + var(--sp-4)); margin: 0; }
 .legend { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; margin: var(--sp-2) 0 0; }
 .sw { display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin-left: 6px; }
