@@ -1,6 +1,6 @@
 # Pozzy progress
 
-## Design pass, 2026-09-15 (branch main, not yet deployed)
+## Design pass, 2026-09-15 (deployed)
 
 Presentation only: no API, store, router, logic or data changes. Spec in docs/briefs/DESIGN.md, product record in PRODUCT.md, direction contract in the impeccable surface brief for web/src/App.vue. Backend suite 209 green, `npm run build` green, `impeccable detect` reports only the deliberate Geist choice.
 
@@ -25,7 +25,7 @@ Verification: 52 screenshots in docs/design-screens (12 routes plus login, 1440 
 
 Deferred to docs/V2.md: replacing window.prompt and window.confirm with inline confirms (logic change), a theme toggle, the Work area colour, the wordmark SVG.
 
-Deployment: waiting for the go after the screenshot review.
+Deployment: approved by Wouter on 2026-09-15 after the screenshot review, pushed to main, Railway web and api deploys 10:14 CEST both SUCCESS. Production verified: Geist served and loaded, manifest and icons live, login renders with no page errors, api health db true and scheduler running.
 
 ## v1 released, 2026-09-14
 
