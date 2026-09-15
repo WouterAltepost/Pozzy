@@ -12,14 +12,17 @@ import {
   PhHouse,
   PhLightning,
   PhList,
+  PhMoon,
   PhNote,
   PhSignOut,
+  PhSun,
   PhTarget,
   PhTimer,
 } from '@phosphor-icons/vue'
 import CaptureBar from './components/CaptureBar.vue'
 import UiSheet from './components/ui/UiSheet.vue'
 import UiToast from './components/ui/UiToast.vue'
+import { useTheme } from './composables/useTheme'
 import { NAV } from './router'
 import { useAuthStore } from './stores/auth'
 
@@ -27,6 +30,7 @@ const auth = useAuthStore()
 const router = useRouter()
 const route = useRoute()
 const menuOpen = ref(false)
+const theme = useTheme()
 
 // Icons by route name; labels and order stay in router/index.js.
 const ICONS = {
@@ -64,6 +68,10 @@ watch(() => route.fullPath, () => (menuOpen.value = false))
       <CaptureBar v-if="auth.isAuthenticated" class="topbar-capture" />
       <div v-if="auth.isAuthenticated" class="topbar-user">
         <span class="topbar-email muted">{{ auth.user?.email }}</span>
+        <button type="button" class="icon-btn" :title="theme.isDark.value ? 'Switch to light mode' : 'Switch to dark mode'" :aria-label="theme.isDark.value ? 'Switch to light mode' : 'Switch to dark mode'" @click="theme.toggle()">
+          <PhSun v-if="theme.isDark.value" />
+          <PhMoon v-else />
+        </button>
         <button type="button" class="icon-btn" title="Log out" aria-label="Log out" @click="logout"><PhSignOut /></button>
         <button type="button" class="icon-btn menu-toggle" aria-label="Menu" :aria-expanded="menuOpen" @click="menuOpen = true"><PhList /></button>
       </div>
@@ -88,7 +96,12 @@ watch(() => route.fullPath, () => (menuOpen.value = false))
           <span>{{ item.label }}</span>
         </RouterLink>
       </nav>
-      <button type="button" class="sheet-logout" @click="logout"><PhSignOut class="nav-icon" /> Log out <span class="muted small">{{ auth.user?.email }}</span></button>
+      <button type="button" class="sheet-row" @click="theme.toggle()">
+        <PhSun v-if="theme.isDark.value" class="nav-icon" /><PhMoon v-else class="nav-icon" />
+        {{ theme.isDark.value ? 'Light mode' : 'Dark mode' }}
+        <span class="muted small">{{ theme.preference.value === 'system' ? 'following system' : 'set here' }}</span>
+      </button>
+      <button type="button" class="sheet-row" @click="logout"><PhSignOut class="nav-icon" /> Log out <span class="muted small">{{ auth.user?.email }}</span></button>
     </UiSheet>
     <UiToast />
   </div>
@@ -155,8 +168,9 @@ watch(() => route.fullPath, () => (menuOpen.value = false))
 
 .sheet-nav { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
 .sheet-nav .nav-item { height: 44px; }
-.sheet-logout { display: flex; align-items: center; gap: 10px; width: 100%; margin-top: var(--sp-3); height: 44px; padding: 0 var(--sp-3); border: 0; border-top: 1px solid var(--line); border-radius: 0; background: none; color: var(--ink-2); font-weight: 500; }
-.sheet-logout .small { margin-left: auto; font-weight: 400; }
+.sheet-row { display: flex; align-items: center; gap: 10px; width: 100%; height: 44px; padding: 0 var(--sp-3); border: 0; border-top: 1px solid var(--line); border-radius: 0; background: none; color: var(--ink-2); font-weight: 500; }
+.sheet-row:first-of-type { margin-top: var(--sp-3); }
+.sheet-row .small { margin-left: auto; font-weight: 400; }
 
 @media (max-width: 1023px) {
   .rail { display: none; }

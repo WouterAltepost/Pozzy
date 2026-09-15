@@ -85,8 +85,10 @@
   --control-h-sm: 28px;
 }
 
+/* Dark scheme: follows the system unless data-theme forces a scheme (theme toggle in the top bar). */
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
     --bg: #141518;
     --surface: #1C1E22;
     --surface-2: #24262B;
@@ -113,6 +115,34 @@
     --shadow-3: 0 18px 44px -10px rgb(0 0 0 / 0.7);
   }
 }
+:root[data-theme="dark"] {
+  color-scheme: dark;
+    --bg: #141518;
+    --surface: #1C1E22;
+    --surface-2: #24262B;
+    --surface-3: #2D3036;
+    --ink: #ECEBE6;
+    --ink-2: #B6B5B0;
+    --ink-3: #8F9097;
+    --line: #2C2E34;
+    --line-2: #3D4048;
+    --brand: #D94141;
+    --brand-soft: #3B1F1F;
+    --on-ink: #16171A;
+    --ok: #5CC48F;
+    --ok-soft: #1B3328;
+    --warn: #E1A64E;
+    --warn-soft: #3A2C16;
+    --danger: #E86B62;
+    --danger-soft: #3D2220;
+    --info: #7FA3E6;
+    --info-soft: #1F2A40;
+    --scrim: rgb(0 0 0 / 0.55);
+    --shadow-1: 0 1px 2px rgb(0 0 0 / 0.5), 0 1px 1px rgb(0 0 0 / 0.3);
+    --shadow-2: 0 6px 16px -4px rgb(0 0 0 / 0.6), 0 2px 4px rgb(0 0 0 / 0.4);
+    --shadow-3: 0 18px 44px -10px rgb(0 0 0 / 0.7);
+}
+:root[data-theme="light"] { color-scheme: light; }
 
 /* Reset and base */
 *, *::before, *::after { box-sizing: border-box; }

@@ -13,7 +13,7 @@ What changed:
 - PWA: icons rendered from Group.png on the bone field, favicon from favicon-svg.svg, manifest and theme colours from the tokens.
 
 Decisions taken at the (skipped) image gate, option 3:
-- Both colour schemes, following the system, no toggle.
+- Both colour schemes, following the system by default, plus a sun or moon toggle in the top bar and nav sheet (added on request after the deploy; stored per device).
 - Comfortable density, closer to compact than the inspo.
 - Plain CSS tokens and shared components; one dependency for icons, no UI library.
 - Desktop first with a 390px pass on every view.
@@ -23,7 +23,7 @@ Decisions taken at the (skipped) image gate, option 3:
 
 Verification: 52 screenshots in docs/design-screens (12 routes plus login, 1440 and 390, light and dark) captured with Playwright against the local API and real Supabase data. No horizontal scroll at 390 on any route, zero console errors, zero failed API calls, keyboard focus visible on the first eight tab stops of the shell. Animation review against the review-animations standard: one finding (a keyframe on the tracker tick toggle) fixed; verdict approve.
 
-Deferred to docs/V2.md: replacing window.prompt and window.confirm with inline confirms (logic change), a theme toggle, the Work area colour, the wordmark SVG.
+Deferred to docs/V2.md: replacing window.prompt and window.confirm with inline confirms (logic change), the Work area colour, the wordmark SVG.
 
 Deployment: approved by Wouter on 2026-09-15 after the screenshot review, pushed to main, Railway web and api deploys 10:14 CEST both SUCCESS. Production verified: Geist served and loaded, manifest and icons live, login renders with no page errors, api health db true and scheduler running.
 

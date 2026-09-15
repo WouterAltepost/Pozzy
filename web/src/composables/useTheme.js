@@ -1,0 +1,49 @@
+import { computed, ref } from 'vue'
+
+// Theme preference: 'system' (default), 'light' or 'dark'. Presentation only, stored per device.
+const KEY = 'pozzy.theme'
+const LIGHT = '#FBFAF8'
+const DARK = '#1C1E22'
+const preference = ref('system')
+
+function read() {
+  try {
+    const v = localStorage.getItem(KEY)
+    return v === 'light' || v === 'dark' ? v : 'system'
+  } catch {
+    return 'system'
+  }
+}
+
+function systemDark() {
+  return window.matchMedia('(prefers-color-scheme: dark)').matches
+}
+
+export function applyTheme(value = read()) {
+  preference.value = value
+  const root = document.documentElement
+  if (value === 'system') root.removeAttribute('data-theme')
+  else root.setAttribute('data-theme', value)
+  const dark = value === 'dark' || (value === 'system' && systemDark())
+  for (const meta of document.querySelectorAll('meta[name="theme-color"]')) meta.setAttribute('content', dark ? DARK : LIGHT)
+}
+
+export function useTheme() {
+  const isDark = computed(() => preference.value === 'dark' || (preference.value === 'system' && systemDark()))
+  function set(value) {
+    try {
+      if (value === 'system') localStorage.removeItem(KEY)
+      else localStorage.setItem(KEY, value)
+    } catch {}
+    applyTheme(value)
+  }
+  // The button flips to the opposite of what is on screen now, so it always does the obvious thing.
+  function toggle() {
+    set(isDark.value ? 'light' : 'dark')
+  }
+  return { preference, isDark, set, toggle }
+}
+
+if (typeof window !== 'undefined') {
+  window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => applyTheme(preference.value))
+}

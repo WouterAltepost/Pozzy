@@ -10,7 +10,7 @@ Pozzy is a desk instrument, not a SaaS dashboard. A matte stone housing carries 
 
 | Question | Decision | Reason |
 |---|---|---|
-| Light, dark or both | Both, following `prefers-color-scheme`, no manual toggle | Morning use is daylight at a desk, evening planning is often on the phone in the dark; a toggle is presentation state the app does not store today |
+| Light, dark or both | Both, following `prefers-color-scheme` by default, with a sun or moon toggle in the top bar and the nav sheet (added on request, 2026-09-15). The choice is stored per device in localStorage as `pozzy.theme` and forces `data-theme` on the root | Morning use is daylight at a desk, evening planning is often on the phone in the dark |
 | Density | Comfortable, closer to compact than the inspo | Daily tool with twelve routes and ten widgets; the inspo's airiness is for marketing screenshots, not a week planner |
 | Implementation | Plain CSS custom properties plus shared Vue components; one dependency added, `@phosphor-icons/vue` for icons | No UI library: the existing markup is small enough to normalise by hand, and a library would fight the token system. Icons must come from a real set, so one tree-shakeable icon package |
 | Desktop first or mobile first | Desktop first with a 390px pass on every view | Primary use is the laptop; the phone is a check-in device |
@@ -150,7 +150,7 @@ Mobile (390px): rail hidden, menu button opens the nav sheet; every grid becomes
 
 ## 7. Dark mode, focus, contrast, reduced motion
 
-Tokens swap once under `prefers-color-scheme: dark`. Text on surfaces meets 4.5:1 in both schemes (`--ink-3` on `--surface` is 4.6:1 light, 4.7:1 dark); badges keep 4.5:1 text on their soft tints. Focus is never removed; `:focus-visible` shows the brand ring. Reduced motion: no transforms, opacity and colour only, skeleton shimmer static, sheet fades.
+Tokens swap under `prefers-color-scheme: dark` unless `data-theme="light"` is set, and under `data-theme="dark"` regardless of the system; `composables/useTheme.js` owns the attribute and the theme-color meta. Text on surfaces meets 4.5:1 in both schemes (`--ink-3` on `--surface` is 4.6:1 light, 4.7:1 dark); badges keep 4.5:1 text on their soft tints. Focus is never removed; `:focus-visible` shows the brand ring. Reduced motion: no transforms, opacity and colour only, skeleton shimmer static, sheet fades.
 
 ## 8. PWA
 
