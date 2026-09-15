@@ -2,6 +2,7 @@
 import { computed, onMounted, ref } from 'vue'
 import { getBriefing, regenerateBriefing } from '../../api/ai'
 import { formatDateTime } from '../../lib/dates'
+import UiButton from '../ui/UiButton.vue'
 
 const data = ref(null)
 const failed = ref(false)
@@ -39,25 +40,24 @@ onMounted(load)
 
 <template>
   <section v-if="!failed && loaded" class="card widget">
-    <h2>
-      Briefing
-      <span class="muted small">
-        <template v-if="data">{{ data.source === 'claude' ? 'Claude' : 'Rules' }} · {{ formatDateTime(data.generated_at) }} ·</template>
-        <button type="button" class="link" :disabled="busy" @click="regenerate">{{ busy ? 'Working' : data ? 'Regenerate' : 'Generate' }}</button>
+    <div class="card-head">
+      <h2>Briefing</h2>
+      <span class="meta">
+        <template v-if="data">{{ data.source === 'claude' ? 'Claude' : 'Rules' }}, {{ formatDateTime(data.generated_at) }}</template>
+        <UiButton size="sm" variant="ghost" :loading="busy" @click="regenerate">{{ data ? 'Regenerate' : 'Generate' }}</UiButton>
       </span>
-    </h2>
+    </div>
     <p v-if="error" class="error">{{ error }}</p>
-    <template v-if="data">
+    <div v-if="data" class="prose">
       <p v-for="(p, i) in paragraphs" :key="i">{{ p }}</p>
-    </template>
+    </div>
     <p v-else class="muted">No briefing for today yet. It is generated at the time set in Settings, or on demand.</p>
   </section>
 </template>
 
 <style scoped>
-h2 { font-size: 1rem; margin: 0 0 0.5rem; display: flex; justify-content: space-between; align-items: baseline; gap: 0.5rem; }
-.small { font-size: 0.78rem; font-weight: normal; }
-p { margin: 0 0 0.6rem; font-size: 0.92rem; line-height: 1.45; }
-p:last-child { margin-bottom: 0; }
-.link { border: none; background: none; padding: 0; color: #2563eb; font-size: 0.78rem; cursor: pointer; }
+.meta { display: inline-flex; align-items: center; gap: var(--sp-2); }
+.prose { max-width: 68ch; }
+.prose p { font-size: var(--fs-base); line-height: 1.6; margin-bottom: var(--sp-3); }
+.prose p:last-child { margin-bottom: 0; }
 </style>

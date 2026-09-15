@@ -1,8 +1,11 @@
 <script setup>
 import { onMounted, ref } from 'vue'
+import { PhCalendarBlank } from '@phosphor-icons/vue'
 import { listEvents } from '../../api/calendar'
 import { addDays, formatTime, today } from '../../lib/dates'
 import { dayStartIso } from '../../stores/calendar'
+import UiBadge from '../ui/UiBadge.vue'
+import UiEmpty from '../ui/UiEmpty.vue'
 
 // Today's calendar events plus scheduled tasks, from the local mirror only.
 // Renders nothing when the API call fails (BUILD.md widget contract).
@@ -30,27 +33,27 @@ onMounted(load)
 
 <template>
   <section v-if="!failed && items" class="card widget">
-    <h2>Today <RouterLink :to="{ name: 'agenda' }" class="muted small">agenda</RouterLink></h2>
-    <ul>
-      <li v-for="it in items" :key="it.id" :class="it.kind">
-        <span class="when">{{ it.allDay ? 'all day' : formatTime(it.start) + ' - ' + formatTime(it.end) }}</span>
-        <span class="title">{{ it.title }}</span>
-        <span v-if="it.kind === 'task'" class="tag">task</span>
-        <span v-else-if="it.location" class="muted loc">{{ it.location }}</span>
+    <div class="card-head">
+      <h2>Today</h2>
+      <span class="meta"><RouterLink :to="{ name: 'agenda' }">Agenda</RouterLink></span>
+    </div>
+    <ul v-if="items.length">
+      <li v-for="it in items" :key="it.id" class="list-row" :class="it.kind">
+        <span class="when num">{{ it.allDay ? 'all day' : formatTime(it.start) + ' to ' + formatTime(it.end) }}</span>
+        <span class="title truncate">{{ it.title }}</span>
+        <UiBadge v-if="it.kind === 'task'" tone="ok">task</UiBadge>
+        <UiBadge v-else-if="it.kind === 'linked'" tone="info">linked</UiBadge>
+        <span v-else-if="it.location" class="muted small truncate loc">{{ it.location }}</span>
       </li>
-      <li v-if="!items.length" class="muted">No events today.</li>
     </ul>
+    <UiEmpty v-else compact title="No events today" hint="Nothing on the calendar mirror for today.">
+      <template #icon><PhCalendarBlank /></template>
+    </UiEmpty>
   </section>
 </template>
 
 <style scoped>
-h2 { font-size: 1rem; margin: 0 0 0.5rem; display: flex; justify-content: space-between; align-items: baseline; }
-.small { font-size: 0.78rem; font-weight: normal; }
-ul { list-style: none; padding: 0; margin: 0; }
-li { display: flex; align-items: baseline; gap: 0.5rem; padding: 0.25rem 0; font-size: 0.9rem; }
-.when { font-variant-numeric: tabular-nums; color: #6b7280; font-size: 0.8rem; min-width: 92px; }
-.title { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.loc { font-size: 0.8rem; }
-.tag { font-size: 0.7rem; padding: 0 0.3rem; border-radius: 3px; background: #ecfdf5; color: #065f46; border: 1px dashed #34d399; }
-li.linked .title { color: #4c1d95; }
+.when { color: var(--ink-3); font-size: var(--fs-sm); min-width: 96px; flex: none; }
+.title { flex: 1; min-width: 0; }
+.loc { max-width: 40%; }
 </style>

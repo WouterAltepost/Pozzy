@@ -24,48 +24,44 @@ onMounted(load)
 
 <template>
   <section v-if="!failed && data" class="card widget">
-    <h2>
-      AI spend
-      <span class="muted small">{{ usd(data.month.cost) }} this month<template v-if="data.budget_usd"> of {{ usd(data.budget_usd) }}</template> · {{ usd(data.today_cost) }} today</span>
-    </h2>
+    <div class="card-head">
+      <h2>AI spend</h2>
+      <span class="meta num">{{ usd(data.month.cost) }} this month<template v-if="data.budget_usd"> of {{ usd(data.budget_usd) }}</template>, {{ usd(data.today_cost) }} today</span>
+    </div>
     <div v-if="budgetPct !== null" class="bar"><div class="fill" :class="{ warn: budgetPct >= 80 }" :style="{ width: budgetPct + '%' }"></div></div>
-    <div class="days">
+    <div class="days" role="img" :aria-label="'Spend over the last 7 days'">
       <div v-for="d in data.last_7_days" :key="d.date" class="day" :title="d.date + ': ' + usd(d.cost) + ', ' + d.calls + ' calls'">
         <div class="col" :style="{ height: Math.max(2, Math.round((d.cost / maxDay) * 28)) + 'px' }"></div>
-        <span class="muted tiny">{{ d.date.slice(8) }}</span>
+        <span class="muted xs num">{{ d.date.slice(8) }}</span>
       </div>
     </div>
     <ul class="features">
       <li v-for="f in data.month.by_feature.slice(0, 5)" :key="f.feature">
         <span>{{ f.feature }}</span>
-        <span class="muted small">{{ f.calls }} calls<template v-if="f.failed">, {{ f.failed }} failed</template></span>
-        <span>{{ usd(f.cost) }}</span>
+        <span class="muted small num">{{ f.calls }} calls<template v-if="f.failed">, {{ f.failed }} failed</template></span>
+        <span class="num">{{ usd(f.cost) }}</span>
       </li>
       <li v-if="!data.month.by_feature.length" class="muted">No AI calls this month.</li>
     </ul>
-    <button v-if="data.recent.length" type="button" class="link" @click="open = !open">{{ open ? 'Hide' : 'Show' }} recent calls</button>
+    <button v-if="data.recent.length" type="button" class="link-btn" @click="open = !open">{{ open ? 'Hide' : 'Show' }} recent calls</button>
     <ul v-if="open" class="recent">
       <li v-for="r in data.recent" :key="r.id" :class="{ bad: !r.ok }">
-        <span>{{ r.feature }}</span><span class="muted small">{{ r.model }} · {{ r.input_tokens }}/{{ r.output_tokens }} tok</span><span>{{ usd(r.cost) }}</span>
-        <div v-if="r.error" class="muted tiny err">{{ r.error }}</div>
+        <span>{{ r.feature }}</span><span class="muted small num">{{ r.model }}, {{ r.input_tokens }}/{{ r.output_tokens }} tok</span><span class="num">{{ usd(r.cost) }}</span>
+        <div v-if="r.error" class="muted xs err">{{ r.error }}</div>
       </li>
     </ul>
   </section>
 </template>
 
 <style scoped>
-h2 { font-size: 1rem; margin: 0 0 0.5rem; display: flex; justify-content: space-between; align-items: baseline; gap: 0.5rem; }
-.small { font-size: 0.78rem; font-weight: normal; }
-.tiny { font-size: 0.65rem; }
-.bar { height: 6px; background: #f3f4f6; border-radius: 3px; margin-bottom: 0.5rem; overflow: hidden; }
-.fill { height: 100%; background: #2563eb; }
-.fill.warn { background: #b91c1c; }
-.days { display: flex; gap: 0.4rem; align-items: flex-end; margin-bottom: 0.5rem; }
-.day { display: flex; flex-direction: column; align-items: center; gap: 0.15rem; flex: 1; }
-.col { width: 100%; max-width: 28px; background: #93c5fd; border-radius: 2px 2px 0 0; }
-ul { list-style: none; padding: 0; margin: 0; }
-.features li, .recent li { display: grid; grid-template-columns: 1fr auto auto; gap: 0.5rem; font-size: 0.88rem; padding: 0.15rem 0; }
-.recent li.bad { color: #b91c1c; }
+.bar { margin-bottom: var(--sp-3); }
+.days { display: flex; gap: var(--sp-2); align-items: flex-end; margin-bottom: var(--sp-3); }
+.day { display: flex; flex-direction: column; align-items: center; gap: 3px; flex: 1; }
+.col { width: 100%; max-width: 28px; background: var(--ink-3); border-radius: 2px 2px 0 0; opacity: 0.7; }
+.features li, .recent li { display: grid; grid-template-columns: 1fr auto auto; gap: var(--sp-3); font-size: var(--fs-md); padding: 4px 0; border-top: 1px solid var(--line); }
+.features li:first-child { border-top: 0; }
+.recent { margin-top: var(--sp-2); }
+.recent li.bad { color: var(--danger); }
 .err { grid-column: 1 / -1; }
-.link { border: none; background: none; padding: 0; color: #2563eb; font-size: 0.78rem; cursor: pointer; margin-top: 0.3rem; }
+.link-btn { margin-top: var(--sp-2); }
 </style>

@@ -1,7 +1,11 @@
 <script setup>
 import { onMounted, ref } from 'vue'
+import { PhCheckSquare } from '@phosphor-icons/vue'
 import { createDo, listDos, updateDo } from '../../api/dos'
 import { formatDay, today } from '../../lib/dates'
+import UiBadge from '../ui/UiBadge.vue'
+import UiButton from '../ui/UiButton.vue'
+import UiEmpty from '../ui/UiEmpty.vue'
 
 // Self-contained: fetches its own data, renders nothing on failure (BUILD.md).
 const dos = ref(null)
@@ -43,28 +47,31 @@ onMounted(load)
 
 <template>
   <section v-if="!failed && dos" class="card widget">
-    <h2>Today's three do's <span class="muted">{{ formatDay(today()) }}</span></h2>
-    <ul>
-      <li v-for="d in dos" :key="d.id" :class="{ done: d.done }">
-        <input type="checkbox" :checked="d.done" @change="toggle(d)" />
-        <span>{{ d.title }}</span>
-        <span v-if="d.warning" class="warn">rolled {{ d.roll_count }}x</span>
+    <div class="card-head">
+      <h2>Today's three do's</h2>
+      <span class="meta">{{ formatDay(today()) }}</span>
+    </div>
+    <ul v-if="dos.length">
+      <li v-for="d in dos" :key="d.id" class="list-row" :class="{ done: d.done }">
+        <input type="checkbox" :checked="d.done" :aria-label="d.title" @change="toggle(d)" />
+        <span class="title">{{ d.title }}</span>
+        <UiBadge v-if="d.warning" tone="warn">rolled {{ d.roll_count }}x</UiBadge>
+        <UiBadge v-else-if="d.roll_count" tone="neutral">rolled</UiBadge>
       </li>
-      <li v-if="!dos.length" class="muted">Nothing set for today. <RouterLink :to="{ name: 'goals' }">Set three do's</RouterLink></li>
     </ul>
+    <UiEmpty v-else compact title="Nothing set for today" hint="Three things that would make today a good day.">
+      <template #icon><PhCheckSquare /></template>
+      <template #action><RouterLink :to="{ name: 'goals' }" class="link-btn">Set three do's</RouterLink></template>
+    </UiEmpty>
     <form v-if="dos.length < 3" class="add" @submit.prevent="add">
-      <input v-model="title" type="text" placeholder="Add a do" />
-      <button type="submit">Add</button>
+      <input v-model="title" type="text" placeholder="Add a do" aria-label="Add a do" />
+      <UiButton type="submit" :disabled="!title.trim()">Add</UiButton>
     </form>
   </section>
 </template>
 
 <style scoped>
-h2 { font-size: 1rem; margin: 0 0 0.5rem; display: flex; justify-content: space-between; }
-ul { list-style: none; padding: 0; margin: 0; }
-li { display: flex; align-items: center; gap: 0.5rem; padding: 0.25rem 0; }
-li.done span { text-decoration: line-through; color: #9ca3af; }
-.warn { color: #b91c1c; font-size: 0.75rem; font-weight: 600; }
-.add { display: flex; gap: 0.4rem; margin-top: 0.4rem; }
-.add input { flex: 1; font: inherit; padding: 0.3rem; border: 1px solid #d1d5db; border-radius: 4px; }
+.title { flex: 1; min-width: 0; }
+.add { display: flex; gap: var(--sp-2); margin-top: var(--sp-3); }
+.add input { flex: 1; }
 </style>

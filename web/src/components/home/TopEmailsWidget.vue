@@ -1,7 +1,10 @@
 <script setup>
 import { onMounted, ref } from 'vue'
+import { PhTray } from '@phosphor-icons/vue'
 import { topEmails, updateEmail } from '../../api/mail'
 import PriorityBadge from '../mail/PriorityBadge.vue'
+import UiBadge from '../ui/UiBadge.vue'
+import UiEmpty from '../ui/UiEmpty.vue'
 
 const emails = ref(null)
 const failed = ref(false)
@@ -29,33 +32,33 @@ onMounted(load)
 
 <template>
   <section v-if="!failed && emails" class="card widget">
-    <h2>Top emails <RouterLink :to="{ name: 'mail' }" class="muted small">inbox</RouterLink></h2>
-    <ul>
-      <li v-for="e in emails" :key="e.id">
-        <input type="checkbox" title="Mark handled" @change="handled(e)" />
-        <span class="account" :style="{ background: e.account?.color || '#9ca3af' }" :title="e.account?.label"></span>
+    <div class="card-head">
+      <h2>Top emails</h2>
+      <span class="meta"><RouterLink :to="{ name: 'mail' }">Inbox</RouterLink></span>
+    </div>
+    <ul v-if="emails.length">
+      <li v-for="e in emails" :key="e.id" class="list-row">
+        <input type="checkbox" title="Mark handled" :aria-label="'Mark handled: ' + e.subject" @change="handled(e)" />
+        <span class="account" :style="{ background: e.account?.color || 'var(--ink-3)' }" :title="e.account?.label"></span>
         <PriorityBadge :priority="e.priority" />
         <span class="text">
-          <span class="from">{{ e.from_name || e.from_email }}</span>
-          <a v-if="e.gmail_url" :href="e.gmail_url" target="_blank" rel="noopener" class="subject">{{ e.subject }}</a>
-          <span v-else class="subject">{{ e.subject }}</span>
+          <span class="from truncate">{{ e.from_name || e.from_email }}</span>
+          <a v-if="e.gmail_url" :href="e.gmail_url" target="_blank" rel="noopener" class="subject truncate">{{ e.subject }}</a>
+          <span v-else class="subject truncate">{{ e.subject }}</span>
         </span>
-        <span v-if="e.needs_reply" class="reply">reply</span>
+        <UiBadge v-if="e.needs_reply" tone="info">reply</UiBadge>
       </li>
-      <li v-if="!emails.length" class="muted">Inbox handled.</li>
     </ul>
+    <UiEmpty v-else compact title="Inbox handled" hint="Nothing unhandled in the top of the inbox.">
+      <template #icon><PhTray /></template>
+    </UiEmpty>
   </section>
 </template>
 
 <style scoped>
-h2 { font-size: 1rem; margin: 0 0 0.5rem; display: flex; justify-content: space-between; align-items: baseline; }
-.small { font-size: 0.78rem; font-weight: normal; }
-ul { list-style: none; padding: 0; margin: 0; }
-li { display: flex; align-items: center; gap: 0.5rem; padding: 0.25rem 0; font-size: 0.9rem; }
 .account { width: 8px; height: 8px; border-radius: 50%; flex: none; }
-.text { flex: 1; min-width: 0; display: flex; flex-direction: column; }
-.from { font-size: 0.75rem; color: #6b7280; }
-.subject { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: inherit; text-decoration: none; }
+.text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.from { font-size: var(--fs-sm); color: var(--ink-3); }
+.subject { color: inherit; text-decoration: none; font-size: var(--fs-md); }
 .subject:hover { text-decoration: underline; }
-.reply { font-size: 0.7rem; background: #dbeafe; color: #1d4ed8; padding: 0 0.3rem; border-radius: 3px; font-weight: 600; }
 </style>

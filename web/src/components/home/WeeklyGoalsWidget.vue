@@ -1,7 +1,10 @@
 <script setup>
 import { onMounted, ref } from 'vue'
+import { PhTarget } from '@phosphor-icons/vue'
 import { addGoalProgress, listGoals, updateGoal } from '../../api/goals'
 import AreaDot from '../shared/AreaDot.vue'
+import UiButton from '../ui/UiButton.vue'
+import UiEmpty from '../ui/UiEmpty.vue'
 
 const data = ref(null)
 const failed = ref(false)
@@ -41,28 +44,27 @@ onMounted(load)
 
 <template>
   <section v-if="!failed && data" class="card widget">
-    <h2>Weekly goals <RouterLink :to="{ name: 'goals' }" class="muted small">{{ data.goals.filter((g) => g.done).length }} / {{ data.goals.length }} done</RouterLink></h2>
-    <ul>
-      <li v-for="g in data.goals" :key="g.id" :class="{ done: g.done }">
-        <input type="checkbox" :checked="g.done" @change="toggle(g)" />
-        <span class="title">{{ g.title }}</span>
+    <div class="card-head">
+      <h2>Weekly goals</h2>
+      <span class="meta"><RouterLink :to="{ name: 'goals' }" class="num">{{ data.goals.filter((g) => g.done).length }} of {{ data.goals.length }} done</RouterLink></span>
+    </div>
+    <ul v-if="data.goals.length">
+      <li v-for="g in data.goals" :key="g.id" class="list-row" :class="{ done: g.done }">
+        <input type="checkbox" :checked="g.done" :aria-label="g.title" @change="toggle(g)" />
+        <span class="title truncate">{{ g.title }}</span>
         <AreaDot :area-id="g.area_id" />
         <template v-if="g.target_value">
-          <span class="muted small">{{ g.current_value }}/{{ g.target_value }}</span>
-          <button type="button" class="plus" @click="bump(g)">+1</button>
+          <span class="muted small num">{{ g.current_value }}/{{ g.target_value }}</span>
+          <UiButton size="sm" variant="ghost" :aria-label="'Add one to ' + g.title" @click="bump(g)">+1</UiButton>
         </template>
       </li>
-      <li v-if="!data.goals.length" class="muted">No goals this week yet.</li>
     </ul>
+    <UiEmpty v-else compact title="No goals this week" hint="Set a few in Goals, or let the weekly review draft them.">
+      <template #icon><PhTarget /></template>
+    </UiEmpty>
   </section>
 </template>
 
 <style scoped>
-h2 { font-size: 1rem; margin: 0 0 0.5rem; display: flex; justify-content: space-between; align-items: baseline; }
-.small { font-size: 0.78rem; font-weight: normal; }
-ul { list-style: none; padding: 0; margin: 0; }
-li { display: flex; align-items: center; gap: 0.5rem; padding: 0.25rem 0; font-size: 0.9rem; }
-li.done .title { text-decoration: line-through; color: #9ca3af; }
-.title { flex: 1; }
-.plus { padding: 0 0.4rem; font-size: 0.75rem; }
+.title { flex: 1; min-width: 0; }
 </style>
