@@ -1,9 +1,17 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
+import { PhCheckSquare } from '@phosphor-icons/vue'
 import SlotPanel from '../components/tasks/SlotPanel.vue'
 import TaskCard from '../components/tasks/TaskCard.vue'
 import TaskForm from '../components/tasks/TaskForm.vue'
 import AreaSelect from '../components/shared/AreaSelect.vue'
+import PageHeader from '../components/ui/PageHeader.vue'
+import UiButton from '../components/ui/UiButton.vue'
+import UiEmpty from '../components/ui/UiEmpty.vue'
+import UiSegmented from '../components/ui/UiSegmented.vue'
+import UiSheet from '../components/ui/UiSheet.vue'
+import UiSkeleton from '../components/ui/UiSkeleton.vue'
+import { useMediaQuery } from '../composables/useMediaQuery'
 import { QUADRANTS, useTasksStore } from '../stores/tasks'
 
 const store = useTasksStore()
@@ -15,9 +23,15 @@ const quickTitle = ref('')
 const busy = ref(false)
 const error = ref('')
 const dragOver = ref(null)
+const narrow = useMediaQuery('(max-width: 899px)')
 
 const selected = computed(() => (selectedId.value ? store.byId(selectedId.value) : null))
 const listItems = computed(() => (store.filters.include_closed ? store.items : store.open))
+const panelOpen = computed(() => creating.value || Boolean(selected.value))
+const MODES = [
+  { value: 'board', label: 'Board' },
+  { value: 'list', label: 'List' },
+]
 
 onMounted(() => store.load())
 
@@ -34,6 +48,12 @@ async function quickAdd() {
 function select(task) {
   selectedId.value = task.id
   creating.value = false
+  showSlots.value = false
+}
+
+function closePanel() {
+  creating.value = false
+  selectedId.value = null
   showSlots.value = false
 }
 
@@ -100,25 +120,22 @@ async function run(fn) {
 
 <template>
   <div class="tasks">
-    <div class="toolbar">
-      <h1>Tasks</h1>
+    <PageHeader title="Tasks">
+      <template #meta><span class="num">{{ store.open.length }} open</span></template>
       <form class="quick" @submit.prevent="quickAdd">
-        <input v-model="quickTitle" type="text" placeholder="Quick add to inbox..." />
-        <button type="submit" :disabled="busy || !quickTitle.trim()">Add</button>
+        <input v-model="quickTitle" type="text" placeholder="Quick add to inbox" aria-label="Quick add to inbox" />
+        <UiButton type="submit" :disabled="busy || !quickTitle.trim()">Add</UiButton>
       </form>
-      <div class="controls">
-        <button type="button" :class="{ active: mode === 'board' }" @click="mode = 'board'">Board</button>
-        <button type="button" :class="{ active: mode === 'list' }" @click="mode = 'list'">List</button>
-        <AreaSelect v-model="store.filters.area_id" @update:model-value="store.load()" />
-        <input v-model="store.filters.q" type="search" placeholder="Search" @change="store.load()" />
-        <label class="check"><input v-model="store.filters.include_closed" type="checkbox" @change="store.load()" /> show done</label>
-        <button type="button" @click="creating = true; selectedId = null">New task</button>
-      </div>
-    </div>
+      <UiSegmented v-model="mode" :options="MODES" />
+      <AreaSelect v-model="store.filters.area_id" aria-label="Area" @update:model-value="store.load()" />
+      <input v-model="store.filters.q" type="search" placeholder="Search" aria-label="Search tasks" class="search" @change="store.load()" />
+      <label class="check"><input v-model="store.filters.include_closed" type="checkbox" @change="store.load()" /> Show done</label>
+      <UiButton variant="primary" @click="creating = true; selectedId = null">New task</UiButton>
+    </PageHeader>
     <p v-if="error" class="error">{{ error }}</p>
     <p v-if="store.error" class="error">{{ store.error }}</p>
 
-    <div class="layout">
+    <div class="layout" :class="{ split: panelOpen && !narrow }">
       <div class="main">
         <div v-if="mode === 'board'" class="board">
           <section
@@ -131,10 +148,10 @@ async function run(fn) {
             @drop.prevent="onDrop(q.key, $event)"
           >
             <header>
-              <strong>{{ q.label }}</strong>
-              <span class="muted">{{ q.hint }}</span>
+              <h2>{{ q.label }}</h2>
+              <span class="muted small">{{ q.hint }}</span>
             </header>
-            <p v-if="!store.byQuadrant(q.key).length" class="muted empty">Drop tasks here</p>
+            <p v-if="!store.byQuadrant(q.key).length" class="muted small empty">Drop tasks here</p>
             <TaskCard
               v-for="t in store.byQuadrant(q.key)"
               :key="t.id"
@@ -148,8 +165,10 @@ async function run(fn) {
         </div>
 
         <div v-else class="list">
-          <p v-if="store.loading" class="muted">Loading...</p>
-          <p v-else-if="!listItems.length" class="muted">No tasks.</p>
+          <UiSkeleton v-if="store.loading" :lines="4" />
+          <UiEmpty v-else-if="!listItems.length" title="No tasks" hint="Quick add one above, or capture it from the top bar.">
+            <template #icon><PhCheckSquare /></template>
+          </UiEmpty>
           <TaskCard
             v-for="t in listItems"
             :key="t.id"
@@ -162,42 +181,70 @@ async function run(fn) {
         </div>
       </div>
 
-      <aside v-if="creating || selected" class="side card">
-        <h2>{{ creating ? 'New task' : 'Edit task' }}</h2>
-        <TaskForm :task="creating ? null : selected" :busy="busy" @save="save" @cancel="creating = false; selectedId = null" @delete="removeSelected" />
-        <div v-if="selected" class="side-actions">
-          <button type="button" @click="showSlots = !showSlots">{{ showSlots ? 'Hide slots' : 'Suggest a slot' }}</button>
-          <span v-if="selected.source !== 'manual'" class="muted">source: {{ selected.source }}</span>
-        </div>
-        <SlotPanel v-if="selected && showSlots" :task="selected" @scheduled="showSlots = false" @close="showSlots = false" />
-      </aside>
+      <Transition name="panel">
+        <aside v-if="panelOpen && !narrow" class="side card">
+          <div class="card-head">
+            <h2>{{ creating ? 'New task' : 'Edit task' }}</h2>
+            <span class="meta"><button type="button" class="link-btn" @click="closePanel">Close</button></span>
+          </div>
+          <TaskForm :task="creating ? null : selected" :busy="busy" @save="save" @cancel="closePanel" @delete="removeSelected" />
+          <div v-if="selected" class="side-actions">
+            <UiButton @click="showSlots = !showSlots">{{ showSlots ? 'Hide slots' : 'Suggest a slot' }}</UiButton>
+            <span v-if="selected.source !== 'manual'" class="muted small">source: {{ selected.source }}</span>
+          </div>
+          <SlotPanel v-if="selected && showSlots" :task="selected" @scheduled="showSlots = false" @close="showSlots = false" />
+        </aside>
+      </Transition>
     </div>
+
+    <UiSheet :open="panelOpen && narrow" :title="creating ? 'New task' : 'Edit task'" @close="closePanel">
+      <TaskForm :task="creating ? null : selected" :busy="busy" @save="save" @cancel="closePanel" @delete="removeSelected" />
+      <div v-if="selected" class="side-actions">
+        <UiButton @click="showSlots = !showSlots">{{ showSlots ? 'Hide slots' : 'Suggest a slot' }}</UiButton>
+        <span v-if="selected.source !== 'manual'" class="muted small">source: {{ selected.source }}</span>
+      </div>
+      <SlotPanel v-if="selected && showSlots" :task="selected" @scheduled="showSlots = false" @close="showSlots = false" />
+    </UiSheet>
   </div>
 </template>
 
 <style scoped>
-.tasks h1 { font-size: 1.3rem; margin: 0; }
-.toolbar { display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center; margin-bottom: 1rem; }
-.quick { display: flex; gap: 0.4rem; flex: 1; min-width: 240px; }
-.quick input { flex: 1; font: inherit; padding: 0.4rem; border: 1px solid #d1d5db; border-radius: 4px; }
-.controls { display: flex; flex-wrap: wrap; gap: 0.4rem; align-items: center; font-size: 0.85rem; }
-.controls input[type='search'], .controls select { font: inherit; padding: 0.35rem; border: 1px solid #d1d5db; border-radius: 4px; }
-.controls button.active { background: #111827; color: #fff; border-color: #111827; }
-.check { display: flex; align-items: center; gap: 0.3rem; }
-.layout { display: grid; grid-template-columns: 1fr; gap: 1rem; }
-@media (min-width: 900px) { .layout { grid-template-columns: 1fr 360px; } }
-.board { display: grid; grid-template-columns: 1fr; gap: 0.75rem; }
-@media (min-width: 640px) { .board { grid-template-columns: 1fr 1fr; } }
-.quadrant { background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 6px; padding: 0.6rem; min-height: 160px; display: flex; flex-direction: column; gap: 0.4rem; }
-.quadrant.over { border-color: #2563eb; background: #eff6ff; }
-.quadrant header { display: flex; justify-content: space-between; align-items: baseline; gap: 0.5rem; margin-bottom: 0.2rem; }
-.quadrant.do { border-top: 3px solid #dc2626; }
-.quadrant.schedule { border-top: 3px solid #2563eb; }
-.quadrant.delegate { border-top: 3px solid #d97706; }
-.quadrant.eliminate { border-top: 3px solid #9ca3af; }
-.empty { text-align: center; padding: 1rem 0; }
-.list { display: flex; flex-direction: column; gap: 0.4rem; }
-.side { align-self: start; position: sticky; top: 1rem; }
-.side h2 { margin-top: 0; }
-.side-actions { display: flex; gap: 0.5rem; align-items: center; margin-top: 0.75rem; }
+.quick { display: flex; gap: var(--sp-2); flex: 1 1 260px; min-width: 200px; }
+.quick input { flex: 1; }
+.search { width: 150px; }
+.check { display: flex; align-items: center; gap: 6px; font-size: var(--fs-md); white-space: nowrap; }
+.layout { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--sp-5); align-items: start; }
+@media (min-width: 900px) { .layout.split { grid-template-columns: minmax(0, 1fr) 360px; } }
+.board { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--sp-3); }
+@media (min-width: 640px) { .board { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } }
+.quadrant {
+  --q: var(--ink-3);
+  position: relative;
+  background: var(--surface-2);
+  border: 1px solid transparent;
+  border-top: 2px solid var(--q);
+  border-radius: var(--r-lg);
+  padding: var(--sp-3);
+  min-height: 180px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  transition: background-color var(--dur-hover) ease, border-color var(--dur-hover) ease;
+}
+.quadrant.do { --q: var(--danger); }
+.quadrant.schedule { --q: var(--info); }
+.quadrant.delegate { --q: var(--warn); }
+.quadrant.eliminate { --q: var(--ink-3); }
+.quadrant.over { background: var(--surface-3); border-color: var(--ink); }
+.quadrant header { display: flex; justify-content: space-between; align-items: baseline; gap: var(--sp-2); margin-bottom: 2px; }
+.quadrant h2 { font-size: var(--fs-base); }
+.empty { text-align: center; padding: var(--sp-4) 0; margin: auto 0; }
+.list { display: flex; flex-direction: column; gap: var(--sp-2); }
+.side { align-self: start; position: sticky; top: calc(var(--bar-h) + var(--sp-4)); margin: 0; }
+.side-actions { display: flex; gap: var(--sp-2); align-items: center; margin-top: var(--sp-4); }
+.panel-enter-active { transition: opacity var(--dur-panel) var(--ease-out), transform var(--dur-panel) var(--ease-out); }
+.panel-leave-active { transition: opacity var(--dur-hover) ease; }
+.panel-enter-from { opacity: 0; transform: translateX(8px); }
+.panel-leave-to { opacity: 0; }
+@media (prefers-reduced-motion: reduce) { .panel-enter-from { transform: none; } }
 </style>

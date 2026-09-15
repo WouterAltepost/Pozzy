@@ -2,6 +2,9 @@
 import { ref } from 'vue'
 import { formatDateTime } from '../../lib/dates'
 import { useTasksStore } from '../../stores/tasks'
+import UiButton from '../ui/UiButton.vue'
+import UiField from '../ui/UiField.vue'
+import UiSkeleton from '../ui/UiSkeleton.vue'
 
 const props = defineProps({ task: { type: Object, required: true } })
 const emit = defineEmits(['scheduled', 'close'])
@@ -58,43 +61,42 @@ fetchSlots()
 <template>
   <div class="slot-panel">
     <div class="head">
-      <strong>Suggest a slot</strong>
-      <button type="button" class="link" @click="emit('close')">close</button>
+      <h3>Suggest a slot</h3>
+      <button type="button" class="link-btn" @click="emit('close')">Close</button>
     </div>
-    <p v-if="task.scheduled_start" class="muted">
-      Currently scheduled {{ formatDateTime(task.scheduled_start) }} to {{ formatDateTime(task.scheduled_end) }}.
-      <button type="button" class="link" @click="unschedule">Unschedule</button>
+    <p v-if="task.scheduled_start" class="muted small">
+      Scheduled {{ formatDateTime(task.scheduled_start) }} to {{ formatDateTime(task.scheduled_end) }}.
+      <button type="button" class="link-btn" @click="unschedule">Unschedule</button>
     </p>
-    <p v-if="loading" class="muted">Computing free slots...</p>
+    <UiSkeleton v-if="loading" :lines="3" />
     <p v-else-if="error" class="error">{{ error }}</p>
     <template v-else-if="result">
-      <p class="muted">{{ result.duration_minutes }} min, {{ result.candidates_considered }} free candidates, ranked by {{ result.ranked_by }}.</p>
-      <p v-if="!result.slots.length" class="muted">No free slot in the next working days. Pick a time manually below.</p>
+      <p class="muted small num">{{ result.duration_minutes }} min, {{ result.candidates_considered }} free candidates, ranked by {{ result.ranked_by }}.</p>
+      <p v-if="!result.slots.length" class="muted small">No free slot in the next working days. Pick a time manually below.</p>
       <ul class="slots">
-        <li v-for="s in result.slots" :key="s.start">
-          <div>
-            <strong>{{ s.day_label }}</strong> {{ formatDateTime(s.start).split(', ').pop() }} to {{ formatDateTime(s.end).split(', ').pop() }}
-            <div class="muted">{{ s.reason }}</div>
+        <li v-for="s in result.slots" :key="s.start" class="inset slot">
+          <div class="slot-text">
+            <span class="when num"><strong>{{ s.day_label }}</strong> {{ formatDateTime(s.start).split(', ').pop() }} to {{ formatDateTime(s.end).split(', ').pop() }}</span>
+            <span class="muted small">{{ s.reason }}</span>
           </div>
-          <button type="button" @click="accept(s)">Accept</button>
+          <UiButton size="sm" variant="primary" @click="accept(s)">Accept</UiButton>
         </li>
       </ul>
     </template>
     <div class="manual">
-      <label>Start <input v-model="manualStart" type="datetime-local" /></label>
-      <label>End <input v-model="manualEnd" type="datetime-local" /></label>
-      <button type="button" :disabled="!manualStart" @click="acceptManual">Schedule manually</button>
+      <UiField label="Start"><input v-model="manualStart" type="datetime-local" /></UiField>
+      <UiField label="End"><input v-model="manualEnd" type="datetime-local" /></UiField>
+      <UiButton :disabled="!manualStart" @click="acceptManual">Schedule manually</UiButton>
     </div>
   </div>
 </template>
 
 <style scoped>
-.slot-panel { border-top: 1px solid #e5e7eb; margin-top: 0.75rem; padding-top: 0.75rem; }
+.slot-panel { border-top: 1px solid var(--line); margin-top: var(--sp-4); padding-top: var(--sp-4); display: flex; flex-direction: column; gap: var(--sp-3); }
 .head { display: flex; justify-content: space-between; align-items: center; }
-.link { border: none; background: none; color: #2563eb; padding: 0; }
-.slots { list-style: none; padding: 0; margin: 0.5rem 0; display: flex; flex-direction: column; gap: 0.4rem; }
-.slots li { display: flex; justify-content: space-between; align-items: center; gap: 0.5rem; background: #f3f4f6; padding: 0.5rem 0.6rem; border-radius: 4px; }
-.manual { display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: flex-end; font-size: 0.85rem; }
-.manual label { display: flex; flex-direction: column; gap: 0.2rem; }
-.manual input { font: inherit; padding: 0.3rem; border: 1px solid #d1d5db; border-radius: 4px; }
+.slots { display: flex; flex-direction: column; gap: var(--sp-2); }
+.slot { display: flex; justify-content: space-between; align-items: center; gap: var(--sp-3); }
+.slot-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; font-size: var(--fs-md); }
+.manual { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-2); align-items: end; }
+.manual > :last-child { grid-column: 1 / -1; }
 </style>

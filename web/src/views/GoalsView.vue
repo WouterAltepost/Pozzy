@@ -1,8 +1,13 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
+import { PhTarget, PhX } from '@phosphor-icons/vue'
 import AreaDot from '../components/shared/AreaDot.vue'
 import AreaSelect from '../components/shared/AreaSelect.vue'
 import WeekNav from '../components/shared/WeekNav.vue'
+import PageHeader from '../components/ui/PageHeader.vue'
+import UiBadge from '../components/ui/UiBadge.vue'
+import UiButton from '../components/ui/UiButton.vue'
+import UiEmpty from '../components/ui/UiEmpty.vue'
 import { formatDay, today, tomorrow } from '../lib/dates'
 import { useGoalsStore } from '../stores/goals'
 
@@ -13,8 +18,8 @@ const newDo = ref({ [today()]: '', [tomorrow()]: '' })
 const suggestFor = ref(tomorrow())
 
 const days = computed(() => [
-  { key: today(), label: `Today, ${formatDay(today())}` },
-  { key: tomorrow(), label: `Tomorrow, ${formatDay(tomorrow())}` },
+  { key: today(), label: 'Today', date: formatDay(today()) },
+  { key: tomorrow(), label: 'Tomorrow', date: formatDay(tomorrow()) },
 ])
 
 onMounted(() => store.load())
@@ -64,101 +69,103 @@ function acceptSuggestion(s) {
 
 <template>
   <div class="goals">
-    <h1>Goals</h1>
+    <PageHeader title="Goals" />
     <p v-if="error || store.error" class="error">{{ error || store.error }}</p>
 
     <section class="dos">
       <div v-for="d in days" :key="d.key" class="card day">
-        <h2>{{ d.label }}</h2>
+        <div class="card-head">
+          <h2>{{ d.label }}</h2>
+          <span class="meta">{{ d.date }}</span>
+        </div>
         <ul>
-          <li v-for="item in store.dosFor(d.key)" :key="item.id" :class="{ done: item.done }">
-            <input type="checkbox" :checked="item.done" @change="run(() => store.toggleDo(item))" />
-            <input class="title" type="text" :value="item.title" @change="renameDo(item, $event)" />
-            <span v-if="item.warning" class="warn" :title="`Rolled over ${item.roll_count} times since ${item.rolled_from_date}`">rolled {{ item.roll_count }}x</span>
-            <span v-else-if="item.roll_count" class="muted">rolled</span>
-            <button type="button" class="x" @click="run(() => store.removeDo(item.id))">&times;</button>
+          <li v-for="item in store.dosFor(d.key)" :key="item.id" class="list-row" :class="{ done: item.done }">
+            <input type="checkbox" :checked="item.done" :aria-label="item.title" @change="run(() => store.toggleDo(item))" />
+            <input class="title" type="text" :value="item.title" aria-label="Do title" @change="renameDo(item, $event)" />
+            <UiBadge v-if="item.warning" tone="warn" :title="`Rolled over ${item.roll_count} times since ${item.rolled_from_date}`">rolled {{ item.roll_count }}x</UiBadge>
+            <UiBadge v-else-if="item.roll_count" tone="neutral">rolled</UiBadge>
+            <button type="button" class="icon-btn" aria-label="Remove" @click="run(() => store.removeDo(item.id))"><PhX /></button>
           </li>
+          <li v-if="!store.dosFor(d.key).length" class="muted small hint">Nothing set yet.</li>
         </ul>
         <form class="add" @submit.prevent="addDo(d.key)">
-          <input v-model="newDo[d.key]" type="text" :placeholder="store.dosFor(d.key).length >= 3 ? 'Add another (three is the aim)' : 'Add a do'" />
-          <button type="submit">Add</button>
+          <input v-model="newDo[d.key]" type="text" :placeholder="store.dosFor(d.key).length >= 3 ? 'Add another (three is the aim)' : 'Add a do'" :aria-label="'Add a do for ' + d.label" />
+          <UiButton type="submit">Add</UiButton>
         </form>
       </div>
     </section>
 
     <section class="card suggest">
-      <div class="row">
-        <strong>Suggest three do's</strong>
-        <select v-model="suggestFor">
+      <div class="card-head">
+        <h2>Suggest three do's</h2>
+        <span class="meta"><button type="button" class="link-btn" @click="run(() => store.rolloverNow())">Run rollover now</button></span>
+      </div>
+      <div class="toolbar">
+        <select v-model="suggestFor" aria-label="Suggest for">
           <option :value="today()">for today</option>
           <option :value="tomorrow()">for tomorrow</option>
         </select>
-        <button type="button" @click="suggest">Suggest</button>
-        <button type="button" class="link" @click="run(() => store.rolloverNow())">Run rollover now</button>
+        <UiButton variant="primary" @click="suggest">Suggest</UiButton>
       </div>
-      <ul v-if="store.suggestions">
-        <li v-if="!store.suggestions.suggestions.length" class="muted">Nothing to suggest, no open tasks or deadlines.</li>
-        <li v-for="s in store.suggestions.suggestions" :key="s.title">
-          <span>{{ s.title }} <span class="muted">{{ s.reason }}</span></span>
-          <button type="button" @click="acceptSuggestion(s)">Add</button>
+      <ul v-if="store.suggestions" class="suggestions">
+        <li v-if="!store.suggestions.suggestions.length" class="muted small hint">Nothing to suggest, no open tasks or deadlines.</li>
+        <li v-for="s in store.suggestions.suggestions" :key="s.title" class="list-row">
+          <span class="title"><span>{{ s.title }}</span> <span class="muted small">{{ s.reason }}</span></span>
+          <UiButton size="sm" @click="acceptSuggestion(s)">Add</UiButton>
         </li>
-        <li class="muted small">picked by {{ store.suggestions.source }}</li>
+        <li class="muted xs picked">picked by {{ store.suggestions.source }}</li>
       </ul>
     </section>
 
     <section class="card">
-      <div class="row">
+      <div class="card-head">
         <h2>Weekly goals</h2>
-        <WeekNav :week-start="store.weekStart" @change="run(() => store.loadWeek($event))" />
+        <span class="meta"><WeekNav :week-start="store.weekStart" @change="run(() => store.loadWeek($event))" /></span>
       </div>
       <ul class="goal-list">
-        <li v-for="g in store.goals" :key="g.id" :class="{ done: g.done }">
-          <input type="checkbox" :checked="g.done" @change="run(() => store.updateGoal(g.id, { done: !g.done }))" />
+        <li v-for="g in store.goals" :key="g.id" class="list-row" :class="{ done: g.done }">
+          <input type="checkbox" :checked="g.done" :aria-label="g.title" @change="run(() => store.updateGoal(g.id, { done: !g.done }))" />
           <div class="goal-body">
-            <div class="goal-title">{{ g.title }} <AreaDot :area-id="g.area_id" label /></div>
+            <div class="title">{{ g.title }} <AreaDot :area-id="g.area_id" label /></div>
             <div v-if="g.target_value" class="progress">
-              <div class="bar"><div class="fill" :style="{ width: Math.round((g.progress || 0) * 100) + '%' }"></div></div>
-              <span>{{ g.current_value }} / {{ g.target_value }}</span>
-              <button type="button" @click="run(() => store.progressGoal(g.id, 1))">+1</button>
-              <button type="button" @click="run(() => store.progressGoal(g.id, -1))">-1</button>
+              <div class="bar"><div class="fill" :class="{ full: g.done }" :style="{ width: Math.round((g.progress || 0) * 100) + '%' }"></div></div>
+              <span class="num small">{{ g.current_value }} / {{ g.target_value }}</span>
+              <UiButton size="sm" variant="ghost" aria-label="Add one" @click="run(() => store.progressGoal(g.id, 1))">+1</UiButton>
+              <UiButton size="sm" variant="ghost" aria-label="Remove one" @click="run(() => store.progressGoal(g.id, -1))">-1</UiButton>
             </div>
           </div>
-          <button type="button" class="x" @click="run(() => store.removeGoal(g.id))">&times;</button>
+          <button type="button" class="icon-btn" aria-label="Remove goal" @click="run(() => store.removeGoal(g.id))"><PhX /></button>
         </li>
-        <li v-if="!store.goals.length" class="muted">No goals for this week yet.</li>
       </ul>
+      <UiEmpty v-if="!store.goals.length" compact title="No goals for this week yet" hint="Add one below, or finalize a weekly review to draft them.">
+        <template #icon><PhTarget /></template>
+      </UiEmpty>
       <form class="add goal-add" @submit.prevent="addGoal">
-        <input v-model="newGoal.title" type="text" placeholder="New weekly goal" />
-        <AreaSelect v-model="newGoal.area_id" />
-        <input v-model.number="newGoal.target_value" type="number" min="1" step="any" placeholder="target (optional)" />
-        <button type="submit">Add</button>
+        <input v-model="newGoal.title" type="text" placeholder="New weekly goal" aria-label="New weekly goal" />
+        <AreaSelect v-model="newGoal.area_id" aria-label="Area" />
+        <input v-model.number="newGoal.target_value" type="number" min="1" step="any" placeholder="target" aria-label="Target" class="target" />
+        <UiButton type="submit">Add</UiButton>
       </form>
     </section>
   </div>
 </template>
 
 <style scoped>
-h1 { font-size: 1.3rem; }
-h2 { font-size: 1rem; margin: 0 0 0.5rem; }
-.dos { display: grid; grid-template-columns: 1fr; gap: 1rem; }
-@media (min-width: 720px) { .dos { grid-template-columns: 1fr 1fr; } }
-ul { list-style: none; padding: 0; margin: 0; }
-li { display: flex; align-items: center; gap: 0.5rem; padding: 0.3rem 0; }
-li.done .title, li.done .goal-title { text-decoration: line-through; color: #9ca3af; }
-.title { flex: 1; font: inherit; border: 1px solid transparent; padding: 0.2rem; border-radius: 3px; }
-.title:focus { border-color: #d1d5db; background: #fff; }
-.warn { color: #b91c1c; font-size: 0.75rem; font-weight: 600; }
-.x { border: none; background: none; color: #9ca3af; font-size: 1.1rem; padding: 0 0.3rem; }
-.add { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-top: 0.5rem; }
-.goal-add :deep(select) { flex: 1; min-width: 110px; }
-.add input[type='text'] { flex: 1; font: inherit; padding: 0.35rem; border: 1px solid #d1d5db; border-radius: 4px; }
-.goal-add input[type='number'] { width: 130px; font: inherit; padding: 0.35rem; border: 1px solid #d1d5db; border-radius: 4px; }
-.row { display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; margin-bottom: 0.5rem; }
-.link { border: none; background: none; color: #2563eb; }
-.small { font-size: 0.75rem; }
-.goal-body { flex: 1; }
-.progress { display: flex; align-items: center; gap: 0.5rem; font-size: 0.8rem; margin-top: 0.2rem; }
-.bar { flex: 1; height: 6px; background: #e5e7eb; border-radius: 3px; overflow: hidden; max-width: 200px; }
-.fill { height: 100%; background: #059669; }
-.progress button { padding: 0 0.4rem; font-size: 0.75rem; }
+.dos { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--sp-4); }
+@media (min-width: 720px) { .dos { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--sp-5); } }
+.dos .card { margin-bottom: var(--sp-4); }
+.list-row .title { flex: 1; min-width: 0; }
+input.title { height: 30px; padding: 0 6px; margin: 0 -6px; border-color: transparent; background: transparent; }
+input.title:hover { border-color: var(--line-2); background: var(--surface); }
+input.title:focus-visible { border-color: var(--line-2); background: var(--surface); }
+.hint { padding: var(--sp-2) 0; }
+.add { display: flex; flex-wrap: wrap; gap: var(--sp-2); margin-top: var(--sp-3); }
+.add input[type='text'] { flex: 1 1 160px; }
+.goal-add :deep(select) { flex: 1 1 120px; min-width: 110px; }
+.goal-add .target { width: 110px; }
+.suggestions { margin-top: var(--sp-3); }
+.picked { padding-top: var(--sp-2); }
+.goal-body { flex: 1; min-width: 0; }
+.progress { display: flex; align-items: center; gap: var(--sp-2); margin-top: 4px; }
+.progress .bar { flex: 1; max-width: 220px; }
 </style>
