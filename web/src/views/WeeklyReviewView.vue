@@ -1,6 +1,10 @@
 <script setup>
 import { computed, onMounted, ref, watch } from 'vue'
+import { PhX } from '@phosphor-icons/vue'
 import WeekNav from '../components/shared/WeekNav.vue'
+import PageHeader from '../components/ui/PageHeader.vue'
+import UiButton from '../components/ui/UiButton.vue'
+import UiField from '../components/ui/UiField.vue'
 import { formatDateTime } from '../lib/dates'
 import { useAreasStore } from '../stores/areas'
 import { useReviewsStore } from '../stores/reviews'
@@ -72,113 +76,112 @@ function finalize() {
 
 <template>
   <div class="review">
-    <div class="head">
-      <h1>Weekly review</h1>
+    <PageHeader title="Weekly review">
       <WeekNav :week-start="store.week" @change="changeWeek" />
-    </div>
+    </PageHeader>
     <p v-if="error || store.error" class="error">{{ error || store.error }}</p>
 
     <div v-if="!review && !store.loading" class="card">
       <p class="muted">No review for this week yet. The draft job runs Sunday 18:00, or generate it now.</p>
-      <button type="button" :disabled="busy" @click="run(() => store.generate())">{{ busy ? 'Working' : 'Generate review' }}</button>
+      <UiButton variant="primary" :loading="busy" @click="run(() => store.generate())">Generate review</UiButton>
     </div>
 
     <template v-if="review">
       <section class="card">
-        <h2>
-          Numbers
-          <span class="muted small">
+        <div class="card-head">
+          <h2>Numbers</h2>
+          <span class="meta">
             <template v-if="review.finalized">finalized {{ formatDateTime(review.finalized_at) }}</template>
-            <template v-else><button type="button" class="link" :disabled="busy" @click="run(() => store.refreshStats())">refresh</button></template>
+            <button v-else type="button" class="link-btn" :disabled="busy" @click="run(() => store.refreshStats())">Refresh</button>
           </span>
-        </h2>
+        </div>
         <div v-if="stats" class="tiles">
-          <div class="tile"><div class="big">{{ stats.goals.done }}/{{ stats.goals.total }}</div><div class="muted small">weekly goals</div></div>
-          <div class="tile"><div class="big">{{ pct(stats.dos.rate) }}</div><div class="muted small">do's done, {{ stats.dos.rolled }} rolled</div></div>
-          <div class="tile"><div class="big">{{ stats.tasks.done }}</div><div class="muted small">tasks done, {{ stats.tasks.overdue }} overdue</div></div>
-          <div class="tile"><div class="big">{{ stats.hours.total_hours }}h</div><div class="muted small">logged</div></div>
-          <div v-if="stats.emails" class="tile"><div class="big">{{ stats.emails.handled }}/{{ stats.emails.received }}</div><div class="muted small">emails handled</div></div>
+          <div class="tile inset"><div class="big num">{{ stats.goals.done }}/{{ stats.goals.total }}</div><div class="muted xs">weekly goals</div></div>
+          <div class="tile inset"><div class="big num">{{ pct(stats.dos.rate) }}</div><div class="muted xs">do's done, {{ stats.dos.rolled }} rolled</div></div>
+          <div class="tile inset"><div class="big num">{{ stats.tasks.done }}</div><div class="muted xs">tasks done, {{ stats.tasks.overdue }} overdue</div></div>
+          <div class="tile inset"><div class="big num">{{ stats.hours.total_hours }}h</div><div class="muted xs">logged</div></div>
+          <div v-if="stats.emails" class="tile inset"><div class="big num">{{ stats.emails.handled }}/{{ stats.emails.received }}</div><div class="muted xs">emails handled</div></div>
         </div>
         <div v-if="stats" class="cols">
           <div>
             <h3>Goals</h3>
-            <ul><li v-for="g in stats.goals.items" :key="g.title" :class="{ done: g.done }">{{ g.title }} <span v-if="g.progress" class="muted small">{{ g.progress }}</span></li><li v-if="!stats.goals.items.length" class="muted">none</li></ul>
+            <ul class="plain"><li v-for="g in stats.goals.items" :key="g.title" :class="{ done: g.done }">{{ g.title }} <span v-if="g.progress" class="muted small num">{{ g.progress }}</span></li><li v-if="!stats.goals.items.length" class="muted">none</li></ul>
             <h3>Hours</h3>
-            <ul><li v-for="h in stats.hours.areas" :key="h.area">{{ h.area }}: {{ h.hours }}h<span v-if="h.target_hours" class="muted"> / {{ h.target_hours }}h</span></li><li v-if="!stats.hours.areas.length" class="muted">none</li></ul>
+            <ul class="plain"><li v-for="h in stats.hours.areas" :key="h.area" class="num">{{ h.area }}: {{ h.hours }}h<span v-if="h.target_hours" class="muted"> / {{ h.target_hours }}h</span></li><li v-if="!stats.hours.areas.length" class="muted">none</li></ul>
           </div>
           <div>
             <h3>Habits</h3>
-            <ul><li v-for="t in stats.trackers" :key="t.name">{{ t.name }}: {{ pct(t.completion) }}<span class="muted small"> streak {{ t.streak }}</span></li><li v-if="!stats.trackers.length" class="muted">none</li></ul>
+            <ul class="plain"><li v-for="t in stats.trackers" :key="t.name" class="num">{{ t.name }}: {{ pct(t.completion) }}<span class="muted small"> streak {{ t.streak }}</span></li><li v-if="!stats.trackers.length" class="muted">none</li></ul>
             <h3>Missed do's</h3>
-            <ul><li v-for="m in stats.dos.missed" :key="m">{{ m }}</li><li v-if="!stats.dos.missed.length" class="muted">none</li></ul>
+            <ul class="plain"><li v-for="m in stats.dos.missed" :key="m">{{ m }}</li><li v-if="!stats.dos.missed.length" class="muted">none</li></ul>
             <h3 v-if="stats.deadlines.upcoming.length">Deadlines next week</h3>
-            <ul><li v-for="d in stats.deadlines.upcoming" :key="d.title">{{ d.title }} <span class="muted small">{{ d.course }} {{ d.due }}</span></li></ul>
+            <ul class="plain"><li v-for="d in stats.deadlines.upcoming" :key="d.title">{{ d.title }} <span class="muted small">{{ d.course }} {{ d.due }}</span></li></ul>
           </div>
         </div>
       </section>
 
       <section class="card">
-        <h2>
-          Reflection
-          <span class="muted small">
+        <div class="card-head">
+          <h2>Reflection</h2>
+          <span class="meta">
             {{ review.reflection_source === 'claude' ? 'Claude' : review.reflection_source === 'edited' ? 'edited' : 'rules' }}
-            <template v-if="!locked"> · <button type="button" class="link" :disabled="busy" @click="run(() => store.generate())">regenerate</button></template>
+            <button v-if="!locked" type="button" class="link-btn" :disabled="busy" @click="run(() => store.generate())">Regenerate</button>
           </span>
-        </h2>
-        <p v-for="(p, i) in paragraphs" :key="i">{{ p }}</p>
-        <p v-if="!paragraphs.length" class="muted">No reflection yet.</p>
+        </div>
+        <div class="prose">
+          <p v-for="(p, i) in paragraphs" :key="i">{{ p }}</p>
+          <p v-if="!paragraphs.length" class="muted">No reflection yet.</p>
+        </div>
       </section>
 
       <section class="card">
-        <h2>Your notes</h2>
-        <textarea v-model="notes" rows="4" :disabled="locked" placeholder="What the numbers do not show" @blur="saveNotes"></textarea>
+        <div class="card-head"><h2>Your notes</h2></div>
+        <textarea v-model="notes" rows="4" :disabled="locked" placeholder="What the numbers do not show" aria-label="Your notes" @blur="saveNotes"></textarea>
       </section>
 
       <section class="card">
-        <h2>Next week focus <span class="muted small">becomes next week's goals on finalize</span></h2>
+        <div class="card-head"><h2>Next week focus</h2><span class="meta">becomes next week's goals on finalize</span></div>
         <div v-for="(f, i) in focus" :key="i" class="focus-row">
-          <input v-model="f.title" type="text" placeholder="Goal" :disabled="locked" />
-          <select v-model="f.area" :disabled="locked">
+          <input v-model="f.title" type="text" placeholder="Goal" aria-label="Goal" :disabled="locked" />
+          <select v-model="f.area" aria-label="Area" :disabled="locked">
             <option :value="null">No area</option>
             <option v-for="a in areas.items" :key="a.id" :value="a.name">{{ a.name }}</option>
           </select>
-          <input v-model="f.target_value" type="number" step="any" min="0" placeholder="target" class="narrow" :disabled="locked" />
-          <button v-if="!locked" type="button" class="tiny" @click="focus.splice(i, 1)">x</button>
+          <input v-model="f.target_value" type="number" step="any" min="0" placeholder="target" aria-label="Target" class="narrow" :disabled="locked" />
+          <button v-if="!locked" type="button" class="icon-btn" aria-label="Remove" @click="focus.splice(i, 1)"><PhX /></button>
           <div v-if="f.reason" class="muted small reason">{{ f.reason }}</div>
         </div>
-        <p v-if="!focus.length" class="muted">Nothing yet.</p>
+        <p v-if="!focus.length" class="muted small">Nothing yet.</p>
         <div v-if="!locked" class="actions">
-          <button type="button" @click="addFocus">Add</button>
-          <button type="button" :disabled="busy" @click="saveFocus">Save</button>
-          <button type="button" class="primary" :disabled="busy" @click="finalize">Finalize week</button>
+          <UiButton @click="addFocus">Add</UiButton>
+          <UiButton :loading="busy" @click="saveFocus">Save</UiButton>
+          <UiButton variant="primary" class="push" :loading="busy" @click="finalize">Finalize week</UiButton>
         </div>
-        <p v-if="createdGoals.length" class="ok small">Created {{ createdGoals.length }} goal(s) for next week. <RouterLink :to="{ name: 'goals' }">Open goals</RouterLink></p>
+        <p v-if="createdGoals.length" class="ok small created">Created {{ createdGoals.length }} goal(s) for next week. <RouterLink :to="{ name: 'goals' }">Open goals</RouterLink></p>
       </section>
     </template>
   </div>
 </template>
 
 <style scoped>
-h1 { font-size: 1.3rem; margin: 0; }
-h2 { font-size: 1rem; margin: 0 0 0.5rem; display: flex; justify-content: space-between; align-items: baseline; gap: 0.5rem; }
-h3 { font-size: 0.85rem; margin: 0.6rem 0 0.2rem; color: #4b5563; }
-.head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 0.5rem; margin-bottom: 1rem; }
-.small { font-size: 0.78rem; font-weight: normal; }
-.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 0.5rem; margin-bottom: 0.5rem; }
-.tile { background: #f9fafb; border-radius: 4px; padding: 0.5rem; text-align: center; }
-.big { font-size: 1.3rem; font-weight: 600; }
-.cols { display: grid; grid-template-columns: 1fr; gap: 0 1rem; }
+.review { max-width: 820px; }
+.tiles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--sp-2); margin-bottom: var(--sp-4); }
+@media (min-width: 640px) { .tiles { grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); } }
+.tile { text-align: center; }
+.big { font-size: var(--fs-2xl); font-weight: 600; letter-spacing: -0.02em; }
+.cols { display: grid; grid-template-columns: 1fr; gap: 0 var(--sp-5); }
 @media (min-width: 640px) { .cols { grid-template-columns: 1fr 1fr; } }
-ul { list-style: none; padding: 0; margin: 0; font-size: 0.9rem; }
-li.done { text-decoration: line-through; color: #9ca3af; }
-p { margin: 0 0 0.6rem; font-size: 0.92rem; line-height: 1.45; }
-textarea { width: 100%; font: inherit; padding: 0.4rem; border: 1px solid #d1d5db; border-radius: 4px; }
-.focus-row { display: grid; grid-template-columns: 1fr auto auto auto; gap: 0.4rem; align-items: center; margin-bottom: 0.3rem; }
-.focus-row input, .focus-row select { font: inherit; padding: 0.35rem; border: 1px solid #d1d5db; border-radius: 4px; }
-.narrow { width: 5rem; }
+h3 { font-size: var(--fs-xs); letter-spacing: 0.02em; color: var(--ink-3); font-weight: 500; margin: var(--sp-3) 0 var(--sp-1); }
+.plain li { font-size: var(--fs-md); padding: 2px 0; }
+.plain li.done { text-decoration: line-through; color: var(--ink-3); }
+.prose { max-width: 68ch; }
+.prose p { line-height: 1.6; }
+textarea { width: 100%; }
+.focus-row { display: grid; grid-template-columns: minmax(0, 1fr) auto auto auto; gap: var(--sp-2); align-items: center; margin-bottom: var(--sp-2); }
+.narrow { width: 96px; }
 .reason { grid-column: 1 / -1; }
-.tiny { padding: 0 0.4rem; font-size: 0.75rem; }
-.actions { display: flex; gap: 0.5rem; margin-top: 0.5rem; }
-.primary { background: #111827; color: #fff; border-color: #111827; }
-.link { border: none; background: none; padding: 0; color: #2563eb; font-size: 0.78rem; cursor: pointer; }
+.actions { display: flex; gap: var(--sp-2); margin-top: var(--sp-3); }
+.push { margin-left: auto; }
+.created { margin-top: var(--sp-3); }
+@media (max-width: 520px) { .focus-row { grid-template-columns: 1fr auto; } .focus-row select { grid-column: 1 / -1; } }
 </style>

@@ -1,8 +1,15 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
+import { PhCaretLeft, PhCaretRight } from '@phosphor-icons/vue'
 import AgendaGrid from '../components/agenda/AgendaGrid.vue'
 import EventForm from '../components/agenda/EventForm.vue'
 import SyncBar from '../components/agenda/SyncBar.vue'
+import PageHeader from '../components/ui/PageHeader.vue'
+import UiButton from '../components/ui/UiButton.vue'
+import UiSegmented from '../components/ui/UiSegmented.vue'
+import UiSheet from '../components/ui/UiSheet.vue'
+import UiSkeleton from '../components/ui/UiSkeleton.vue'
+import { useMediaQuery } from '../composables/useMediaQuery'
 import { formatDay, mondayOf, today } from '../lib/dates'
 import { useCalendarStore } from '../stores/calendar'
 
@@ -10,8 +17,14 @@ const store = useCalendarStore()
 const panel = ref(null) // null | { event } | { defaults }
 const saving = ref(false)
 const formError = ref('')
+const narrow = useMediaQuery('(max-width: 899px)')
 
 const title = computed(() => (store.view === 'week' ? `Week of ${formatDay(mondayOf(store.anchor))}` : formatDay(store.anchor)))
+const VIEWS = [
+  { value: 'week', label: 'Week' },
+  { value: 'day', label: 'Day' },
+]
+const view = computed({ get: () => store.view, set: (v) => store.setView(v) })
 
 onMounted(() => {
   store.load()
@@ -64,72 +77,83 @@ function pickDay(evt) {
 
 <template>
   <div class="agenda">
-    <div class="toolbar">
-      <h1>Agenda</h1>
+    <PageHeader title="Agenda">
+      <template #meta>{{ title }}</template>
       <div class="nav">
-        <button type="button" @click="store.step(-1)">&lsaquo;</button>
-        <span class="range">{{ title }}</span>
-        <button type="button" @click="store.step(1)">&rsaquo;</button>
-        <button v-if="store.anchor !== today()" type="button" class="link" @click="store.goToday()">Today</button>
-        <input type="date" :value="store.anchor" @change="pickDay" />
+        <button type="button" class="icon-btn" aria-label="Previous" @click="store.step(-1)"><PhCaretLeft /></button>
+        <button type="button" class="icon-btn" aria-label="Next" @click="store.step(1)"><PhCaretRight /></button>
+        <button v-if="store.anchor !== today()" type="button" class="link-btn" @click="store.goToday()">Today</button>
+        <input type="date" :value="store.anchor" aria-label="Go to date" @change="pickDay" />
       </div>
-      <div class="views">
-        <button type="button" :class="{ active: store.view === 'week' }" @click="store.setView('week')">Week</button>
-        <button type="button" :class="{ active: store.view === 'day' }" @click="store.setView('day')">Day</button>
-        <button type="button" class="primary" @click="openNew({ day: store.anchor })">New event</button>
-      </div>
+      <UiSegmented v-model="view" :options="VIEWS" />
+      <UiButton variant="primary" @click="openNew({ day: store.anchor })">New event</UiButton>
+    </PageHeader>
+
+    <div class="status">
+      <SyncBar />
+      <p v-if="store.error" class="error">{{ store.error }}</p>
     </div>
 
-    <SyncBar />
-    <p v-if="store.error" class="error">{{ store.error }}</p>
-
-    <div class="body">
+    <div class="body" :class="{ split: panel && !narrow }">
       <div class="gridwrap">
-        <p v-if="store.loading && !store.events.length" class="muted">Loading...</p>
+        <UiSkeleton v-if="store.loading && !store.events.length" height="240px" />
         <AgendaGrid :days="store.days" :events="store.events" :tasks="store.tasks" @select-event="openEvent" @create="openNew" />
-        <p class="legend muted">
+        <p class="legend muted xs">
           <span class="sw event"></span> event <span class="sw recurring"></span> recurring <span class="sw linked"></span> Pozzy task event
           <span class="sw task"></span> scheduled task (not yet on iCloud)
         </p>
       </div>
-      <aside v-if="panel" class="card panel">
-        <EventForm
-          :event="panel.event || null"
-          :defaults="panel.defaults || {}"
-          :calendars="store.selectedCalendars"
-          :default-calendar-url="store.account?.write_calendar_url || ''"
-          :saving="saving"
-          :error="formError"
-          @save="save"
-          @delete="remove"
-          @close="closePanel"
-        />
-      </aside>
+      <Transition name="panel">
+        <aside v-if="panel && !narrow" class="card panel">
+          <EventForm
+            :event="panel.event || null"
+            :defaults="panel.defaults || {}"
+            :calendars="store.selectedCalendars"
+            :default-calendar-url="store.account?.write_calendar_url || ''"
+            :saving="saving"
+            :error="formError"
+            @save="save"
+            @delete="remove"
+            @close="closePanel"
+          />
+        </aside>
+      </Transition>
     </div>
+
+    <UiSheet :open="Boolean(panel) && narrow" :title="panel?.event ? 'Event' : 'New event'" @close="closePanel">
+      <EventForm
+        v-if="panel"
+        :event="panel.event || null"
+        :defaults="panel.defaults || {}"
+        :calendars="store.selectedCalendars"
+        :default-calendar-url="store.account?.write_calendar_url || ''"
+        :saving="saving"
+        :error="formError"
+        @save="save"
+        @delete="remove"
+        @close="closePanel"
+      />
+    </UiSheet>
   </div>
 </template>
 
 <style scoped>
-.agenda { display: flex; flex-direction: column; gap: 0.75rem; }
-h1 { font-size: 1.3rem; margin: 0; }
-.toolbar { display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; }
-.nav, .views { display: flex; align-items: center; gap: 0.4rem; }
-.range { font-size: 0.9rem; min-width: 140px; text-align: center; }
-.nav input { font: inherit; font-size: 0.8rem; padding: 0.25rem; border: 1px solid #d1d5db; border-radius: 4px; }
-.views .active { background: #111827; color: #fff; border-color: #111827; }
-.primary { background: #2563eb; color: #fff; border-color: #2563eb; }
-.link { border: none; background: none; color: #2563eb; padding: 0.2rem 0.4rem; }
-.body { display: flex; gap: 1rem; align-items: flex-start; }
-.gridwrap { flex: 1; min-width: 0; }
-.panel { width: 320px; flex-shrink: 0; position: sticky; top: 1rem; }
-.legend { font-size: 0.75rem; display: flex; gap: 0.4rem; align-items: center; flex-wrap: wrap; margin: 0.4rem 0 0; }
-.sw { display: inline-block; width: 12px; height: 12px; border-radius: 3px; }
-.sw.event { background: #dbeafe; border: 1px solid #bfdbfe; }
-.sw.recurring { background: #dbeafe; border-left: 3px solid #60a5fa; }
-.sw.linked { background: #ede9fe; border: 1px solid #ddd6fe; }
-.sw.task { background: #ecfdf5; border: 1px dashed #34d399; }
-@media (max-width: 860px) {
-  .body { flex-direction: column; }
-  .panel { width: 100%; position: static; }
-}
+.nav { display: flex; align-items: center; gap: 4px; }
+.nav input[type='date'] { margin-left: 4px; }
+.status { display: flex; align-items: center; gap: var(--sp-3); flex-wrap: wrap; margin: calc(var(--sp-5) * -1) 0 var(--sp-3); }
+.body { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--sp-5); align-items: start; }
+@media (min-width: 900px) { .body.split { grid-template-columns: minmax(0, 1fr) 340px; } }
+.gridwrap { min-width: 0; }
+.panel { position: sticky; top: calc(var(--bar-h) + var(--sp-4)); margin: 0; }
+.legend { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; margin: var(--sp-2) 0 0; }
+.sw { display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin-left: 6px; }
+.sw.event { background: var(--info-soft); box-shadow: inset 3px 0 0 var(--info); }
+.sw.recurring { background: var(--surface-2); box-shadow: inset 3px 0 0 var(--ink-3); }
+.sw.linked { background: var(--ok-soft); box-shadow: inset 3px 0 0 var(--ok); }
+.sw.task { outline: 1px dashed var(--ok); outline-offset: -1px; }
+.panel-enter-active { transition: opacity var(--dur-panel) var(--ease-out), transform var(--dur-panel) var(--ease-out); }
+.panel-leave-active { transition: opacity var(--dur-hover) ease; }
+.panel-enter-from { opacity: 0; transform: translateX(8px); }
+.panel-leave-to { opacity: 0; }
+@media (prefers-reduced-motion: reduce) { .panel-enter-from { transform: none; } }
 </style>

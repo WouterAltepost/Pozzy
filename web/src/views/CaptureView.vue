@@ -1,6 +1,11 @@
 <script setup>
 import { onMounted, ref } from 'vue'
+import { PhLightning, PhX } from '@phosphor-icons/vue'
 import ProposalEditor from '../components/capture/ProposalEditor.vue'
+import PageHeader from '../components/ui/PageHeader.vue'
+import UiBadge from '../components/ui/UiBadge.vue'
+import UiButton from '../components/ui/UiButton.vue'
+import UiEmpty from '../components/ui/UiEmpty.vue'
 import { formatDateTime } from '../lib/dates'
 import { useCapturesStore } from '../stores/captures'
 
@@ -54,63 +59,69 @@ function resultLink(ref) {
 
 <template>
   <div class="capture">
-    <h1>Capture</h1>
+    <PageHeader title="Capture" />
     <form class="card entry" @submit.prevent="submit">
-      <textarea v-model="text" rows="2" placeholder="Anything: 'call dentist tomorrow', 'note: ...', 'goal: run 3x next week', 'weight 82.4', 'event: standup tue 09:00'" @keydown.enter.exact.prevent="submit"></textarea>
-      <div class="row">
-        <button type="submit" :disabled="busy || !text.trim()">{{ busy ? 'Working' : 'Capture' }}</button>
+      <textarea v-model="text" rows="2" placeholder="Anything: 'call dentist tomorrow', 'note: ...', 'goal: run 3x next week', 'weight 82.4', 'event: standup tue 09:00'" aria-label="Capture text" @keydown.enter.exact.prevent="submit"></textarea>
+      <div class="entry-row">
+        <UiButton type="submit" variant="primary" :loading="busy" :disabled="!text.trim()">Capture</UiButton>
         <span class="muted small">Stored first, then Claude (or the rule parser) proposes what it is. Nothing is created until you confirm.</span>
       </div>
     </form>
     <p v-if="error || store.error" class="error">{{ error || store.error }}</p>
-    <p v-if="lastCreated" class="ok small">
+    <p v-if="lastCreated" class="ok small created">
       Created {{ lastCreated.type }} "{{ lastCreated.title }}".
       <RouterLink v-if="resultLink(lastCreated.ref)" :to="resultLink(lastCreated.ref)">Open</RouterLink>
     </p>
 
-    <h2>Inbox <span class="muted small">{{ store.open.length }}</span></h2>
-    <p v-if="!store.open.length" class="muted">Nothing waiting.</p>
+    <div class="section-head"><h2>Inbox</h2><span class="muted small num">{{ store.open.length }}</span></div>
+    <div v-if="!store.open.length" class="card">
+      <UiEmpty compact title="Nothing waiting" hint="Captured items appear here until you confirm or discard them.">
+        <template #icon><PhLightning /></template>
+      </UiEmpty>
+    </div>
     <section v-for="c in store.open" :key="c.id" class="card item">
       <div class="raw">
-        <span>{{ c.raw_text }}</span>
-        <span class="muted small">{{ formatDateTime(c.created_at) }}</span>
+        <span class="raw-text">{{ c.raw_text }}</span>
+        <span class="muted xs num">{{ formatDateTime(c.created_at) }}</span>
       </div>
       <ProposalEditor v-if="c.proposal" :proposal="c.proposal" @confirm="(body) => confirm(c, body)" @discard="run(() => store.discard(c.id))" />
       <div v-else class="row">
-        <button type="button" :disabled="busy" @click="run(() => store.process(c.id))">Propose</button>
-        <button type="button" class="danger" @click="run(() => store.discard(c.id))">Discard</button>
+        <UiButton variant="primary" :loading="busy" @click="run(() => store.process(c.id))">Propose</UiButton>
+        <UiButton variant="danger" @click="run(() => store.discard(c.id))">Discard</UiButton>
       </div>
     </section>
 
-    <h2 class="toggle" @click="showHandled = !showHandled">Handled <span class="muted small">{{ store.handled.length }} {{ showHandled ? '(hide)' : '(show)' }}</span></h2>
-    <ul v-if="showHandled" class="handled">
-      <li v-for="c in store.handled" :key="c.id">
-        <span :class="['badge', c.status]">{{ c.status }}</span>
-        <span class="txt">{{ c.raw_text }}</span>
-        <RouterLink v-if="c.status === 'processed' && resultLink(c.result_ref)" :to="resultLink(c.result_ref)" class="small">{{ c.parsed_type }}</RouterLink>
-        <span class="muted small">{{ formatDateTime(c.processed_at || c.updated_at) }}</span>
-        <button type="button" class="tiny" @click="run(() => store.remove(c.id))">x</button>
-      </li>
-    </ul>
+    <div class="section-head">
+      <h2>Handled</h2>
+      <span class="muted small num">{{ store.handled.length }}</span>
+      <button type="button" class="link-btn" @click="showHandled = !showHandled">{{ showHandled ? 'Hide' : 'Show' }}</button>
+    </div>
+    <div v-if="showHandled" class="card">
+      <ul class="handled">
+        <li v-for="c in store.handled" :key="c.id" class="list-row">
+          <UiBadge :tone="c.status === 'processed' ? 'ok' : 'neutral'">{{ c.status }}</UiBadge>
+          <span class="txt truncate">{{ c.raw_text }}</span>
+          <RouterLink v-if="c.status === 'processed' && resultLink(c.result_ref)" :to="resultLink(c.result_ref)" class="small">{{ c.parsed_type }}</RouterLink>
+          <span class="muted xs num">{{ formatDateTime(c.processed_at || c.updated_at) }}</span>
+          <button type="button" class="icon-btn" aria-label="Remove" @click="run(() => store.remove(c.id))"><PhX /></button>
+        </li>
+        <li v-if="!store.handled.length" class="muted small">Nothing handled yet.</li>
+      </ul>
+    </div>
   </div>
 </template>
 
 <style scoped>
-h1 { font-size: 1.3rem; margin: 0 0 0.75rem; }
-h2 { font-size: 1rem; margin: 1rem 0 0.5rem; }
-h2.toggle { cursor: pointer; }
-.entry { display: flex; flex-direction: column; gap: 0.5rem; }
-.entry textarea { font: inherit; width: 100%; padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 4px; }
-.row { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; }
-.small { font-size: 0.8rem; }
-.item { display: flex; flex-direction: column; gap: 0.6rem; }
-.raw { display: flex; justify-content: space-between; gap: 0.5rem; font-weight: 600; font-size: 0.95rem; }
-.handled { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 0.25rem; }
-.handled li { display: flex; align-items: center; gap: 0.5rem; font-size: 0.88rem; }
-.handled .txt { flex: 1; }
-.badge { font-size: 0.7rem; padding: 0 0.35rem; border-radius: 3px; background: #f3f4f6; }
-.badge.processed { background: #d1fae5; }
-.badge.discarded { background: #fee2e2; }
-.tiny { padding: 0 0.4rem; font-size: 0.75rem; }
-.danger { color: #b91c1c; }
+.capture { max-width: 820px; }
+.entry { display: flex; flex-direction: column; gap: var(--sp-3); }
+.entry textarea { width: 100%; }
+.entry-row { display: flex; flex-wrap: wrap; gap: var(--sp-3); align-items: center; }
+.created { margin: calc(var(--sp-2) * -1) 0 var(--sp-3); }
+.section-head { display: flex; align-items: baseline; gap: var(--sp-2); margin: var(--sp-5) 0 var(--sp-3); }
+.section-head h2 { font-size: var(--fs-lg); }
+.item { display: flex; flex-direction: column; gap: var(--sp-3); }
+.raw { display: flex; justify-content: space-between; gap: var(--sp-3); align-items: baseline; }
+.raw-text { font-weight: 500; }
+.row { display: flex; gap: var(--sp-2); }
+.txt { flex: 1; min-width: 0; }
 </style>

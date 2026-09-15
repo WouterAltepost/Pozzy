@@ -1,8 +1,10 @@
 <script setup>
-// Top-bar quick input. Stream E mounts this in App.vue inside the authenticated part of the header.
-// Submit stores the text immediately; the proposal shows in a small panel with Confirm / Edit / Discard.
+// Top-bar quick input. Submit stores the text immediately; the proposal shows in a
+// popover under the field with Confirm / Edit / Discard.
 import { ref } from 'vue'
+import { PhLightning, PhX } from '@phosphor-icons/vue'
 import { useCapturesStore } from '../stores/captures'
+import UiButton from './ui/UiButton.vue'
 
 const store = useCapturesStore()
 const text = ref('')
@@ -18,7 +20,7 @@ function summary(p) {
   if (f.start) bits.push(new Date(f.start).toLocaleString('en-GB', { weekday: 'short', hour: '2-digit', minute: '2-digit' }))
   if (f.area) bits.push(f.area)
   if (p.type === 'tracker') bits.push(String(f.value))
-  return bits.filter(Boolean).join(' · ')
+  return bits.filter(Boolean).join(', ')
 }
 
 async function submit() {
@@ -69,31 +71,39 @@ function dismiss() {
 
 <template>
   <div class="capture-bar">
-    <form @submit.prevent="submit">
-      <input v-model="text" type="text" placeholder="Capture..." :disabled="busy" @keydown.esc="dismiss" />
+    <form class="field" @submit.prevent="submit">
+      <PhLightning class="bolt" aria-hidden="true" />
+      <input v-model="text" type="text" placeholder="Capture anything" aria-label="Capture" :disabled="busy" @keydown.esc="dismiss" />
     </form>
-    <div v-if="current?.proposal || message" class="panel">
-      <template v-if="current?.proposal">
-        <div class="summary">{{ summary(current.proposal) }}</div>
-        <div class="actions">
-          <button type="button" :disabled="busy" @click="confirm">Confirm</button>
-          <RouterLink :to="{ name: 'capture' }" class="link" @click="dismiss">Edit</RouterLink>
-          <button type="button" :disabled="busy" @click="discard">Discard</button>
-        </div>
-      </template>
-      <div v-else class="summary">{{ message }} <button type="button" class="x" @click="dismiss">x</button></div>
-    </div>
+    <Transition name="pop">
+      <div v-if="current?.proposal || message" class="panel" role="status">
+        <template v-if="current?.proposal">
+          <div class="summary">{{ summary(current.proposal) }}</div>
+          <div class="actions">
+            <UiButton size="sm" variant="primary" :loading="busy" @click="confirm">Confirm</UiButton>
+            <RouterLink :to="{ name: 'capture' }" class="link-btn" @click="dismiss">Edit</RouterLink>
+            <UiButton size="sm" variant="ghost" :disabled="busy" @click="discard">Discard</UiButton>
+          </div>
+        </template>
+        <div v-else class="summary msg">{{ message }} <button type="button" class="icon-btn" aria-label="Dismiss" @click="dismiss"><PhX /></button></div>
+      </div>
+    </Transition>
   </div>
 </template>
 
 <style scoped>
-.capture-bar { position: relative; flex: 1; max-width: 420px; margin: 0 1rem; }
-.capture-bar input { width: 100%; font: inherit; font-size: 0.9rem; padding: 0.3rem 0.5rem; border: 1px solid #4b5563; border-radius: 4px; background: #1f2937; color: #f9fafb; }
-.capture-bar input::placeholder { color: #9ca3af; }
-.panel { position: absolute; top: 110%; left: 0; right: 0; z-index: 20; background: #fff; color: #1f2937; border: 1px solid #e5e7eb; border-radius: 6px; padding: 0.6rem 0.75rem; box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12); font-size: 0.88rem; }
-.summary { margin-bottom: 0.4rem; }
-.actions { display: flex; gap: 0.5rem; align-items: center; }
-.actions button { padding: 0.25rem 0.6rem; font-size: 0.85rem; }
-.link { font-size: 0.85rem; }
-.x { padding: 0 0.35rem; font-size: 0.75rem; margin-left: 0.5rem; }
+.capture-bar { position: relative; width: 100%; max-width: 480px; }
+.field { position: relative; display: flex; align-items: center; }
+.bolt { position: absolute; left: 12px; width: 15px; height: 15px; color: var(--ink-3); pointer-events: none; }
+.capture-bar input { width: 100%; height: 34px; padding-left: 34px; border-radius: var(--r-pill); background: var(--surface-2); border-color: transparent; }
+.capture-bar input:hover { border-color: var(--line-2); }
+.capture-bar input:focus-visible { background: var(--surface); border-color: var(--line-2); }
+.panel { position: absolute; top: calc(100% + 6px); left: 0; right: 0; z-index: var(--z-sheet); background: var(--surface); color: var(--ink); border: 1px solid var(--line); border-radius: var(--r-lg); padding: var(--sp-3); box-shadow: var(--shadow-2); font-size: var(--fs-md); transform-origin: top center; }
+.summary { margin-bottom: var(--sp-2); }
+.summary.msg { margin: 0; display: flex; align-items: center; justify-content: space-between; gap: var(--sp-2); }
+.actions { display: flex; gap: var(--sp-2); align-items: center; }
+.pop-enter-active { transition: opacity var(--dur-ui) var(--ease-out), transform var(--dur-ui) var(--ease-out); }
+.pop-leave-active { transition: opacity var(--dur-hover) ease, transform var(--dur-hover) ease; }
+.pop-enter-from, .pop-leave-to { opacity: 0; transform: scale(0.97); }
+@media (prefers-reduced-motion: reduce) { .pop-enter-from, .pop-leave-to { transform: none; } }
 </style>

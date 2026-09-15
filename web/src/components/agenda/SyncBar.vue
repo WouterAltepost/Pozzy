@@ -2,6 +2,8 @@
 import { computed } from 'vue'
 import { formatDateTime } from '../../lib/dates'
 import { useCalendarStore } from '../../stores/calendar'
+import UiBadge from '../ui/UiBadge.vue'
+import UiButton from '../ui/UiButton.vue'
 
 const store = useCalendarStore()
 const status = computed(() => {
@@ -14,14 +16,14 @@ const status = computed(() => {
 
 <template>
   <div class="syncbar">
-    <span class="muted">{{ status }}</span>
-    <span v-if="store.account?.last_sync_error" class="error" :title="store.account.last_sync_error">sync error</span>
-    <button type="button" :disabled="store.syncing || !store.account" @click="store.sync()">{{ store.syncing ? 'Syncing...' : 'Sync now' }}</button>
-    <span v-if="store.syncMessage" class="muted msg">{{ store.syncMessage }}</span>
+    <span class="muted small num">{{ status }}</span>
+    <UiBadge v-if="store.account?.last_sync_error" tone="danger" :title="store.account.last_sync_error">sync error</UiBadge>
+    <UiButton size="sm" :loading="store.syncing" :disabled="!store.account" @click="store.sync()">Sync now</UiButton>
+    <span v-if="store.syncMessage" class="muted small msg truncate">{{ store.syncMessage }}</span>
   </div>
 </template>
 
 <style scoped>
-.syncbar { display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap; font-size: 0.85rem; }
-.msg { max-width: 420px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.syncbar { display: flex; align-items: center; gap: var(--sp-2); flex-wrap: wrap; }
+.msg { max-width: 420px; }
 </style>

@@ -1,6 +1,8 @@
 <script setup>
 import { computed, reactive, ref, watch } from 'vue'
 import { toDay } from '../../lib/dates'
+import UiButton from '../ui/UiButton.vue'
+import UiField from '../ui/UiField.vue'
 
 // Create (event = null) or edit a single event. Times are edited as local date + time
 // inputs and sent as ISO strings with the browser offset.
@@ -91,42 +93,41 @@ function submit() {
 
 <template>
   <form class="event-form" @submit.prevent="submit">
-    <div class="head">
+    <div class="card-head">
       <h2>{{ isEdit ? 'Event' : 'New event' }}</h2>
-      <button type="button" class="link" @click="emit('close')">Close</button>
+      <span class="meta"><button type="button" class="link-btn" @click="emit('close')">Close</button></span>
     </div>
     <p v-if="readOnly" class="muted small">This is one occurrence of a recurring event. Edit or delete it on your phone; the change syncs back.</p>
     <p v-if="event?.task_id" class="muted small">Linked to a scheduled task. Moving it here moves the task too.</p>
-    <fieldset :disabled="readOnly || saving">
-      <label>Title <input v-model="form.title" type="text" required maxlength="500" autofocus /></label>
-      <label class="inline"><input v-model="form.all_day" type="checkbox" /> All day</label>
-      <div class="row">
-        <label>Start <input v-model="form.startDay" type="date" required /></label>
-        <label v-if="!form.all_day">&nbsp;<input v-model="form.startTime" type="time" required /></label>
+    <fieldset :disabled="readOnly || saving" class="fields">
+      <UiField label="Title"><input v-model="form.title" type="text" required maxlength="500" autofocus /></UiField>
+      <label class="check"><input v-model="form.all_day" type="checkbox" /> All day</label>
+      <div class="pair">
+        <UiField label="Start"><input v-model="form.startDay" type="date" required /></UiField>
+        <UiField v-if="!form.all_day" label="Time"><input v-model="form.startTime" type="time" required /></UiField>
       </div>
-      <div class="row">
-        <label>End <input v-model="form.endDay" type="date" required /></label>
-        <label v-if="!form.all_day">&nbsp;<input v-model="form.endTime" type="time" required /></label>
+      <div class="pair">
+        <UiField label="End"><input v-model="form.endDay" type="date" required /></UiField>
+        <UiField v-if="!form.all_day" label="Time"><input v-model="form.endTime" type="time" required /></UiField>
       </div>
-      <label>Location <input v-model="form.location" type="text" maxlength="500" /></label>
-      <label>Notes <textarea v-model="form.description" rows="3" maxlength="5000"></textarea></label>
-      <label v-if="!isEdit && calendars.length > 1">
-        Calendar
+      <UiField label="Location"><input v-model="form.location" type="text" maxlength="500" /></UiField>
+      <UiField label="Notes"><textarea v-model="form.description" rows="3" maxlength="5000"></textarea></UiField>
+      <UiField v-if="!isEdit && calendars.length > 1" label="Calendar">
         <select v-model="form.calendar_url">
           <option v-for="c in calendars" :key="c.url" :value="c.url">{{ c.name }}</option>
         </select>
-      </label>
+      </UiField>
       <p v-else-if="isEdit" class="muted small">Calendar: {{ calendars.find((c) => c.url === form.calendar_url)?.name || form.calendar_url }}</p>
     </fieldset>
     <p v-if="error" class="error">{{ error }}</p>
-    <div class="actions" v-if="!readOnly">
-      <button type="submit" :disabled="saving">{{ saving ? 'Saving...' : isEdit ? 'Save' : 'Create' }}</button>
+    <div v-if="!readOnly" class="actions">
+      <UiButton type="submit" variant="primary" :loading="saving">{{ isEdit ? 'Save' : 'Create' }}</UiButton>
       <template v-if="isEdit">
-        <button v-if="!confirmDelete" type="button" class="danger" :disabled="saving" @click="confirmDelete = true">Delete</button>
+        <UiButton v-if="!confirmDelete" variant="danger" class="push" :disabled="saving" @click="confirmDelete = true">Delete</UiButton>
         <template v-else>
-          <span class="small">Delete from iCloud?</span>
-          <button type="button" class="danger" :disabled="saving" @click="emit('delete')">Yes, delete</button>
-          <button type="button" class="link" @click="confirmDelete = false">No</button>
+          <span class="small push">Delete from iCloud?</span>
+          <UiButton variant="danger" :disabled="saving" @click="emit('delete')">Yes, delete</UiButton>
+          <UiButton variant="ghost" @click="confirmDelete = false">No</UiButton>
         </template>
       </template>
     </div>
@@ -134,17 +135,10 @@ function submit() {
 </template>
 
 <style scoped>
-.event-form { display: flex; flex-direction: column; gap: 0.6rem; }
-.head { display: flex; justify-content: space-between; align-items: center; }
-.head h2 { margin: 0; font-size: 1rem; }
-fieldset { border: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 0.5rem; min-width: 0; }
-label { display: flex; flex-direction: column; gap: 0.2rem; font-size: 0.85rem; color: #4b5563; }
-label.inline { flex-direction: row; align-items: center; gap: 0.4rem; }
-input, textarea, select { font: inherit; padding: 0.35rem; border: 1px solid #d1d5db; border-radius: 4px; width: 100%; box-sizing: border-box; }
-.row { display: flex; gap: 0.5rem; }
-.row label { flex: 1; }
-.actions { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
-.link { border: none; background: none; color: #2563eb; padding: 0.2rem 0.4rem; }
-.danger { color: #b91c1c; border-color: #fecaca; }
-.small { font-size: 0.8rem; }
+.event-form { display: flex; flex-direction: column; gap: var(--sp-3); }
+.fields { display: flex; flex-direction: column; gap: var(--sp-3); }
+.check { display: flex; align-items: center; gap: 6px; }
+.pair { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-2); }
+.actions { display: flex; align-items: center; gap: var(--sp-2); flex-wrap: wrap; }
+.push { margin-left: auto; }
 </style>

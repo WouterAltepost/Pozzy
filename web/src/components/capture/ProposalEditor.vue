@@ -1,6 +1,9 @@
 <script setup>
 import { onMounted, reactive, watch } from 'vue'
 import { useAreasStore } from '../../stores/areas'
+import UiBadge from '../ui/UiBadge.vue'
+import UiButton from '../ui/UiButton.vue'
+import UiField from '../ui/UiField.vue'
 
 const props = defineProps({ proposal: { type: Object, default: null } })
 const emit = defineEmits(['confirm', 'discard'])
@@ -70,63 +73,72 @@ watch(() => props.proposal, reset, { immediate: true })
 
 <template>
   <form class="proposal" @submit.prevent="submit">
-    <div class="row types">
-      <label v-for="t in TYPES" :key="t" :class="{ on: form.type === t }"><input type="radio" :value="t" :checked="form.type === t" @change="switchType(t)" /> {{ t }}</label>
-      <span v-if="proposal?.reason" class="muted small">{{ proposal.source === 'claude' ? 'Claude' : 'Rules' }}: {{ proposal.reason }}</span>
+    <div class="types" role="radiogroup" aria-label="Type">
+      <label v-for="t in TYPES" :key="t" class="type" :class="{ on: form.type === t }">
+        <input type="radio" name="capture-type" :value="t" :checked="form.type === t" @change="switchType(t)" />
+        {{ t }}
+      </label>
+      <UiBadge v-if="proposal?.reason" tone="neutral" class="reason" :title="proposal.reason">{{ proposal.source === 'claude' ? 'Claude' : 'Rules' }}</UiBadge>
+      <span v-if="proposal?.reason" class="muted small reason-text">{{ proposal.reason }}</span>
     </div>
 
     <template v-if="form.type === 'tracker'">
-      <input v-model="form.fields.tracker" type="text" placeholder="Tracker name" required />
+      <UiField label="Tracker"><input v-model="form.fields.tracker" type="text" required /></UiField>
       <div class="row">
-        <input v-model="form.fields.date" type="date" />
-        <input v-model="form.fields.value" type="number" step="any" placeholder="Value" />
-        <input v-model="form.fields.note" type="text" placeholder="Note" />
+        <UiField label="Date"><input v-model="form.fields.date" type="date" /></UiField>
+        <UiField label="Value"><input v-model="form.fields.value" type="number" step="any" class="narrow" /></UiField>
+        <UiField label="Note" class="grow"><input v-model="form.fields.note" type="text" /></UiField>
       </div>
     </template>
     <template v-else>
-      <input v-model="form.fields.title" type="text" placeholder="Title" required maxlength="200" />
+      <UiField label="Title"><input v-model="form.fields.title" type="text" required maxlength="200" /></UiField>
       <div class="row">
-        <select v-model="form.fields.area">
-          <option :value="null">No area</option>
-          <option v-for="a in areas.items" :key="a.id" :value="a.name">{{ a.name }}</option>
-        </select>
+        <UiField label="Area">
+          <select v-model="form.fields.area">
+            <option :value="null">No area</option>
+            <option v-for="a in areas.items" :key="a.id" :value="a.name">{{ a.name }}</option>
+          </select>
+        </UiField>
         <template v-if="form.type === 'task'">
-          <input v-model="form.fields.due_date" type="date" title="Due date" />
-          <input v-model="form.fields.estimated_minutes" type="number" min="1" placeholder="min" class="narrow" />
-          <label class="check"><input v-model="form.fields.urgent" type="checkbox" /> urgent</label>
-          <label class="check"><input v-model="form.fields.important" type="checkbox" /> important</label>
+          <UiField label="Due"><input v-model="form.fields.due_date" type="date" /></UiField>
+          <UiField label="Minutes"><input v-model="form.fields.estimated_minutes" type="number" min="1" class="narrow" /></UiField>
+          <label class="check"><input v-model="form.fields.urgent" type="checkbox" /> Urgent</label>
+          <label class="check"><input v-model="form.fields.important" type="checkbox" /> Important</label>
         </template>
         <template v-if="form.type === 'event'">
-          <input v-model="form.fields.start" type="datetime-local" required />
-          <input v-model="form.fields.end" type="datetime-local" />
+          <UiField label="Start"><input v-model="form.fields.start" type="datetime-local" required /></UiField>
+          <UiField label="End"><input v-model="form.fields.end" type="datetime-local" /></UiField>
         </template>
         <template v-if="form.type === 'goal'">
-          <input v-model="form.fields.target_value" type="number" step="any" min="0" placeholder="target" class="narrow" />
-          <select v-model="form.fields.week"><option value="this">this week</option><option value="next">next week</option></select>
+          <UiField label="Target"><input v-model="form.fields.target_value" type="number" step="any" min="0" class="narrow" /></UiField>
+          <UiField label="Week"><select v-model="form.fields.week"><option value="this">this week</option><option value="next">next week</option></select></UiField>
         </template>
       </div>
-      <input v-if="form.type === 'task' || form.type === 'note'" v-model="form.fields.tagsText" type="text" placeholder="tags, comma separated" />
-      <textarea v-if="form.type === 'note'" v-model="form.fields.body" rows="4" placeholder="Body (markdown)"></textarea>
-      <textarea v-else-if="form.type !== 'goal'" v-model="form.fields.description" rows="2" placeholder="Description"></textarea>
+      <UiField v-if="form.type === 'task' || form.type === 'note'" label="Tags" hint="Comma separated"><input v-model="form.fields.tagsText" type="text" /></UiField>
+      <UiField v-if="form.type === 'note'" label="Body" hint="Markdown"><textarea v-model="form.fields.body" rows="4"></textarea></UiField>
+      <UiField v-else-if="form.type !== 'goal'" label="Description"><textarea v-model="form.fields.description" rows="2"></textarea></UiField>
     </template>
 
-    <div class="row actions">
-      <button type="submit">Confirm</button>
-      <button type="button" class="danger" @click="emit('discard')">Discard</button>
+    <div class="actions">
+      <UiButton type="submit" variant="primary">Confirm</UiButton>
+      <UiButton variant="danger" class="push" @click="emit('discard')">Discard</UiButton>
     </div>
   </form>
 </template>
 
 <style scoped>
-.proposal { display: flex; flex-direction: column; gap: 0.45rem; }
-.row { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; }
-.types label { font-size: 0.85rem; padding: 0.1rem 0.4rem; border: 1px solid #e5e7eb; border-radius: 3px; cursor: pointer; }
-.types label.on { border-color: #2563eb; background: #eff6ff; }
-.types input { display: none; }
-.small { font-size: 0.78rem; }
-input[type='text'], input[type='date'], input[type='datetime-local'], input[type='number'], select, textarea { font: inherit; padding: 0.35rem; border: 1px solid #d1d5db; border-radius: 4px; }
-input[type='text'], textarea { width: 100%; }
-.narrow { width: 5rem; }
-.check { display: flex; align-items: center; gap: 0.3rem; font-size: 0.85rem; }
-.danger { color: #b91c1c; }
+.proposal { display: flex; flex-direction: column; gap: var(--sp-3); }
+.types { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.type { display: inline-flex; align-items: center; height: 28px; padding: 0 12px; border: 1px solid var(--line-2); border-radius: var(--r-pill); font-size: var(--fs-md); font-weight: 500; color: var(--ink-2); cursor: pointer; text-transform: capitalize; transition: background-color var(--dur-hover) ease, color var(--dur-hover) ease, border-color var(--dur-hover) ease; }
+.type.on { background: var(--ink); color: var(--on-ink); border-color: var(--ink); }
+.type input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.type:has(input:focus-visible) { outline: 2px solid var(--brand); outline-offset: 2px; }
+.reason { margin-left: var(--sp-2); }
+.reason-text { flex-basis: 100%; }
+.row { display: flex; flex-wrap: wrap; gap: var(--sp-3); align-items: end; }
+.grow { flex: 1 1 140px; }
+.narrow { width: 90px; }
+.check { display: flex; align-items: center; gap: 6px; height: var(--control-h); }
+.actions { display: flex; gap: var(--sp-2); }
+.push { margin-left: auto; }
 </style>

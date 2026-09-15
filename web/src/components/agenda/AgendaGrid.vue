@@ -4,7 +4,7 @@ import { formatTime, shortDay, today } from '../../lib/dates'
 
 // Week and day views share this grid: one column per day, an all-day row on top,
 // timed events absolutely positioned between HOUR_START and HOUR_END. Scheduled
-// tasks are overlaid as dashed blocks.
+// tasks are overlaid as dashed blocks. HOUR_PX and the click-to-create math are unchanged.
 const props = defineProps({
   days: { type: Array, required: true },
   events: { type: Array, default: () => [] },
@@ -110,15 +110,15 @@ function timeLabel(h) {
 <template>
   <div class="grid" :class="{ single: days.length === 1 }">
     <div class="corner"></div>
-    <div v-for="c in columns" :key="c.day" class="head" :class="{ today: c.isToday }">{{ shortDay(c.day) }}</div>
+    <div v-for="c in columns" :key="c.day" class="head num" :class="{ today: c.isToday }">{{ shortDay(c.day) }}</div>
 
     <div class="gutter-label">all day</div>
-    <div v-for="c in columns" :key="'ad-' + c.day" class="allday" @click="emit('create', { day: c.day, allDay: true })">
+    <div v-for="c in columns" :key="'ad-' + c.day" class="allday" :class="{ today: c.isToday }" @click="emit('create', { day: c.day, allDay: true })">
       <button v-for="e in c.allDay" :key="e.id" type="button" class="chip" :title="e.title" @click.stop="emit('select-event', e)">{{ e.title }}</button>
     </div>
 
     <div class="gutter" :style="{ height: gridHeight + 'px' }">
-      <div v-for="h in hours" :key="h" class="hour-label" :style="{ height: HOUR_PX + 'px' }">{{ timeLabel(h) }}</div>
+      <div v-for="h in hours" :key="h" class="hour-label num" :style="{ height: HOUR_PX + 'px' }">{{ timeLabel(h) }}</div>
     </div>
     <div
       v-for="c in columns"
@@ -132,11 +132,11 @@ function timeLabel(h) {
       <div v-if="c.isToday && nowLine !== null" class="now" :style="{ top: nowLine + 'px' }"></div>
       <template v-for="b in c.timed" :key="b.key">
         <button v-if="b.kind === 'event'" type="button" class="block event" :class="{ linked: b.item.task_id, recurring: b.item.recurrence_id }" :style="blockStyle(b)" :title="b.item.title" @click.stop="emit('select-event', b.item)">
-          <span class="time">{{ formatTime(b.item.start) }}</span>
+          <span class="time num">{{ formatTime(b.item.start) }}</span>
           <span class="title">{{ b.item.title }}</span>
         </button>
         <RouterLink v-else :to="{ name: 'tasks' }" class="block task" :style="blockStyle(b)" :title="'Task: ' + b.item.title" @click.stop>
-          <span class="time">{{ formatTime(b.item.scheduled_start) }}</span>
+          <span class="time num">{{ formatTime(b.item.scheduled_start) }}</span>
           <span class="title">{{ b.item.title }}</span>
         </RouterLink>
       </template>
@@ -148,52 +148,59 @@ function timeLabel(h) {
 .grid {
   display: grid;
   grid-template-columns: 52px repeat(7, minmax(0, 1fr));
-  border: 1px solid #e5e7eb;
-  border-radius: 6px;
-  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  background: var(--surface);
   overflow: hidden;
-  font-size: 0.8rem;
+  font-size: var(--fs-md);
 }
 .grid.single { grid-template-columns: 52px minmax(0, 1fr); }
-.corner, .head, .gutter-label, .allday { border-bottom: 1px solid #e5e7eb; }
-.head { padding: 0.4rem 0.3rem; font-weight: 600; text-align: center; border-left: 1px solid #f3f4f6; }
-.head.today { color: #2563eb; }
-.gutter-label { font-size: 0.7rem; color: #9ca3af; padding: 0.3rem 0.2rem; text-align: right; }
-.allday { min-height: 28px; padding: 0.15rem; border-left: 1px solid #f3f4f6; display: flex; flex-direction: column; gap: 2px; cursor: pointer; }
-.chip { font: inherit; font-size: 0.72rem; text-align: left; border: none; border-radius: 3px; padding: 0.1rem 0.3rem; background: #fde68a; color: #78350f; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; cursor: pointer; }
+.corner, .head, .gutter-label, .allday { border-bottom: 1px solid var(--line); }
+.head { padding: 8px 4px; font-weight: 500; font-size: var(--fs-sm); color: var(--ink-2); text-align: center; border-left: 1px solid var(--line); }
+.head.today { color: var(--brand); background: var(--brand-soft); font-weight: 600; }
+.gutter-label { font-size: var(--fs-xs); color: var(--ink-3); padding: 6px 4px; text-align: right; letter-spacing: 0.02em; }
+.allday { min-height: 30px; padding: 2px; border-left: 1px solid var(--line); display: flex; flex-direction: column; gap: 2px; cursor: pointer; }
+.allday.today { background: color-mix(in srgb, var(--brand-soft) 45%, transparent); }
+.chip { font: inherit; font-size: var(--fs-xs); font-weight: 500; text-align: left; border: 0; border-radius: var(--r-sm); padding: 2px 6px; background: var(--surface-3); color: var(--ink); overflow: hidden; white-space: nowrap; text-overflow: ellipsis; cursor: pointer; }
 .gutter { position: relative; }
-.hour-label { font-size: 0.7rem; color: #9ca3af; text-align: right; padding-right: 0.3rem; transform: translateY(-0.5em); }
-.col { position: relative; border-left: 1px solid #f3f4f6; cursor: crosshair; }
-.col.today { background: #f8fafc; }
-.hour-line { position: absolute; left: 0; right: 0; border-top: 1px solid #f3f4f6; pointer-events: none; }
-.now { position: absolute; left: 0; right: 0; border-top: 2px solid #ef4444; z-index: 3; pointer-events: none; }
+.hour-label { font-size: var(--fs-xs); color: var(--ink-3); text-align: right; padding-right: 6px; transform: translateY(-0.5em); }
+.col { position: relative; border-left: 1px solid var(--line); cursor: crosshair; }
+.col.today { background: color-mix(in srgb, var(--brand-soft) 30%, transparent); }
+.hour-line { position: absolute; left: 0; right: 0; border-top: 1px solid var(--line); opacity: 0.7; pointer-events: none; }
+.now { position: absolute; left: 0; right: 0; border-top: 2px solid var(--brand); z-index: 3; pointer-events: none; }
+.now::before { content: ''; position: absolute; left: -1px; top: -5px; width: 8px; height: 8px; border-radius: 50%; background: var(--brand); }
 .block {
   position: absolute;
   box-sizing: border-box;
   margin: 1px;
-  padding: 0.15rem 0.3rem;
-  border-radius: 4px;
+  padding: 2px 6px 2px 8px;
+  border-radius: var(--r-sm);
   overflow: hidden;
   text-align: left;
   font: inherit;
-  font-size: 0.74rem;
-  line-height: 1.2;
+  font-size: var(--fs-sm);
+  line-height: 1.25;
   cursor: pointer;
   z-index: 2;
   display: flex;
   flex-direction: column;
   gap: 1px;
   text-decoration: none;
+  border: 0;
+  box-shadow: inset 3px 0 0 var(--accent, var(--info));
+  transition: filter var(--dur-hover) ease;
 }
-.block .time { font-size: 0.66rem; opacity: 0.8; }
-.block .title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.event { background: #dbeafe; color: #1e3a8a; border: 1px solid #bfdbfe; }
-.event.recurring { border-left: 3px solid #60a5fa; }
-.event.linked { background: #ede9fe; color: #4c1d95; border-color: #ddd6fe; }
-.task { background: #ecfdf5; color: #065f46; border: 1px dashed #34d399; }
+@media (hover: hover) and (pointer: fine) { .block:hover { filter: brightness(0.96); } }
+.block .time { font-size: var(--fs-xs); opacity: 0.8; }
+.block .title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 500; }
+.event { --accent: var(--info); background: var(--info-soft); color: var(--ink); }
+.event.recurring { --accent: var(--ink-3); background: var(--surface-2); }
+.event.linked { --accent: var(--ok); background: var(--ok-soft); }
+.task { --accent: var(--ok); background: transparent; color: var(--ok); outline: 1px dashed var(--ok); outline-offset: -1px; box-shadow: none; }
 @media (max-width: 720px) {
-  .grid { font-size: 0.7rem; }
-  .block { font-size: 0.66rem; padding: 0.1rem 0.2rem; }
+  .grid { font-size: var(--fs-sm); grid-template-columns: 40px repeat(7, minmax(0, 1fr)); }
+  .grid.single { grid-template-columns: 40px minmax(0, 1fr); }
+  .block { font-size: var(--fs-xs); padding: 1px 3px 1px 6px; }
   .block .time { display: none; }
 }
 </style>

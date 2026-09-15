@@ -2,8 +2,10 @@
 import { computed, onMounted, ref } from 'vue'
 import { formatDateTime } from '../../lib/dates'
 import { useCalendarStore } from '../../stores/calendar'
+import UiButton from '../ui/UiButton.vue'
+import UiField from '../ui/UiField.vue'
 
-// Mounted by stream E inside SettingsView's Integrations card. Self-contained:
+// Mounted inside SettingsView's Integrations card. Self-contained:
 // loads the account, lets Wouter pick which calendars sync and where Pozzy writes.
 const store = useCalendarStore()
 const selected = ref([])
@@ -67,33 +69,32 @@ async function syncNow() {
 </script>
 
 <template>
-  <div class="calendar-accounts">
+  <div class="integration">
     <h3>iCloud calendar</h3>
     <p v-if="store.accountError" class="error">{{ store.accountError }}</p>
     <p v-if="!account" class="muted small">Not configured. Set ICLOUD_USERNAME and ICLOUD_APP_PASSWORD in the environment and restart the API.</p>
     <template v-else>
       <p class="small">
         <strong>{{ account.name }}</strong> <span class="muted">{{ account.username }}</span><br />
-        <span class="muted">{{ account.last_synced_at ? 'Last synced ' + formatDateTime(account.last_synced_at) : 'Never synced' }}</span>
+        <span class="muted num">{{ account.last_synced_at ? 'Last synced ' + formatDateTime(account.last_synced_at) : 'Never synced' }}</span>
         <span v-if="account.last_sync_error" class="error"> {{ account.last_sync_error }}</span>
       </p>
-      <label class="inline"><input v-model="enabled" type="checkbox" /> Sync enabled</label>
+      <label class="check"><input v-model="enabled" type="checkbox" /> Sync enabled</label>
       <p v-if="!calendars.length" class="muted small">No calendars discovered yet.</p>
       <div v-else class="list">
-        <label v-for="c in calendars" :key="c.url" class="inline">
+        <label v-for="c in calendars" :key="c.url" class="check">
           <input v-model="selected" type="checkbox" :value="c.url" /> {{ c.name }}
         </label>
       </div>
-      <label v-if="calendars.length" class="write">
-        Pozzy writes new events to
+      <UiField v-if="calendars.length" label="Pozzy writes new events to" class="write">
         <select v-model="writeUrl">
           <option v-for="c in calendars" :key="c.url" :value="c.url">{{ c.name }}</option>
         </select>
-      </label>
+      </UiField>
       <div class="actions">
-        <button type="button" :disabled="busy" @click="discover">{{ calendars.length ? 'Refresh calendar list' : 'Discover calendars' }}</button>
-        <button type="button" :disabled="busy || !calendars.length" @click="save">Save calendars</button>
-        <button type="button" :disabled="busy" @click="syncNow">Sync now</button>
+        <UiButton :loading="busy" @click="discover">{{ calendars.length ? 'Refresh calendar list' : 'Discover calendars' }}</UiButton>
+        <UiButton variant="primary" :disabled="busy || !calendars.length" @click="save">Save calendars</UiButton>
+        <UiButton :disabled="busy" @click="syncNow">Sync now</UiButton>
         <span class="muted small">{{ message }}</span>
       </div>
     </template>
@@ -101,11 +102,10 @@ async function syncNow() {
 </template>
 
 <style scoped>
-h3 { font-size: 0.95rem; margin: 0.5rem 0 0.4rem; }
-.small { font-size: 0.85rem; }
-.inline { display: flex; align-items: center; gap: 0.4rem; font-size: 0.9rem; }
-.list { display: flex; flex-wrap: wrap; gap: 0.4rem 1rem; margin: 0.4rem 0; }
-.write { display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem; color: #4b5563; margin: 0.4rem 0; }
-select { font: inherit; padding: 0.3rem; border: 1px solid #d1d5db; border-radius: 4px; }
-.actions { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.5rem; }
+.integration { display: flex; flex-direction: column; gap: var(--sp-2); padding-bottom: var(--sp-4); }
+h3 { font-size: var(--fs-base); }
+.check { display: flex; align-items: center; gap: 6px; font-size: var(--fs-md); }
+.list { display: flex; flex-wrap: wrap; gap: var(--sp-2) var(--sp-4); }
+.write { max-width: 320px; }
+.actions { display: flex; align-items: center; gap: var(--sp-2); flex-wrap: wrap; margin-top: var(--sp-1); }
 </style>

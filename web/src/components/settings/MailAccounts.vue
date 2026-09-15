@@ -2,8 +2,10 @@
 import { onMounted, reactive, ref } from 'vue'
 import { formatDateTime } from '../../lib/dates'
 import { useMailStore } from '../../stores/mail'
+import UiBadge from '../ui/UiBadge.vue'
+import UiButton from '../ui/UiButton.vue'
 
-// Stream E mounts this in SettingsView.vue at #settings-mail-accounts.
+// Mounted inside SettingsView's Integrations card.
 const store = useMailStore()
 const status = reactive({})
 const error = ref('')
@@ -30,7 +32,7 @@ async function saveMeta(account, field, value) {
 }
 
 async function test(account) {
-  status[account.id] = 'testing...'
+  status[account.id] = 'testing'
   try {
     const result = await store.testAccount(account.id)
     status[account.id] = `ok, ${result.messages} messages in INBOX`
@@ -54,7 +56,7 @@ async function sync() {
 </script>
 
 <template>
-  <div class="mail-accounts">
+  <div class="integration">
     <h3>Mail accounts</h3>
     <p class="muted small">
       Accounts and app passwords come from <code>MAIL_ACCOUNTS_JSON</code> in the environment. Passwords are never stored in the database.
@@ -62,40 +64,38 @@ async function sync() {
     </p>
     <p v-if="error || store.error" class="error">{{ error || store.error }}</p>
     <p v-if="notice" class="muted small">{{ notice }}</p>
-    <p v-if="!store.accounts.length" class="muted">No accounts configured.</p>
-    <ul v-else>
-      <li v-for="a in store.accounts" :key="a.id" :class="{ off: !a.enabled }">
-        <input type="color" :value="a.color || '#9ca3af'" title="Colour" @change="saveMeta(a, 'color', $event.target.value)" />
-        <input class="label" type="text" :value="a.label" maxlength="60" title="Label" @change="saveMeta(a, 'label', $event.target.value)" />
-        <span class="email">{{ a.email }}</span>
-        <label class="check small"><input type="checkbox" :checked="a.enabled" @change="toggle(a)" /> enabled</label>
-        <button type="button" @click="test(a)">Test</button>
-        <span class="muted small info">
-          <span v-if="status[a.id]">{{ status[a.id] }}</span>
-          <span v-else-if="a.last_error" class="error">{{ a.last_error }}</span>
-          <span v-else-if="a.last_synced_at">synced {{ formatDateTime(a.last_synced_at) }}, last UID {{ a.last_uid }}</span>
-          <span v-else>never synced</span>
+    <p v-if="!store.accounts.length" class="muted small">No accounts configured.</p>
+    <ul v-else class="accounts">
+      <li v-for="a in store.accounts" :key="a.id" class="account" :class="{ off: !a.enabled }">
+        <input type="color" :value="a.color || '#6F727A'" title="Colour" aria-label="Account colour" @change="saveMeta(a, 'color', $event.target.value)" />
+        <input class="label" type="text" :value="a.label" maxlength="60" aria-label="Label" @change="saveMeta(a, 'label', $event.target.value)" />
+        <span class="email muted small truncate">{{ a.email }}</span>
+        <label class="check"><input type="checkbox" :checked="a.enabled" @change="toggle(a)" /> Enabled</label>
+        <UiButton size="sm" @click="test(a)">Test</UiButton>
+        <span class="info xs">
+          <span v-if="status[a.id]" class="muted">{{ status[a.id] }}</span>
+          <UiBadge v-else-if="a.last_error" tone="danger" :title="a.last_error">{{ a.last_error }}</UiBadge>
+          <span v-else-if="a.last_synced_at" class="muted num">synced {{ formatDateTime(a.last_synced_at) }}, last UID {{ a.last_uid }}</span>
+          <span v-else class="muted">never synced</span>
         </span>
       </li>
     </ul>
     <div class="actions">
-      <button type="button" :disabled="store.syncing || !store.accounts.length" @click="sync">{{ store.syncing ? 'Syncing...' : 'Sync now' }}</button>
+      <UiButton :loading="store.syncing" :disabled="!store.accounts.length" @click="sync">Sync now</UiButton>
       <span class="muted small">The job also runs every 15 minutes.</span>
     </div>
   </div>
 </template>
 
 <style scoped>
-h3 { font-size: 0.95rem; margin: 0.75rem 0 0.25rem; }
-.small { font-size: 0.8rem; }
-ul { list-style: none; padding: 0; margin: 0.5rem 0; display: flex; flex-direction: column; gap: 0.4rem; }
-li { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; padding: 0.4rem 0.5rem; border: 1px solid #e5e7eb; border-radius: 4px; }
-li.off { opacity: 0.6; }
-input[type='color'] { width: 28px; height: 24px; padding: 0; border: 1px solid #d1d5db; border-radius: 4px; background: none; }
-.label { font: inherit; font-size: 0.85rem; padding: 0.25rem 0.4rem; border: 1px solid #d1d5db; border-radius: 4px; width: 120px; }
-.email { font-size: 0.85rem; color: #374151; }
-.check { display: flex; align-items: center; gap: 0.3rem; }
+.integration { display: flex; flex-direction: column; gap: var(--sp-2); border-top: 1px solid var(--line); padding-top: var(--sp-4); }
+h3 { font-size: var(--fs-base); }
+.accounts { display: flex; flex-direction: column; gap: var(--sp-2); }
+.account { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-2); padding: var(--sp-2) var(--sp-3); background: var(--surface-2); border-radius: var(--r-md); }
+.account.off { opacity: 0.6; }
+.label { height: var(--control-h-sm); width: 130px; font-size: var(--fs-md); }
+.email { flex: 1 1 160px; min-width: 0; }
+.check { display: flex; align-items: center; gap: 6px; font-size: var(--fs-md); }
 .info { flex-basis: 100%; }
-.actions { display: flex; align-items: center; gap: 0.75rem; }
-code { background: #f3f4f6; padding: 0 0.25rem; border-radius: 3px; }
+.actions { display: flex; align-items: center; gap: var(--sp-3); margin-top: var(--sp-1); }
 </style>
