@@ -9,20 +9,20 @@ export default defineConfig({
     vue(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['favicon.svg', 'apple-touch-icon.png'],
+      includeAssets: ['favicon.svg', 'apple-touch-icon.png', 'logo.png', 'fonts/geist-latin.woff2'],
       manifest: {
         name: 'Pozzy',
         short_name: 'Pozzy',
         description: 'Personal operating system: agenda, mail triage, tasks, goals, tracking, hours, study.',
-        theme_color: '#111827',
-        background_color: '#f9fafb',
+        theme_color: '#FBFAF8',
+        background_color: '#F2F1ED',
         display: 'standalone',
         start_url: '/',
         scope: '/',
         icons: [
           { src: 'pwa-192.png', sizes: '192x192', type: 'image/png' },
           { src: 'pwa-512.png', sizes: '512x512', type: 'image/png' },
-          { src: 'pwa-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+          { src: 'pwa-512-maskable.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
         ],
       },
       workbox: {

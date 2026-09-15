@@ -1,4 +1,5 @@
 <script setup>
+import { PhCaretLeft, PhCaretRight } from '@phosphor-icons/vue'
 import { addDays, formatDay, mondayOf } from '../../lib/dates'
 
 const props = defineProps({ weekStart: { type: String, required: true } })
@@ -7,14 +8,15 @@ const emit = defineEmits(['change'])
 
 <template>
   <div class="weeknav">
-    <button type="button" @click="emit('change', addDays(props.weekStart, -7))">&lsaquo;</button>
-    <span>Week of {{ formatDay(props.weekStart) }}</span>
-    <button type="button" @click="emit('change', addDays(props.weekStart, 7))">&rsaquo;</button>
-    <button v-if="props.weekStart !== mondayOf()" type="button" class="link" @click="emit('change', mondayOf())">This week</button>
+    <button type="button" class="icon-btn" aria-label="Previous week" @click="emit('change', addDays(props.weekStart, -7))"><PhCaretLeft /></button>
+    <span class="label num">Week of {{ formatDay(props.weekStart) }}</span>
+    <button type="button" class="icon-btn" aria-label="Next week" @click="emit('change', addDays(props.weekStart, 7))"><PhCaretRight /></button>
+    <button v-if="props.weekStart !== mondayOf()" type="button" class="link-btn" @click="emit('change', mondayOf())">This week</button>
   </div>
 </template>
 
 <style scoped>
-.weeknav { display: flex; align-items: center; gap: 0.5rem; font-size: 0.9rem; }
-.link { border: none; background: none; color: #2563eb; padding: 0.2rem 0.4rem; }
+.weeknav { display: inline-flex; align-items: center; gap: 4px; font-size: var(--fs-md); }
+.label { min-width: 132px; text-align: center; color: var(--ink-2); font-weight: 500; }
+.link-btn { margin-left: var(--sp-2); }
 </style>

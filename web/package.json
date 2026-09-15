@@ -10,6 +10,7 @@
     "start": "serve -s dist -l $PORT"
   },
   "dependencies": {
+    "@phosphor-icons/vue": "^2.2.1",
     "@supabase/supabase-js": "^2.49.0",
     "pinia": "^3.0.0",
     "serve": "^14.2.0",

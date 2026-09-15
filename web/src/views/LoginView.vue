@@ -1,6 +1,8 @@
 <script setup>
 import { ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import UiButton from '../components/ui/UiButton.vue'
+import UiField from '../components/ui/UiField.vue'
 import { useAuthStore } from '../stores/auth'
 
 const auth = useAuthStore()
@@ -27,13 +29,23 @@ async function submit() {
 </script>
 
 <template>
-  <div class="card">
-    <h2>Log in</h2>
-    <form class="login" @submit.prevent="submit">
-      <input v-model="email" type="email" placeholder="Email" autocomplete="username" required />
-      <input v-model="password" type="password" placeholder="Password" autocomplete="current-password" required />
-      <button type="submit" :disabled="busy">{{ busy ? 'Logging in...' : 'Log in' }}</button>
-      <p v-if="error" class="error">{{ error }}</p>
-    </form>
+  <div class="login-wrap">
+    <div class="card login-card">
+      <img src="/logo.png" alt="Pozzy" class="logo" width="180" />
+      <h1>Log in</h1>
+      <form class="login" @submit.prevent="submit">
+        <UiField label="Email"><input v-model="email" type="email" autocomplete="username" required /></UiField>
+        <UiField label="Password" :error="error"><input v-model="password" type="password" autocomplete="current-password" required /></UiField>
+        <UiButton type="submit" variant="primary" :loading="busy" block>Log in</UiButton>
+      </form>
+    </div>
   </div>
 </template>
+
+<style scoped>
+.login-wrap { display: flex; justify-content: center; padding-top: var(--sp-10); }
+.login-card { width: 100%; max-width: 360px; display: flex; flex-direction: column; gap: var(--sp-4); }
+.logo { width: 180px; height: auto; margin: var(--sp-2) auto 0; }
+h1 { font-size: var(--fs-xl); text-align: center; }
+.login { display: flex; flex-direction: column; gap: var(--sp-3); }
+</style>
