@@ -1,4 +1,5 @@
 <script setup>
+import { accountName } from '../../lib/mail'
 import { CATEGORIES, PRIORITIES } from '../../api/mail'
 import AreaSelect from '../shared/AreaSelect.vue'
 
@@ -12,7 +13,7 @@ const change = () => emit('change')
     <input v-model="props.filters.q" type="search" placeholder="Search from, subject, summary" aria-label="Search mail" class="search" @change="change" />
     <select v-model="props.filters.account_id" aria-label="Account" @change="change">
       <option value="">All accounts</option>
-      <option v-for="a in accounts" :key="a.id" :value="a.id">{{ a.label }}</option>
+      <option v-for="a in accounts" :key="a.id" :value="a.id">{{ accountName(a) }} ({{ a.label }})</option>
     </select>
     <select v-model="props.filters.category" aria-label="Category" @change="change">
       <option value="">All categories</option>

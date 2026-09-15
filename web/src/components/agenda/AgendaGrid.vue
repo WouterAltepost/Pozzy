@@ -16,7 +16,7 @@ const props = defineProps({
   hourEnd: { type: Number, default: 23 },
   draft: { type: Object, default: null }, // { day, from, to } in minutes from midnight
 })
-const emit = defineEmits(['select-event', 'create'])
+const emit = defineEmits(['select-event', 'create', 'move'])
 
 const HOUR_PX = 44
 const hours = computed(() => Array.from({ length: props.hourEnd - props.hourStart }, (_, i) => props.hourStart + i))
@@ -165,6 +165,75 @@ function onPointerCancel() {
   drag.value = null
 }
 
+// Dragging an existing event: move (keeps the duration) or resize (bottom grip). Threshold of
+// 4px separates a drag from a click. The block itself stays put; a ghost shows the new place.
+const evDrag = ref(null) // { item, mode, day, from, to, duration, startY, startX, moved }
+let suppressSelect = false
+
+function columnAt(x) {
+  const cols = [...document.querySelectorAll('.grid .col')]
+  for (let i = 0; i < cols.length; i++) {
+    const r = cols[i].getBoundingClientRect()
+    if (x >= r.left && x <= r.right) return { day: props.days[i], el: cols[i] }
+  }
+  return null
+}
+function onEventPointerDown(evt, item, mode = 'move') {
+  if (evt.pointerType === 'touch' || evt.button !== 0 || item.recurrence_id) return
+  const col = evt.currentTarget.closest('.col')
+  const day = props.days[[...col.parentElement.querySelectorAll('.col')].indexOf(col)]
+  const [dayStart] = dayBounds(day)
+  const from = minutesFromDayStart(new Date(item.start), dayStart)
+  const to = minutesFromDayStart(new Date(item.end), dayStart)
+  evDrag.value = { item, mode, day, from, to, duration: to - from, origin: mode === 'move' ? minutesAt(evt, col) : to, startX: evt.clientX, startY: evt.clientY, moved: false }
+  evt.currentTarget.setPointerCapture(evt.pointerId)
+  evt.stopPropagation()
+}
+function onEventPointerMove(evt) {
+  const d = evDrag.value
+  if (!d) return
+  if (!d.moved && Math.hypot(evt.clientX - d.startX, evt.clientY - d.startY) < 4) return
+  d.moved = true
+  const target = columnAt(evt.clientX) || { day: d.day, el: evt.currentTarget.closest('.col') }
+  const at = minutesAt(evt, target.el)
+  if (d.mode === 'move') {
+    const shift = snap(at - d.origin)
+    let from = Math.max(props.hourStart * 60, d.from + shift)
+    from = Math.min(from, props.hourEnd * 60 - d.duration)
+    d.day = target.day
+    d.newFrom = from
+    d.newTo = from + d.duration
+  } else {
+    d.newFrom = d.from
+    d.newTo = Math.max(d.from + SNAP, Math.min(props.hourEnd * 60, snap(at)))
+  }
+}
+function onEventPointerUp(evt) {
+  const d = evDrag.value
+  if (!d) return
+  evDrag.value = null
+  if (!d.moved) return
+  suppressSelect = true
+  setTimeout(() => (suppressSelect = false), 0)
+  if (d.newFrom === undefined || (d.day === dayOf(d.item) && d.newFrom === d.from && d.newTo === d.to)) return
+  emit('move', { event: d.item, day: d.day, from: d.newFrom, to: d.newTo, mode: d.mode })
+}
+function dayOf(item) {
+  const s = new Date(item.start)
+  return `${s.getFullYear()}-${String(s.getMonth() + 1).padStart(2, '0')}-${String(s.getDate()).padStart(2, '0')}`
+}
+function onEventClick(item) {
+  if (suppressSelect) return
+  emit('select-event', item)
+}
+function moveGhost(day) {
+  const d = evDrag.value
+  if (!d || !d.moved || d.day !== day || d.newFrom === undefined) return null
+  const top = ((d.newFrom - props.hourStart * 60) / 60) * HOUR_PX
+  const height = Math.max(((d.newTo - d.newFrom) / 60) * HOUR_PX, 12)
+  return { top: `${top}px`, height: `${height}px`, label: `${timeOf(d.newFrom)} to ${timeOf(d.newTo)}`, title: d.item.title }
+}
+
 function ghost(day) {
   const d = drag.value?.day === day && drag.value.moved ? drag.value : props.draft?.day === day ? props.draft : null
   if (!d || d.to <= d.from) return null
@@ -208,11 +277,25 @@ function timeLabel(h) {
     >
       <div v-for="h in hours" :key="h" class="hour-line" :style="{ top: (h - hourStart) * HOUR_PX + 'px' }"></div>
       <div v-if="ghost(c.day)" class="ghost" :style="{ top: ghost(c.day).top, height: ghost(c.day).height }"><span class="num">{{ ghost(c.day).label }}</span></div>
+      <div v-if="moveGhost(c.day)" class="ghost moving" :style="{ top: moveGhost(c.day).top, height: moveGhost(c.day).height }"><span class="num">{{ moveGhost(c.day).label }}</span><span class="ghost-title">{{ moveGhost(c.day).title }}</span></div>
       <div v-if="c.isToday && nowLine !== null" class="now" :style="{ top: nowLine + 'px' }"></div>
       <template v-for="b in c.timed" :key="b.key">
-        <button v-if="b.kind === 'event'" type="button" class="block event" :class="{ linked: b.item.task_id, recurring: b.item.recurrence_id }" :style="blockStyle(b)" :title="b.item.title" @click.stop="emit('select-event', b.item)">
+        <button
+          v-if="b.kind === 'event'"
+          type="button"
+          class="block event"
+          :class="{ linked: b.item.task_id, recurring: b.item.recurrence_id, dragging: evDrag?.item?.id === b.item.id && evDrag.moved }"
+          :style="blockStyle(b)"
+          :title="b.item.title"
+          @click.stop="onEventClick(b.item)"
+          @pointerdown="onEventPointerDown($event, b.item)"
+          @pointermove="onEventPointerMove"
+          @pointerup="onEventPointerUp"
+          @pointercancel="evDrag = null"
+        >
           <span class="time num">{{ formatTime(b.item.start) }}</span>
           <span class="title">{{ b.item.title }}</span>
+          <span v-if="!b.item.recurrence_id" class="grip" aria-hidden="true" @pointerdown.stop="onEventPointerDown($event, b.item, 'resize')"></span>
         </button>
         <RouterLink v-else :to="{ name: 'tasks' }" class="block task" :style="blockStyle(b)" :title="'Task: ' + b.item.title" @click.stop>
           <span class="time num">{{ formatTime(b.item.scheduled_start) }}</span>
@@ -244,6 +327,12 @@ function timeLabel(h) {
 .gutter { position: relative; }
 .hour-label { font-size: var(--fs-xs); color: var(--ink-3); text-align: right; padding-right: 6px; transform: translateY(-0.5em); }
 .col { position: relative; border-left: 1px solid var(--line); cursor: crosshair; touch-action: pan-y; user-select: none; }
+.block.event { touch-action: pan-y; }
+.block.event:not(.recurring) { cursor: grab; }
+.block.event.dragging { opacity: 0.45; }
+.grip { position: absolute; left: 0; right: 0; bottom: 0; height: 7px; cursor: ns-resize; }
+.ghost.moving { z-index: 4; background: color-mix(in srgb, var(--info) 18%, transparent); border-color: var(--info); color: var(--ink); box-shadow: var(--shadow-2); }
+.ghost-title { display: block; font-weight: 500; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 .ghost { position: absolute; left: 1px; right: 1px; z-index: 2; border-radius: var(--r-sm); background: color-mix(in srgb, var(--ink) 10%, transparent); border: 1px dashed var(--ink-3); padding: 2px 6px; font-size: var(--fs-xs); color: var(--ink-2); pointer-events: none; overflow: hidden; }
 .col.today { background: color-mix(in srgb, var(--brand-soft) 30%, transparent); }
 .hour-line { position: absolute; left: 0; right: 0; border-top: 1px solid var(--line); opacity: 0.7; pointer-events: none; }

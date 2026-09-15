@@ -12,10 +12,12 @@ import UiLoadGate from '../components/ui/UiLoadGate.vue'
 import UiModal from '../components/ui/UiModal.vue'
 import { useMediaQuery } from '../composables/useMediaQuery'
 import { useReady } from '../composables/useReady'
+import { useToast } from '../composables/useToast'
 import { formatDay, mondayOf, today } from '../lib/dates'
 import { useCalendarStore } from '../stores/calendar'
 
 const store = useCalendarStore()
+const toast = useToast()
 const panel = ref(null) // null | { event } | { defaults }
 const quick = ref(null) // { day, hour, minute, endHour, endMinute, anchor } for the popover
 const saving = ref(false)
@@ -52,6 +54,18 @@ function onSlot(defaults) {
   quick.value = defaults
 }
 const draft = computed(() => (quick.value ? { day: quick.value.day, from: quick.value.hour * 60 + quick.value.minute, to: quick.value.endHour * 60 + quick.value.endMinute } : null))
+
+// Dropped or resized on the grid: write the new times to iCloud through the API.
+async function onMove({ event, day, from, to }) {
+  const [y, m, d] = day.split('-').map(Number)
+  const at = (minutes) => new Date(y, m - 1, d, Math.floor(minutes / 60), minutes % 60).toISOString()
+  try {
+    await store.updateEvent(event.id, { start: at(from), end: at(to) })
+    toast.success(`Moved "${event.title}" to ${day}, ${String(Math.floor(from / 60)).padStart(2, '0')}:${String(from % 60).padStart(2, '0')}`)
+  } catch (err) {
+    toast.error(err.message)
+  }
+}
 
 async function quickSave(body) {
   saving.value = true
@@ -120,7 +134,7 @@ function pickDay(evt) {
     <UiLoadGate :ready="ready" label="Loading your week">
       <div class="gridwrap">
         <div class="gridpos">
-          <AgendaGrid :days="store.days" :events="store.events" :tasks="store.tasks" :draft="draft" @select-event="openEvent" @create="onSlot" />
+          <AgendaGrid :days="store.days" :events="store.events" :tasks="store.tasks" :draft="draft" @select-event="openEvent" @create="onSlot" @move="onMove" />
           <Transition name="pop">
             <EventPopover
               v-if="quick"

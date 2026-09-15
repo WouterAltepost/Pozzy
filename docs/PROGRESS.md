@@ -1,5 +1,14 @@
 # Pozzy progress
 
+## Account names on mail, steadier loader, galaxy blue mark, event drag on the agenda, 2026-09-15 (deployed)
+
+- Mail: email cards, the detail dialog, the account filter, the top emails widget and Settings show the account name derived from the address (wout.altepost, altepostwout, wjaltepost, wout@alpacaai) with the MAIL_ACCOUNTS_JSON label (Mail 1, Personal, Important, Work) as a tag. Presentation only (`web/src/lib/mail.js`), so env syncs, which reset labels, cannot undo it.
+- Loader: the hidden content is absolutely positioned while loading so the gate keeps one height and the figure no longer drifts down as widgets arrive; the mark spins instead of breathing.
+- Brand colour: galaxy blue #2A4B7C (dark #7C9CD9). favicon.svg recoloured at source; logo.png, pwa-192, pwa-512, pwa-512-maskable and apple-touch-icon recoloured by mapping the red hue to the blue one with shading kept (scratch PIL script). Tokens `--brand` and `--brand-soft` in both schemes. Olive green would be a one-line token change plus the same recolour.
+- Agenda: drag an event to move it (keeps its duration, across days, 15 minute steps) or drag its bottom edge to resize; ghost preview while dragging; release sends `PUT /api/calendar/events/<id>` with the new start and end and a toast confirms. Recurring occurrences stay read-only. No API change.
+
+Verification: Playwright on the local stack. With the API throttled the figure's position was sampled six times over 1.5 seconds and did not move; the mark carries the spin animation. Mail rows show the derived names and tags. The event drag was tested with the PUT intercepted in the browser so nothing reached iCloud: moving a block 88px down produced a ghost two hours later and a request body with start and end shifted by two hours and the same duration; the resize grip produced a body with the original start and a later end. Zero console errors.
+
 ## Capture dialog, tasks list, dialogs everywhere, loading gate, live habits chart, 2026-09-15 (deployed)
 
 Five notes from Wouter.

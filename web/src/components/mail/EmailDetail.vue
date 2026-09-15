@@ -2,6 +2,7 @@
 import { computed, reactive, ref, watch } from 'vue'
 import { CATEGORIES, PRIORITIES } from '../../api/mail'
 import { formatDateTime } from '../../lib/dates'
+import { accountName } from '../../lib/mail'
 import AreaSelect from '../shared/AreaSelect.vue'
 import UiBadge from '../ui/UiBadge.vue'
 import UiButton from '../ui/UiButton.vue'
@@ -52,7 +53,8 @@ function createTask() {
   <div class="detail">
     <div class="card-head">
       <div class="badges">
-        <UiBadge :color="email.account?.color || ''">{{ email.account?.label }}</UiBadge>
+        <UiBadge :color="email.account?.color || ''">{{ accountName(email.account) }}</UiBadge>
+        <span v-if="email.account?.label" class="tag">{{ email.account.label }}</span>
         <PriorityBadge :priority="email.priority" />
         <span class="tag">{{ email.category }}</span>
         <UiBadge v-if="email.needs_reply" tone="info">needs reply</UiBadge>

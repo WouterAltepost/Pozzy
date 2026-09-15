@@ -17,7 +17,7 @@ Constraints: plain CSS tokens and shared components, one icon family (Phosphor, 
 
 THESIS: Pozzy is a desk instrument, not a SaaS dashboard: a matte housing with hairline rules, machined radii, tabular numerals and one red lamp. It refuses the category default of white cards floating on grey with a blue accent and a rainbow of status pills.
 
-OWN-WORLD: stone housing (#F2F1ED) with raised bone panels (#FBFAF8) in light; graphite housing (#141518) with charcoal panels in dark. Ink text, hairlines not shadows for structure, soft diffused shadow only on floating layers. Geist everywhere, tabular figures for every number. Brand red (#AF1616) appears only as the logo, the "now" marker (today, current time line, running timer) and the focus ring. Primary actions are ink, secondary are outlined, area and account colours are data and come from the database untouched.
+OWN-WORLD: stone housing (#F2F1ED) with raised bone panels (#FBFAF8) in light; graphite housing (#141518) with charcoal panels in dark. Ink text, hairlines not shadows for structure, soft diffused shadow only on floating layers. Geist everywhere, tabular figures for every number. Brand galaxy blue (#2A4B7C, red #AF1616 until 2026-09-15) appears only as the logo, the "now" marker (today, current time line, running timer) and the focus ring. Primary actions are ink, secondary are outlined, area and account colours are data and come from the database untouched.
 
 STORY: open the app, the date and today's three do's read first, then what the calendar and inbox demand; every control looks the same everywhere so nothing needs relearning; failures and empty states say what they are.
 

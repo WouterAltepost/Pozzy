@@ -1,4 +1,5 @@
 <script setup>
+import { accountName } from '../../lib/mail'
 import { useLoadTask } from '../../composables/useReady'
 import { useWidgetLink } from '../../composables/useWidgetLink'
 import { onMounted, ref } from 'vue'
@@ -44,7 +45,7 @@ const link = useWidgetLink('mail')
     <ul v-if="emails.length">
       <li v-for="e in emails" :key="e.id" class="list-row">
         <input type="checkbox" title="Mark handled" :aria-label="'Mark handled: ' + e.subject" @change="handled(e)" />
-        <span class="account" :style="{ background: e.account?.color || 'var(--ink-3)' }" :title="e.account?.label"></span>
+        <span class="account" :style="{ background: e.account?.color || 'var(--ink-3)' }" :title="accountName(e.account) + (e.account?.label ? ', ' + e.account.label : '')"></span>
         <PriorityBadge :priority="e.priority" />
         <span class="text">
           <span class="from truncate">{{ e.from_name || e.from_email }}</span>

@@ -1,5 +1,6 @@
 <script setup>
 import { formatDateTime } from '../../lib/dates'
+import { accountName } from '../../lib/mail'
 import AreaDot from '../shared/AreaDot.vue'
 import UiBadge from '../ui/UiBadge.vue'
 import PriorityBadge from './PriorityBadge.vue'
@@ -10,10 +11,12 @@ const emit = defineEmits(['open', 'handled'])
 
 <template>
   <li class="row" :class="{ active, handled: email.handled, reply: email.needs_reply }">
-    <span class="account" :style="{ background: email.account?.color || 'var(--ink-3)' }" :title="email.account?.label"></span>
+    <span class="account" :style="{ background: email.account?.color || 'var(--ink-3)' }" :title="accountName(email.account)"></span>
     <button type="button" class="open" @click="emit('open', email)">
       <span class="line1">
         <PriorityBadge :priority="email.priority" />
+        <span class="acct truncate" :style="{ color: email.account?.color || 'var(--ink-2)' }">{{ accountName(email.account) }}</span>
+        <span v-if="email.account?.label" class="tag">{{ email.account.label }}</span>
         <span class="from truncate">{{ email.from_name || email.from_email }}</span>
         <span class="tag">{{ email.category }}</span>
         <UiBadge v-if="email.needs_reply" tone="info">reply</UiBadge>
@@ -42,7 +45,8 @@ const emit = defineEmits(['open', 'handled'])
 .account { width: 3px; border-radius: 2px; flex: none; }
 .open { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; text-align: left; padding: 2px 4px; border: 0; background: none; color: inherit; font: inherit; cursor: pointer; border-radius: var(--r-sm); }
 .line1 { display: flex; align-items: center; gap: 6px; min-width: 0; }
-.from { color: var(--ink); font-weight: 500; font-size: var(--fs-md); max-width: 40%; }
+.acct { font-size: var(--fs-xs); font-weight: 600; letter-spacing: 0.01em; max-width: 30%; }
+.from { color: var(--ink); font-weight: 500; font-size: var(--fs-md); max-width: 36%; }
 .date { margin-left: auto; white-space: nowrap; }
 .subject { font-size: var(--fs-base); }
 .summary { font-size: var(--fs-sm); color: var(--ink-3); }

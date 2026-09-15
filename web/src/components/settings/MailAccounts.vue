@@ -1,4 +1,5 @@
 <script setup>
+import { accountName } from '../../lib/mail'
 import { onMounted, reactive, ref } from 'vue'
 import { formatDateTime } from '../../lib/dates'
 import { useMailStore } from '../../stores/mail'
@@ -68,7 +69,8 @@ async function sync() {
     <ul v-else class="accounts">
       <li v-for="a in store.accounts" :key="a.id" class="account" :class="{ off: !a.enabled }">
         <input type="color" :value="a.color || '#6F727A'" title="Colour" aria-label="Account colour" @change="saveMeta(a, 'color', $event.target.value)" />
-        <input class="label" type="text" :value="a.label" maxlength="60" aria-label="Label" @change="saveMeta(a, 'label', $event.target.value)" />
+        <span class="name">{{ accountName(a) }}</span>
+        <input class="label" type="text" :value="a.label" maxlength="60" aria-label="Tag" title="Shown as a tag on each email. Reset from MAIL_ACCOUNTS_JSON on the next sync." @change="saveMeta(a, 'label', $event.target.value)" />
         <span class="email muted small truncate">{{ a.email }}</span>
         <label class="check"><input type="checkbox" :checked="a.enabled" @change="toggle(a)" /> Enabled</label>
         <UiButton size="sm" @click="test(a)">Test</UiButton>
@@ -93,7 +95,8 @@ h3 { font-size: var(--fs-base); }
 .accounts { display: flex; flex-direction: column; gap: var(--sp-2); }
 .account { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-2); padding: var(--sp-2) var(--sp-3); background: var(--surface-2); border-radius: var(--r-md); }
 .account.off { opacity: 0.6; }
-.label { height: var(--control-h-sm); width: 130px; font-size: var(--fs-md); }
+.name { font-weight: 600; font-size: var(--fs-md); white-space: nowrap; }
+.label { height: var(--control-h-sm); width: 110px; font-size: var(--fs-md); }
 .email { flex: 1 1 160px; min-width: 0; }
 .check { display: flex; align-items: center; gap: 6px; font-size: var(--fs-md); }
 .info { flex-basis: 100%; }
