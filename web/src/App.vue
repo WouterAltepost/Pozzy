@@ -60,6 +60,7 @@ watch(() => route.fullPath, () => (menuOpen.value = false))
 
 <template>
   <div class="shell">
+    <div class="ambient" aria-hidden="true"></div>
     <header class="topbar">
       <RouterLink to="/" class="brand" aria-label="Pozzy home">
         <img src="/favicon.svg" alt="" class="mark" width="26" height="26" />

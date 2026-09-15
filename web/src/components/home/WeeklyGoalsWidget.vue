@@ -1,4 +1,5 @@
 <script setup>
+import { useWidgetLink } from '../../composables/useWidgetLink'
 import { onMounted, ref } from 'vue'
 import { PhTarget } from '@phosphor-icons/vue'
 import { addGoalProgress, listGoals, updateGoal } from '../../api/goals'
@@ -40,10 +41,11 @@ async function bump(g) {
 }
 
 onMounted(load)
+const link = useWidgetLink('goals')
 </script>
 
 <template>
-  <section v-if="!failed && data" class="card widget">
+  <section v-if="!failed && data" class="card widget clickable" tabindex="0" role="link" :aria-label="'Open goals'" @click="link.onClick" @keydown="link.onKey">
     <div class="card-head">
       <h2>Weekly goals</h2>
       <span class="meta"><RouterLink :to="{ name: 'goals' }" class="num">{{ data.goals.filter((g) => g.done).length }} of {{ data.goals.length }} done</RouterLink></span>

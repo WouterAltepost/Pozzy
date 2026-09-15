@@ -1,4 +1,5 @@
 <script setup>
+import { useWidgetLink } from '../../composables/useWidgetLink'
 import { onMounted, ref } from 'vue'
 import { upcoming } from '../../api/study'
 import { daysUntil, formatDateTime, formatDay } from '../../lib/dates'
@@ -21,10 +22,11 @@ function tone(day) {
   if (d <= 3) return 'warn'
   return 'neutral'
 }
+const link = useWidgetLink('study')
 </script>
 
 <template>
-  <section v-if="!failed && data && (data.deadlines.length || data.application_steps.length)" class="card widget">
+  <section v-if="!failed && data && (data.deadlines.length || data.application_steps.length)" class="card widget clickable" tabindex="0" role="link" :aria-label="'Open study'" @click="link.onClick" @keydown="link.onKey">
     <div class="card-head">
       <h2>Next two weeks</h2>
       <span class="meta"><RouterLink :to="{ name: 'study' }">Study</RouterLink></span>

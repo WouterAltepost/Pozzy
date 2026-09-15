@@ -97,6 +97,12 @@ Caller: `modules/ai/briefing.py::generate_briefing`. Kill switch: `ai_enabled.br
 
 Input: the dict from `briefing.build_context(day)` (dos, tasks_due, scheduled_tasks, events, deadlines, application_steps, weekly_goals, trackers_open, hours, emails, yesterday). Output: the briefing text (plain, paragraphs separated by blank lines). Fallback: `briefing.deterministic_text`.
 
+### `reply_briefing(payload: dict) -> dict | None`
+
+Caller: `modules/ai/briefing.py::add_note` (reply box under the briefing). Kill switch: `ai_enabled.briefing`. Model: smart. Prompt `briefing_reply`.
+
+Input: `{"date", "weekday", "briefing" (current text), "previous_notes": [str], "note": str, "context": build_context(day) plus "notes", "candidates": {"emails": [{id, from, subject}], "tasks": [{id, title, due_date}], "areas": [names]}}`. Output: `{"reply": str, "text": str (the rewritten briefing), "actions": [{"type", ...ids or fields, "reason"}]}` with `type` in `mark_email_handled | complete_task | drop_task | add_do | add_note | set_hour_target`. `briefing.validate_actions` keeps only actions whose ids and area names come from `candidates`, caps at six, and attaches a `label` and `index`. Actions are stored on the note with `applied: false`; `POST /api/ai/briefing/notes/<i>/apply` runs the ticked ones through the owning services (mail `update_email`, tasks `complete_task`/`update_task`, dos `create_do`, notes `create_note`, the `hour_targets` setting). Fallback: the note is stored, the deterministic text gains a "Your note:" line, no actions. Notes are passed as `context.notes` to every later `write_briefing` for the same day.
+
 ### `review_week(stats: dict, max_goals: int = 5) -> dict | None`
 
 Caller: `modules/reviews/service.py::generate_review`. Kill switch: `ai_enabled.weekly_review`. Model: smart. Prompt `weekly_review`.

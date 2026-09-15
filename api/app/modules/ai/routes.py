@@ -29,6 +29,31 @@ def regenerate_briefing():
     return ok(briefing.generate_briefing(_day_arg(), force=True).to_dict())
 
 
+@bp.post("/briefing/notes")
+@require_auth
+def add_briefing_note():
+    """Reply to today's briefing. Claude rewrites the briefing and proposes actions; nothing is applied yet."""
+    from ...utils.validation import parse_str, require_object
+
+    body = require_object(request.get_json(silent=True))
+    text = parse_str(body, "text", required=True, max_len=2000)
+    return ok(briefing.add_note(_day_arg(), text).to_dict())
+
+
+@bp.post("/briefing/notes/<int:note_index>/apply")
+@require_auth
+def apply_briefing_actions(note_index):
+    """Apply the ticked actions of one note through the owning services."""
+    from ...utils.validation import require_object
+
+    body = require_object(request.get_json(silent=True))
+    indexes = body.get("actions")
+    if not isinstance(indexes, list) or any(not isinstance(i, int) for i in indexes):
+        return fail("validation_error", "'actions' must be a list of action indexes", 400)
+    row, results = briefing.apply_actions(_day_arg(), note_index, indexes)
+    return ok({"briefing": row.to_dict(), "results": results})
+
+
 @bp.get("/briefing/context")
 @require_auth
 def briefing_context():

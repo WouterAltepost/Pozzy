@@ -170,6 +170,9 @@ def generate_briefing(day: date | None = None, force: bool = True) -> DailyBrief
     if row is not None and not force:
         return row
     ctx = build_context(day)
+    notes = [n["text"] for n in (row.notes_json or [])] if row is not None else []
+    if notes:
+        ctx["notes"] = notes
     text = None
     try:
         text = claude_client.write_briefing(ctx)
@@ -178,6 +181,8 @@ def generate_briefing(day: date | None = None, force: bool = True) -> DailyBrief
     source = "claude" if text else "deterministic"
     if not text:
         text = deterministic_text(ctx)
+        if notes:
+            text += "\n\nYour notes: " + " / ".join(notes)
     if row is None:
         row = DailyBriefing(date=day)
         db.session.add(row)
@@ -188,3 +193,174 @@ def generate_briefing(day: date | None = None, force: bool = True) -> DailyBrief
     row.generated_at = now_utc()
     db.session.commit()
     return row
+
+
+# --- replies to the briefing --------------------------------------------------
+
+ACTION_TYPES = ("mark_email_handled", "complete_task", "drop_task", "add_do", "add_note", "set_hour_target")
+
+
+def _candidates(day: date) -> dict:
+    """Ids the model may reference. Anything else in a proposed action is dropped."""
+    from ..tasks import service as tasks
+    from ...models import Area
+
+    emails = []
+    try:
+        from ...models import Email  # type: ignore
+
+        rows = db.session.scalars(select(Email).where(Email.handled.is_(False)).order_by(Email.priority_override.nulls_last(), Email.priority.nulls_last(), Email.date.desc()).limit(15)).all()
+        emails = [{"id": str(e.id), "from": e.from_name or e.from_email, "subject": e.subject} for e in rows]
+    except Exception:
+        log.exception("briefing notes: emails candidates failed")
+    open_tasks = tasks.list_tasks()[:30]
+    areas = [a.name for a in db.session.scalars(select(Area)).all()]
+    return {
+        "emails": emails,
+        "tasks": [{"id": str(t.id), "title": t.title, "due_date": t.due_date.isoformat() if t.due_date else None} for t in open_tasks],
+        "areas": areas,
+    }
+
+
+def validate_actions(actions: list, candidates: dict) -> list[dict]:
+    """Keep only well-formed actions that reference given ids and names. Never trusts the model."""
+    email_ids = {e["id"] for e in candidates["emails"]}
+    task_ids = {t["id"] for t in candidates["tasks"]}
+    areas = set(candidates["areas"])
+    out = []
+    for a in actions or []:
+        if not isinstance(a, dict) or a.get("type") not in ACTION_TYPES:
+            continue
+        t = a["type"]
+        reason = str(a.get("reason") or "")[:200]
+        if t == "mark_email_handled" and a.get("email_id") in email_ids:
+            e = next(e for e in candidates["emails"] if e["id"] == a["email_id"])
+            out.append({"type": t, "email_id": a["email_id"], "label": f"Mark handled: {e.get('from') or '?'}, {e['subject']}", "reason": reason})
+        elif t in ("complete_task", "drop_task") and a.get("task_id") in task_ids:
+            label = next(x["title"] for x in candidates["tasks"] if x["id"] == a["task_id"])
+            verb = "Complete" if t == "complete_task" else "Drop"
+            out.append({"type": t, "task_id": a["task_id"], "label": f"{verb} task: {label}", "reason": reason})
+        elif t == "add_do" and str(a.get("title") or "").strip():
+            title = str(a["title"]).strip()[:200]
+            out.append({"type": t, "title": title, "label": f"Add do: {title}", "reason": reason})
+        elif t == "add_note" and str(a.get("title") or "").strip():
+            title = str(a["title"]).strip()[:200]
+            out.append({"type": t, "title": title, "body": str(a.get("body") or "")[:2000], "label": f"Save note: {title}", "reason": reason})
+        elif t == "set_hour_target" and a.get("area") in areas and a.get("hours") is not None:
+            try:
+                hours = max(0, min(168, int(round(float(a["hours"])))))
+            except (TypeError, ValueError):
+                continue
+            out.append({"type": t, "area": a["area"], "hours": hours, "label": f"Set {a['area']} target to {hours}h per week", "reason": reason})
+        if len(out) >= 6:
+            break
+    for i, a in enumerate(out):
+        a["index"] = i
+        a["applied"] = False
+    return out
+
+
+def add_note(day: date, text: str) -> DailyBriefing:
+    """Store a reply to the briefing. With AI on, Claude rewrites the briefing and proposes actions;
+    with AI off the note is kept and the deterministic text gains a line quoting it."""
+    day = day or today_local()
+    row = get_briefing(day) or generate_briefing(day, force=False)
+    notes = list(row.notes_json or [])
+    ctx = build_context(day)
+    ctx["notes"] = [n["text"] for n in notes] + [text]
+    candidates = _candidates(day)
+    payload = {
+        "date": ctx["date"],
+        "weekday": ctx["weekday"],
+        "briefing": row.text,
+        "previous_notes": [n["text"] for n in notes],
+        "note": text,
+        "context": ctx,
+        "candidates": candidates,
+    }
+    answer = None
+    try:
+        answer = claude_client.reply_briefing(payload)
+    except Exception:
+        log.exception("reply_briefing raised")
+    if answer:
+        entry = {"at": now_utc().isoformat(), "text": text, "reply": answer["reply"], "actions": validate_actions(answer["actions"], candidates), "source": "claude"}
+        row.text = answer["text"]
+        row.source = "claude"
+        row.model = claude_client.model_for("smart")
+    else:
+        entry = {"at": now_utc().isoformat(), "text": text, "reply": "Noted. AI is off or unavailable, so the briefing was not rewritten; the note is kept for the next one.", "actions": [], "source": "deterministic"}
+        row.text = deterministic_text(ctx) + "\n\nYour note: " + text
+        row.source = "deterministic"
+    notes.append(entry)
+    row.notes_json = notes
+    row.context_json = ctx
+    row.generated_at = now_utc()
+    db.session.commit()
+    return row
+
+
+def apply_actions(day: date, note_index: int, indexes: list[int]) -> tuple[DailyBriefing, list[dict]]:
+    """Apply the selected proposed actions through the owning services. Idempotent per action."""
+    from ..dos import service as dos
+    from ..notes import service as notes_service
+    from ..tasks import service as tasks
+    from ...models import Setting, Task
+    from ...utils.validation import ValidationError, to_uuid
+
+    row = get_briefing(day)
+    if row is None or not row.notes_json or note_index < 0 or note_index >= len(row.notes_json):
+        raise ValidationError("No such note")
+    notes = list(row.notes_json)
+    entry = dict(notes[note_index])
+    actions = [dict(a) for a in entry.get("actions", [])]
+    results = []
+    for i in indexes:
+        if i < 0 or i >= len(actions):
+            continue
+        a = actions[i]
+        if a.get("applied"):
+            results.append({"index": i, "ok": True, "message": "already applied"})
+            continue
+        try:
+            t = a["type"]
+            if t == "mark_email_handled":
+                from ..mail import service as mail
+                from ...models import Email  # type: ignore
+
+                email = db.session.get(Email, to_uuid(a["email_id"]))
+                if email is None:
+                    raise ValidationError("email not found")
+                mail.update_email(email, {"handled": True})
+            elif t in ("complete_task", "drop_task"):
+                task = db.session.get(Task, to_uuid(a["task_id"]))
+                if task is None:
+                    raise ValidationError("task not found")
+                if t == "complete_task":
+                    tasks.complete_task(task)
+                else:
+                    tasks.update_task(task, {"status": "dropped"})
+            elif t == "add_do":
+                dos.create_do({"date": day, "title": a["title"]})
+            elif t == "add_note":
+                notes_service.create_note({"title": a["title"], "body": a.get("body") or "", "tags": ["briefing"]})
+            elif t == "set_hour_target":
+                setting = db.session.scalar(select(Setting).where(Setting.key == "hour_targets"))
+                targets = dict((setting.value if setting else None) or {})
+                targets[a["area"]] = int(a["hours"]) * 60
+                if setting is None:
+                    db.session.add(Setting(key="hour_targets", value=targets))
+                else:
+                    setting.value = targets
+                db.session.commit()
+            a["applied"] = True
+            results.append({"index": i, "ok": True, "message": a["label"]})
+        except Exception as exc:
+            db.session.rollback()
+            log.exception("briefing action failed")
+            results.append({"index": i, "ok": False, "message": f"{type(exc).__name__}: {exc}"[:200]})
+    entry["actions"] = actions
+    notes[note_index] = entry
+    row.notes_json = notes
+    db.session.commit()
+    return row, results

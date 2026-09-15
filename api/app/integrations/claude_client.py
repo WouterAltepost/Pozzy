@@ -364,6 +364,32 @@ def write_briefing(context: dict) -> str | None:
     return text or None
 
 
+class _BriefingAction(BaseModel):
+    type: str
+    email_id: str | None = None
+    task_id: str | None = None
+    title: str | None = None
+    body: str | None = None
+    area: str | None = None
+    hours: float | None = None
+    reason: str = ""
+
+
+class BriefingReplyAnswer(BaseModel):
+    reply: str
+    text: str
+    actions: list[_BriefingAction] = []
+
+
+def reply_briefing(payload: dict) -> dict | None:
+    """Reply to a note on the briefing: acknowledgement, rewritten briefing, proposed actions.
+    See docs/AI_CONTRACTS.md 'reply_briefing'. Ids are validated by the caller against the candidates."""
+    answer = _call(feature="briefing_reply", switch="briefing", tier="smart", prompt="briefing_reply", payload=payload, schema=BriefingReplyAnswer, max_tokens=1400)
+    if answer is None or not answer.text.strip():
+        return None
+    return {"reply": answer.reply.strip(), "text": answer.text.strip(), "actions": [a.model_dump() for a in answer.actions[:6]]}
+
+
 class _FocusItem(BaseModel):
     title: str
     area: str | None = None

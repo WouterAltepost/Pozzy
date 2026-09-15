@@ -1,4 +1,5 @@
 <script setup>
+import { useWidgetLink } from '../../composables/useWidgetLink'
 import { computed, onMounted, ref } from 'vue'
 import { getSpend } from '../../api/ai'
 
@@ -20,10 +21,11 @@ async function load() {
 }
 
 onMounted(load)
+const link = useWidgetLink('settings')
 </script>
 
 <template>
-  <section v-if="!failed && data" class="card widget">
+  <section v-if="!failed && data" class="card widget clickable" tabindex="0" role="link" :aria-label="'Open settings'" @click="link.onClick" @keydown="link.onKey">
     <div class="card-head">
       <h2>AI spend</h2>
       <span class="meta num">{{ usd(data.month.cost) }} this month<template v-if="data.budget_usd"> of {{ usd(data.budget_usd) }}</template>, {{ usd(data.today_cost) }} today</span>

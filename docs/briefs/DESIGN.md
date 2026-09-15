@@ -15,6 +15,8 @@ Pozzy is a desk instrument, not a SaaS dashboard. A matte stone housing carries 
 | Implementation | Plain CSS custom properties plus shared Vue components; one dependency added, `@phosphor-icons/vue` for icons | No UI library: the existing markup is small enough to normalise by hand, and a library would fight the token system. Icons must come from a real set, so one tree-shakeable icon package |
 | Desktop first or mobile first | Desktop first with a 390px pass on every view | Primary use is the laptop; the phone is a check-in device |
 | Logo colour as accent | Reserved: logo, now marker, focus ring only. Interactive accent is ink | The seeded Work area is red (#dc2626); red buttons next to red Work dots would read as one thing. Ink buttons keep the red rare and meaningful |
+| Card material | iOS-style glass (requested 2026-09-15): cards are `--surface` at 74% over a fixed ambient layer of two soft brand and info fields, `backdrop-filter: blur(18px) saturate(150%)`, a 1px white inner highlight on the top edge (7% in dark), hairline at 80%. Sheets use the same at 82% and 24px. `prefers-reduced-transparency` restores the solid surface and hides the ambient layer | The blur needs something behind it, so the ambient layer exists only to be blurred. Kept subtle so text contrast on the cards is unchanged |
+| Widget click-through | Every homepage widget card except the briefing is a link to its route (`role="link"`, tabindex, Enter). Clicks on controls inside the card (checkbox, button, link, input) do not navigate; a text selection does not navigate. Hover lifts the card to `--shadow-2`, press scales to 0.995 | Requested 2026-09-15. The briefing card instead hosts the reply column |
 | Fonts | Self-hosted Geist (variable, 300 to 800), latin subset, `font-display: swap`; no runtime font requests | One workhorse sans for an Operate surface; tabular figures and a real medium weight; the wordmark serif lives only inside the logo image |
 | Logo assets | `favicon-svg.svg` as the mark, `pozzy.png` as mark plus wordmark (login and top bar wordmark), `Group.png` as PWA icons source | `pozzy-svg.svg` is green while every other asset is red; treated as an export error and left unused until confirmed |
 
@@ -132,7 +134,7 @@ Every interactive component has default, hover, focus-visible, active, disabled 
 
 Content max width 1180px inside the rail layout; page padding `--sp-6` desktop, `--sp-4` mobile. Every view starts with PageHeader.
 
-- **Home**: display date; widget grid two columns from 900px (`minmax(0,1fr)` twice), one column below; order per docs/WIDGETS.md; each widget a card; the briefing card spans both columns when it has text.
+- **Home**: display date; widget grid two columns from 900px (`minmax(0,1fr)` twice), one column below; order per docs/WIDGETS.md; each widget a card and a link to its route; the briefing card spans both columns and, from 900px, is itself a two-column grid: the text at 1.4fr and a reply column at 1fr behind a hairline (thread of your notes and Pozzy's replies as small bubbles, a dashed "Proposed changes" inset with checkboxes and an Apply button, a textarea with a send button, Cmd or Ctrl plus Enter sends). Below 900px the reply column becomes a "Reply (n)" button in the card head that opens the same content in a sheet.
 - **Agenda**: PageHeader with week nav, view toggle (segmented control), date input, Sync now and New event; grid card flush; today column `--brand-soft` header text `--brand`; now line `--brand` 2px; events use account or area colour as a 3px left rule inside the block (allowed: it is data, under 1px rule exception because it is inside a block, not a card); editor in the side panel / sheet.
 - **Tasks**: PageHeader with quick add, board or list segmented control, area select, search, show done; board two by two, each quadrant an inset (`--surface-2`, `--r-lg`, 2px top rule in quadrant colour); task cards are `--surface` rows with a checkbox, title, meta chips; editor in the side panel / sheet.
 - **Goals**: two-column top row (today and tomorrow do's) then suggestions and weekly goals; do rows 40px with checkbox, editable title, rollover badge (warn tone when rolled twice); goal rows with a 6px progress bar in `--ink` on `--surface-3`.
@@ -171,6 +173,7 @@ Icons: `pwa-192.png`, `pwa-512.png`, `apple-touch-icon.png` rendered from `Group
 | Skeleton | 1.6s linear shimmer, static under reduced motion |
 | Route change | none (Operate: no page choreography) |
 | Tracker tick | background-color 160ms, mark scale(0.9) to 1 in 120ms |
+| Widget card hover and press | box-shadow and border-color 160ms ease-out on fine pointers; press scale(0.995); none under reduced motion |
 
 No keyframes on rapidly triggered elements except the skeleton shimmer.
 

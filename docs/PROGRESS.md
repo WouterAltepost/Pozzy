@@ -1,5 +1,16 @@
 # Pozzy progress
 
+## Briefing replies, glass cards, widget links, 2026-09-15 (deployed)
+
+Three notes from Wouter after the design pass.
+
+- Briefing reply (functional). Migration `g1000000notes` adds `daily_briefings.notes_json` (applied to Supabase). `POST /api/ai/briefing/notes` stores a note; with AI on, `claude_client.reply_briefing` (prompt `briefing_reply`, switch `ai_enabled.briefing`, smart model) returns an acknowledgement, the rewritten briefing and proposed actions. `briefing.validate_actions` keeps only allowlisted types (`mark_email_handled`, `complete_task`, `drop_task`, `add_do`, `add_note`, `set_hour_target`) whose ids and area names come from the candidates it was given, at most six. Nothing is applied until `POST /api/ai/briefing/notes/<i>/apply` runs the ticked ones through the owning services; each action is idempotent and reports ok or an error. With AI off the note is kept, the deterministic text quotes it, and no actions are proposed. Notes are passed to every later regeneration of the same day. Contract in docs/AI_CONTRACTS.md, tests in `api/tests/e/test_briefing_notes.py` (214 green in total).
+- BriefingWidget: reply column on the right from 900px, a Reply button and sheet below that. Thread bubbles, proposed changes as pre-ticked checkboxes with the model's reason, Apply, textarea with Cmd/Ctrl plus Enter.
+- Glass cards: translucent surface with backdrop blur over a fixed ambient layer, inner top highlight, reduced-transparency fallback; sheets share the material. Decisions and tokens in docs/briefs/DESIGN.md.
+- Widget click-through: every homepage widget card except the briefing links to its route; controls inside the card keep working without navigating. Composable `web/src/composables/useWidgetLink.js`.
+
+Verified locally against Supabase with a real Claude call: note "The Railway deploy issues have been fixed. The Ace and Tate email is not my concern." produced a rewritten briefing without the deploy paragraph and four "mark handled" proposals (the Ace & Tate email and three Railway build failures), nothing applied. Widget clicks land on /tasks and /agenda at 1440 and 390; no overflow at 390, no console errors, no failed API calls. Screenshots: docs/design-screens/home-*.png and home-briefing-reply-*.png.
+
 ## Design pass, 2026-09-15 (deployed)
 
 Presentation only: no API, store, router, logic or data changes. Spec in docs/briefs/DESIGN.md, product record in PRODUCT.md, direction contract in the impeccable surface brief for web/src/App.vue. Backend suite 209 green, `npm run build` green, `impeccable detect` reports only the deliberate Geist choice.

@@ -1,4 +1,5 @@
 <script setup>
+import { useWidgetLink } from '../../composables/useWidgetLink'
 import { onMounted, ref } from 'vue'
 import { PhCalendarBlank } from '@phosphor-icons/vue'
 import { listEvents } from '../../api/calendar'
@@ -29,10 +30,11 @@ async function load() {
 }
 
 onMounted(load)
+const link = useWidgetLink('agenda')
 </script>
 
 <template>
-  <section v-if="!failed && items" class="card widget">
+  <section v-if="!failed && items" class="card widget clickable" tabindex="0" role="link" :aria-label="'Open agenda'" @click="link.onClick" @keydown="link.onKey">
     <div class="card-head">
       <h2>Today</h2>
       <span class="meta"><RouterLink :to="{ name: 'agenda' }">Agenda</RouterLink></span>

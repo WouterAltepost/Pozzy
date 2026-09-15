@@ -126,7 +126,10 @@ function onPointerUp() {
   max-height: min(88vh, 88dvh);
   display: flex;
   flex-direction: column;
-  background: var(--surface);
+  background: color-mix(in srgb, var(--surface) 82%, transparent);
+  -webkit-backdrop-filter: blur(24px) saturate(160%);
+  backdrop-filter: blur(24px) saturate(160%);
+  border-top: 1px solid color-mix(in srgb, var(--line) 80%, transparent);
   border-radius: var(--r-xl) var(--r-xl) 0 0;
   box-shadow: var(--shadow-3);
   padding-bottom: env(safe-area-inset-bottom);
@@ -139,6 +142,7 @@ function onPointerUp() {
 .close { display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; border: 0; border-radius: 50%; background: var(--surface-2); color: var(--ink-2); }
 .sheet-body { overflow-y: auto; padding: var(--sp-2) var(--sp-4) var(--sp-5); }
 
+@media (prefers-reduced-transparency: reduce) { .panel { background: var(--surface); -webkit-backdrop-filter: none; backdrop-filter: none; } }
 .sheet-enter-active .scrim, .sheet-leave-active .scrim { transition: opacity var(--dur-panel) ease; }
 .sheet-enter-active .panel { transition: transform var(--dur-sheet) var(--ease-drawer); }
 .sheet-leave-active .panel { transition: transform var(--dur-panel) var(--ease-drawer); }

@@ -1,4 +1,5 @@
 <script setup>
+import { useWidgetLink } from '../../composables/useWidgetLink'
 import { onMounted, ref } from 'vue'
 import { PhCheckSquare } from '@phosphor-icons/vue'
 import { createDo, listDos, updateDo } from '../../api/dos'
@@ -43,10 +44,11 @@ async function add() {
 }
 
 onMounted(load)
+const link = useWidgetLink('goals')
 </script>
 
 <template>
-  <section v-if="!failed && dos" class="card widget">
+  <section v-if="!failed && dos" class="card widget clickable" tabindex="0" role="link" :aria-label="'Open goals'" @click="link.onClick" @keydown="link.onKey">
     <div class="card-head">
       <h2>Today's three do's</h2>
       <span class="meta">{{ formatDay(today()) }}</span>

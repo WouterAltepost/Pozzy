@@ -20,6 +20,8 @@ class DailyBriefing(BaseModel, db.Model):
     # The context handed to the model, kept so a bad briefing can be explained.
     context_json: Mapped[Optional[Any]] = mapped_column(JSONType, nullable=True)
     generated_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    # Wouter's replies to the briefing: [{at, text, reply, actions: [{type, ..., applied}], source}].
+    notes_json: Mapped[Optional[Any]] = mapped_column(JSONType, nullable=True)
 
     def to_dict(self) -> dict:
         from ..utils.dates import iso
@@ -31,4 +33,5 @@ class DailyBriefing(BaseModel, db.Model):
             "source": self.source,
             "model": self.model,
             "generated_at": iso(self.generated_at),
+            "notes": list(self.notes_json or []),
         }

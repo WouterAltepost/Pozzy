@@ -1,4 +1,5 @@
 <script setup>
+import { useWidgetLink } from '../../composables/useWidgetLink'
 import { onMounted, ref } from 'vue'
 import { PhTray } from '@phosphor-icons/vue'
 import { topEmails, updateEmail } from '../../api/mail'
@@ -28,10 +29,11 @@ async function handled(e) {
 }
 
 onMounted(load)
+const link = useWidgetLink('mail')
 </script>
 
 <template>
-  <section v-if="!failed && emails" class="card widget">
+  <section v-if="!failed && emails" class="card widget clickable" tabindex="0" role="link" :aria-label="'Open mail'" @click="link.onClick" @keydown="link.onKey">
     <div class="card-head">
       <h2>Top emails</h2>
       <span class="meta"><RouterLink :to="{ name: 'mail' }">Inbox</RouterLink></span>

@@ -1,4 +1,5 @@
 <script setup>
+import { useWidgetLink } from '../../composables/useWidgetLink'
 import { onMounted, ref } from 'vue'
 import { hoursWeek } from '../../api/hours'
 import { minutesToHours } from '../../lib/dates'
@@ -17,10 +18,11 @@ onMounted(async () => {
 function pct(row) {
   return row.target_minutes ? Math.min(100, Math.round((row.minutes / row.target_minutes) * 100)) : null
 }
+const link = useWidgetLink('hours')
 </script>
 
 <template>
-  <section v-if="!failed && summary" class="card widget">
+  <section v-if="!failed && summary" class="card widget clickable" tabindex="0" role="link" :aria-label="'Open hours'" @click="link.onClick" @keydown="link.onKey">
     <div class="card-head">
       <h2>Hours this week</h2>
       <span class="meta"><RouterLink :to="{ name: 'hours' }" class="num">{{ minutesToHours(summary.total_minutes) }} total</RouterLink></span>

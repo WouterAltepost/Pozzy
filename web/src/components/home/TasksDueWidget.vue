@@ -1,4 +1,5 @@
 <script setup>
+import { useWidgetLink } from '../../composables/useWidgetLink'
 import { onMounted, ref } from 'vue'
 import { PhCheckSquare } from '@phosphor-icons/vue'
 import { completeTask, listTasks } from '../../api/tasks'
@@ -29,10 +30,11 @@ async function complete(t) {
 }
 
 onMounted(load)
+const link = useWidgetLink('tasks')
 </script>
 
 <template>
-  <section v-if="!failed && tasks" class="card widget">
+  <section v-if="!failed && tasks" class="card widget clickable" tabindex="0" role="link" :aria-label="'Open tasks'" @click="link.onClick" @keydown="link.onKey">
     <div class="card-head">
       <h2>Due today or overdue</h2>
       <span class="meta"><RouterLink :to="{ name: 'tasks' }">All tasks</RouterLink></span>

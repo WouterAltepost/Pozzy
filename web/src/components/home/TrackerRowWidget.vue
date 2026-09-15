@@ -1,4 +1,5 @@
 <script setup>
+import { useWidgetLink } from '../../composables/useWidgetLink'
 import { computed, onMounted, ref } from 'vue'
 import { PhCheck } from '@phosphor-icons/vue'
 import { tickTracker, trackerWeek } from '../../api/trackers'
@@ -32,10 +33,11 @@ async function tick(t) {
 }
 
 onMounted(load)
+const link = useWidgetLink('trackers')
 </script>
 
 <template>
-  <section v-if="!failed && week && quick.length" class="card widget">
+  <section v-if="!failed && week && quick.length" class="card widget clickable" tabindex="0" role="link" :aria-label="'Open trackers'" @click="link.onClick" @keydown="link.onKey">
     <div class="card-head">
       <h2>Trackers today</h2>
       <span class="meta"><RouterLink :to="{ name: 'trackers' }">Tracking</RouterLink></span>

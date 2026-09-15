@@ -12,7 +12,7 @@ Each widget under `web/src/components/home/` fetches its own data on mount and r
 | 6 | `HoursWeekWidget.vue` | `GET /api/hours/week`, bar per area against Settings targets | A |
 | 7 | `WeeklyGoalsWidget.vue` | `GET /api/goals`, tick and +1 inline | A |
 | 8 | `DeadlinesWidget.vue` | `GET /api/study/upcoming?days=14`, deadlines and application next steps. Renders nothing when empty. | A |
-| 9 | `BriefingWidget.vue` | `GET /api/ai/briefing` (today), paragraphs of text with source and time, Generate/Regenerate button calling `POST /api/ai/briefing`. Shows a hint when no briefing exists yet. | D |
+| 9 | `BriefingWidget.vue` | `GET /api/ai/briefing` (today), paragraphs of text with source and time, Generate/Regenerate button calling `POST /api/ai/briefing`. Shows a hint when no briefing exists yet. Reply column (sheet on mobile): `POST /api/ai/briefing/notes` stores a note, Claude rewrites the text and proposes actions; ticked ones go to `POST /api/ai/briefing/notes/<i>/apply`. | D, E |
 | 10 | `AiSpendWidget.vue` | `GET /api/ai/spend`: month cost against Settings `ai_monthly_budget_usd`, today's cost, 7-day bars, cost per feature, collapsible recent calls with errors. | D |
 
 Widgets are `<section class="card widget">` blocks; a two-column grid at 900px and up works with them as-is.

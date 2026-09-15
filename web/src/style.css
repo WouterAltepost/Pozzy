@@ -249,15 +249,34 @@ button:not([class]):disabled { opacity: 0.55; }
 .page { max-width: var(--content-w); margin: 0 auto; padding: var(--sp-6) var(--sp-6) var(--sp-10); }
 @media (max-width: 720px) { .page { padding: var(--sp-4) var(--sp-4) var(--sp-8); } }
 
-/* Card: one surface vocabulary. UiCard applies these same rules. */
+/* Card: one surface vocabulary, iOS-style glass. UiCard applies these same rules.
+   Translucent surface, blur of what sits behind, a bright top edge as the light catching the material,
+   and a 1px tinted hairline. The ambient layer in App.vue gives the blur something to show. */
 .card {
-  background: var(--surface);
-  border: 1px solid var(--line);
+  --glass: color-mix(in srgb, var(--surface) 74%, transparent);
+  background: var(--glass);
+  -webkit-backdrop-filter: blur(18px) saturate(150%);
+  backdrop-filter: blur(18px) saturate(150%);
+  border: 1px solid color-mix(in srgb, var(--line) 80%, transparent);
   border-radius: var(--r-lg);
-  box-shadow: var(--shadow-1);
+  box-shadow: var(--shadow-1), inset 0 1px 0 rgb(255 255 255 / 0.6);
   padding: var(--sp-4);
   margin-bottom: var(--sp-4);
 }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .card { box-shadow: var(--shadow-1), inset 0 1px 0 rgb(255 255 255 / 0.07); } }
+:root[data-theme="dark"] .card { box-shadow: var(--shadow-1), inset 0 1px 0 rgb(255 255 255 / 0.07); }
+@media (prefers-reduced-transparency: reduce) { .card { --glass: var(--surface); -webkit-backdrop-filter: none; backdrop-filter: none; } }
+.card.clickable { cursor: pointer; transition: box-shadow var(--dur-hover) var(--ease-out), border-color var(--dur-hover) ease, transform var(--dur-hover) var(--ease-out); }
+@media (hover: hover) and (pointer: fine) { .card.clickable:hover { box-shadow: var(--shadow-2), inset 0 1px 0 rgb(255 255 255 / 0.6); border-color: var(--line-2); } }
+.card.clickable:active { transform: scale(0.995); }
+@media (prefers-reduced-motion: reduce) { .card.clickable:active { transform: none; } }
+
+/* Ambient layer: two soft fields behind the housing so the glass has depth to blur. Fixed, no pointer events. */
+.ambient { position: fixed; inset: 0; z-index: -1; pointer-events: none; overflow: hidden; }
+.ambient::before, .ambient::after { content: ''; position: absolute; border-radius: 50%; filter: blur(80px); opacity: 0.55; }
+.ambient::before { width: 60vw; height: 60vw; left: -18vw; top: -22vw; background: radial-gradient(closest-side, color-mix(in srgb, var(--brand) 22%, transparent), transparent 70%); }
+.ambient::after { width: 70vw; height: 70vw; right: -25vw; bottom: -30vw; background: radial-gradient(closest-side, color-mix(in srgb, var(--info) 16%, transparent), transparent 70%); }
+@media (prefers-reduced-transparency: reduce) { .ambient { display: none; } }
 @media (min-width: 900px) { .card { padding: var(--sp-5); } }
 .card > h2:first-child, .card > .card-head:first-child { margin-bottom: var(--sp-3); }
 .card h2 { font-size: var(--fs-lg); }
