@@ -186,17 +186,16 @@ function timeLabel(h) {
   flex-direction: column;
   gap: 1px;
   text-decoration: none;
-  border: 0;
-  box-shadow: inset 3px 0 0 var(--accent, var(--info));
+  border: 1px solid color-mix(in srgb, var(--accent, var(--info)) 35%, transparent);
   transition: filter var(--dur-hover) ease;
 }
 @media (hover: hover) and (pointer: fine) { .block:hover { filter: brightness(0.96); } }
-.block .time { font-size: var(--fs-xs); opacity: 0.8; }
+.block .time { font-size: var(--fs-xs); color: var(--accent, var(--info)); font-weight: 500; }
 .block .title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 500; }
 .event { --accent: var(--info); background: var(--info-soft); color: var(--ink); }
 .event.recurring { --accent: var(--ink-3); background: var(--surface-2); }
 .event.linked { --accent: var(--ok); background: var(--ok-soft); }
-.task { --accent: var(--ok); background: transparent; color: var(--ok); outline: 1px dashed var(--ok); outline-offset: -1px; box-shadow: none; }
+.task { --accent: var(--ok); background: transparent; color: var(--ok); border: 1px dashed var(--ok); }
 @media (max-width: 720px) {
   .grid { font-size: var(--fs-sm); grid-template-columns: 40px repeat(7, minmax(0, 1fr)); }
   .grid.single { grid-template-columns: 40px minmax(0, 1fr); }

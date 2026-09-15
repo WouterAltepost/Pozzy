@@ -147,10 +147,10 @@ function pickDay(evt) {
 .panel { position: sticky; top: calc(var(--bar-h) + var(--sp-4)); margin: 0; }
 .legend { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; margin: var(--sp-2) 0 0; }
 .sw { display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin-left: 6px; }
-.sw.event { background: var(--info-soft); box-shadow: inset 3px 0 0 var(--info); }
-.sw.recurring { background: var(--surface-2); box-shadow: inset 3px 0 0 var(--ink-3); }
-.sw.linked { background: var(--ok-soft); box-shadow: inset 3px 0 0 var(--ok); }
-.sw.task { outline: 1px dashed var(--ok); outline-offset: -1px; }
+.sw.event { background: var(--info-soft); border: 1px solid color-mix(in srgb, var(--info) 35%, transparent); }
+.sw.recurring { background: var(--surface-2); border: 1px solid color-mix(in srgb, var(--ink-3) 35%, transparent); }
+.sw.linked { background: var(--ok-soft); border: 1px solid color-mix(in srgb, var(--ok) 35%, transparent); }
+.sw.task { border: 1px dashed var(--ok); }
 .panel-enter-active { transition: opacity var(--dur-panel) var(--ease-out), transform var(--dur-panel) var(--ease-out); }
 .panel-leave-active { transition: opacity var(--dur-hover) ease; }
 .panel-enter-from { opacity: 0; transform: translateX(8px); }
