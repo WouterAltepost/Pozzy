@@ -1,9 +1,13 @@
 <script setup>
 import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
+import { PhX } from '@phosphor-icons/vue'
 import AreaDot from '../components/shared/AreaDot.vue'
 import AreaSelect from '../components/shared/AreaSelect.vue'
 import TagsInput from '../components/shared/TagsInput.vue'
 import WeekNav from '../components/shared/WeekNav.vue'
+import PageHeader from '../components/ui/PageHeader.vue'
+import UiButton from '../components/ui/UiButton.vue'
+import UiField from '../components/ui/UiField.vue'
 import { formatDay, minutesToHours, today, weekDays } from '../lib/dates'
 import { useHoursStore } from '../stores/hours'
 
@@ -74,109 +78,97 @@ function pct(row) {
 
 <template>
   <div class="hours">
-    <div class="head">
-      <h1>Hours</h1>
+    <PageHeader title="Hours">
       <WeekNav :week-start="store.weekStart" @change="run(() => store.setWeek($event))" />
-    </div>
+    </PageHeader>
     <p v-if="error || store.error" class="error">{{ error || store.error }}</p>
 
     <section class="card timer" :class="{ running: store.timerRunning }">
       <div class="timer-row">
-        <strong class="clock">{{ store.timerRunning ? elapsedLabel : '00:00' }}</strong>
-        <AreaSelect v-model="timerForm.area_id" />
-        <input v-model="timerForm.note" type="text" placeholder="What are you working on?" />
-        <TagsInput v-model="timerForm.tags" placeholder="tags" />
-        <button v-if="!store.timerRunning" type="button" @click="startTimer">Start</button>
+        <div class="clock-wrap">
+          <span class="lamp" aria-hidden="true"></span>
+          <span class="clock num" aria-live="off">{{ store.timerRunning ? elapsedLabel : '00:00' }}</span>
+        </div>
+        <AreaSelect v-model="timerForm.area_id" aria-label="Area" />
+        <input v-model="timerForm.note" type="text" placeholder="What are you working on?" aria-label="Note" class="grow" />
+        <TagsInput v-model="timerForm.tags" placeholder="tags" class="tags" />
+        <UiButton v-if="!store.timerRunning" variant="primary" @click="startTimer">Start</UiButton>
         <template v-else>
-          <button type="button" @click="stopTimer">Stop and log</button>
-          <button type="button" class="link" @click="store.cancelTimer()">discard</button>
+          <UiButton variant="primary" @click="stopTimer">Stop and log</UiButton>
+          <UiButton variant="ghost" @click="store.cancelTimer()">Discard</UiButton>
         </template>
       </div>
-      <p v-if="store.timerRunning" class="muted small">Started {{ new Date(store.timer.startedAt).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) }}. The timer survives a page reload.</p>
+      <p v-if="store.timerRunning" class="muted small started">Started {{ new Date(store.timer.startedAt).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) }}. The timer survives a page reload.</p>
     </section>
 
-    <section class="card" v-if="store.summary">
-      <h2>Week totals</h2>
-      <table class="totals">
+    <section v-if="store.summary" class="card">
+      <div class="card-head"><h2>Week totals</h2><span class="meta num">{{ minutesToHours(store.summary.total_minutes) }} total</span></div>
+      <table class="ui totals">
         <tbody>
           <tr v-for="row in store.summary.areas" :key="row.area">
-            <td class="area"><span class="dot" :style="{ background: row.color }"></span>{{ row.area }}</td>
+            <td class="area"><span class="dot" :style="{ background: row.color }" aria-hidden="true"></span>{{ row.area }}</td>
             <td class="num">{{ minutesToHours(row.minutes) }}</td>
             <td class="bar-cell">
               <div v-if="row.target_minutes" class="bar"><div class="fill" :class="{ full: pct(row) >= 100 }" :style="{ width: pct(row) + '%' }"></div></div>
             </td>
-            <td class="muted small">{{ row.target_minutes ? `of ${minutesToHours(row.target_minutes)} (${pct(row)}%)` : '' }}</td>
-          </tr>
-          <tr class="total">
-            <td>Total</td>
-            <td class="num">{{ minutesToHours(store.summary.total_minutes) }}</td>
-            <td colspan="2"></td>
+            <td class="muted small num">{{ row.target_minutes ? `of ${minutesToHours(row.target_minutes)} (${pct(row)}%)` : '' }}</td>
           </tr>
         </tbody>
       </table>
     </section>
 
     <section class="card">
-      <h2>Log time</h2>
+      <div class="card-head"><h2>Log time</h2></div>
       <form class="log-form" @submit.prevent="addLog">
-        <input v-model="form.date" type="date" required />
-        <input v-model.number="form.minutes" type="number" min="1" max="1440" step="5" required />
-        <span class="muted small">min</span>
-        <AreaSelect v-model="form.area_id" />
-        <TagsInput v-model="form.tags" />
-        <input v-model="form.note" type="text" placeholder="note" class="grow" />
-        <button type="submit">Add</button>
+        <UiField label="Date"><input v-model="form.date" type="date" required /></UiField>
+        <UiField label="Minutes"><input v-model.number="form.minutes" type="number" min="1" max="1440" step="5" required class="minutes" /></UiField>
+        <UiField label="Area"><AreaSelect v-model="form.area_id" /></UiField>
+        <UiField label="Tags"><TagsInput v-model="form.tags" placeholder="tags" /></UiField>
+        <UiField label="Note" class="grow"><input v-model="form.note" type="text" /></UiField>
+        <UiButton type="submit" variant="primary">Add</UiButton>
       </form>
     </section>
 
     <section class="card">
-      <h2>Logs this week</h2>
+      <div class="card-head"><h2>Logs this week</h2></div>
       <div v-for="(logs, day) in byDay" :key="day" class="day">
-        <div class="day-head"><strong>{{ formatDay(day) }}</strong> <span class="muted small">{{ minutesToHours(logs.reduce((s, l) => s + l.minutes, 0)) }}</span></div>
-        <ul>
-          <li v-for="log in logs" :key="log.id">
-            <span class="mins">{{ minutesToHours(log.minutes) }}</span>
+        <div class="day-head"><span class="dname">{{ formatDay(day) }}</span> <span class="muted small num">{{ minutesToHours(logs.reduce((s, l) => s + l.minutes, 0)) }}</span></div>
+        <ul v-if="logs.length">
+          <li v-for="log in logs" :key="log.id" class="list-row">
+            <span class="mins num">{{ minutesToHours(log.minutes) }}</span>
             <AreaDot :area-id="log.area_id" label />
-            <span class="note">{{ log.note }}</span>
+            <span class="note truncate">{{ log.note }}</span>
             <span v-for="tag in log.tags" :key="tag" class="tag">{{ tag }}</span>
-            <button type="button" class="x" @click="run(() => store.remove(log.id))">&times;</button>
+            <button type="button" class="icon-btn" aria-label="Remove log" @click="run(() => store.remove(log.id))"><PhX /></button>
           </li>
         </ul>
+        <p v-else class="muted small nothing">Nothing logged.</p>
       </div>
     </section>
   </div>
 </template>
 
 <style scoped>
-h1 { font-size: 1.3rem; margin: 0; }
-h2 { font-size: 1rem; margin: 0 0 0.5rem; }
-.head { display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center; margin-bottom: 1rem; }
-.timer.running { border-color: #059669; }
-.timer-row { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; }
-.timer-row input, .timer-row select { font: inherit; padding: 0.35rem; border: 1px solid #d1d5db; border-radius: 4px; }
-.clock { font-variant-numeric: tabular-nums; font-size: 1.4rem; min-width: 90px; }
-.link { border: none; background: none; color: #6b7280; }
-.small { font-size: 0.78rem; }
-.totals { border-collapse: collapse; width: 100%; font-size: 0.9rem; }
-.totals td { padding: 0.25rem 0.4rem; }
-.area { display: flex; align-items: center; gap: 0.4rem; white-space: nowrap; }
-.dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
-.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
-.bar-cell { width: 40%; }
-.bar { height: 8px; background: #e5e7eb; border-radius: 4px; overflow: hidden; }
-.fill { height: 100%; background: #2563eb; }
-.fill.full { background: #059669; }
-.total td { border-top: 1px solid #e5e7eb; font-weight: 600; }
-.log-form { display: flex; flex-wrap: wrap; gap: 0.4rem; align-items: center; }
-.log-form input, .log-form select { font: inherit; padding: 0.35rem; border: 1px solid #d1d5db; border-radius: 4px; }
-.log-form input[type='number'] { width: 80px; }
-.grow { flex: 1; min-width: 140px; }
-.day { margin-bottom: 0.5rem; }
-.day-head { display: flex; gap: 0.5rem; align-items: baseline; }
-ul { list-style: none; padding: 0; margin: 0.15rem 0 0; }
-li { display: flex; gap: 0.5rem; align-items: center; font-size: 0.85rem; padding: 0.15rem 0; }
-.mins { font-variant-numeric: tabular-nums; min-width: 56px; }
-.note { flex: 1; color: #374151; }
-.tag { background: #f3f4f6; padding: 0 0.35rem; border-radius: 3px; font-size: 0.75rem; }
-.x { border: none; background: none; color: #9ca3af; font-size: 1rem; }
+.timer { transition: border-color var(--dur-ui) ease; }
+.timer.running { border-color: var(--brand); }
+.timer-row { display: flex; flex-wrap: wrap; gap: var(--sp-2); align-items: center; }
+.clock-wrap { display: inline-flex; align-items: center; gap: 10px; min-width: 130px; }
+.lamp { width: 8px; height: 8px; border-radius: 50%; background: var(--line-2); transition: background-color var(--dur-ui) ease, box-shadow var(--dur-ui) ease; }
+.running .lamp { background: var(--brand); box-shadow: 0 0 0 4px var(--brand-soft); }
+.clock { font-size: var(--fs-3xl); font-weight: 500; letter-spacing: -0.02em; line-height: 1; }
+.grow { flex: 1 1 180px; min-width: 140px; }
+.tags { width: 150px; }
+.started { margin-top: var(--sp-3); }
+.totals td.area { display: flex; align-items: center; gap: 8px; white-space: nowrap; }
+.dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+.bar-cell { width: 42%; }
+.log-form { display: flex; flex-wrap: wrap; gap: var(--sp-3); align-items: end; }
+.minutes { width: 88px; }
+.day { padding: var(--sp-2) 0; border-top: 1px solid var(--line); }
+.day:first-of-type { border-top: 0; padding-top: 0; }
+.day-head { display: flex; gap: var(--sp-2); align-items: baseline; }
+.dname { font-weight: 500; font-size: var(--fs-md); }
+.mins { min-width: 56px; color: var(--ink-2); }
+.note { flex: 1; min-width: 0; color: var(--ink-2); }
+.nothing { padding: 2px 0 0; }
 </style>

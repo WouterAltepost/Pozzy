@@ -2,6 +2,7 @@
 import { computed } from 'vue'
 
 // Tiny inline SVG line chart. points: [{ date, value }]. No library, per BUILD.md.
+// Geometry is unchanged from v1; only colours moved to tokens.
 const props = defineProps({
   points: { type: Array, default: () => [] },
   target: { type: Number, default: null },
@@ -39,7 +40,7 @@ const fmt = (v) => (Math.abs(v) >= 100 ? Math.round(v) : Math.round(v * 10) / 10
 </script>
 
 <template>
-  <svg :viewBox="`0 0 ${width} ${height}`" class="chart" preserveAspectRatio="none">
+  <svg :viewBox="`0 0 ${width} ${height}`" class="chart" preserveAspectRatio="none" role="img" :aria-label="points.length ? `${points.length} entries` : 'No entries yet'">
     <template v-if="geometry">
       <g class="grid">
         <line v-for="t in geometry.ticks" :key="t.v" :x1="pad.l" :x2="width - pad.r" :y1="t.y" :y2="t.y" />
@@ -59,9 +60,9 @@ const fmt = (v) => (Math.abs(v) >= 100 ? Math.round(v) : Math.round(v * 10) / 10
 
 <style scoped>
 .chart { width: 100%; height: 140px; display: block; }
-.grid line { stroke: #e5e7eb; stroke-width: 1; }
-.grid text, .axis { font-size: 10px; fill: #6b7280; }
-.target { stroke: #d97706; stroke-dasharray: 4 3; stroke-width: 1; }
-.line { fill: none; stroke: #2563eb; stroke-width: 1.5; }
-.dot { fill: #2563eb; }
+.grid line { stroke: var(--line); stroke-width: 1; }
+.grid text, .axis { font-size: 10px; fill: var(--ink-3); font-variant-numeric: tabular-nums; }
+.target { stroke: var(--brand); stroke-dasharray: 4 3; stroke-width: 1; }
+.line { fill: none; stroke: var(--ink); stroke-width: 1.5; }
+.dot { fill: var(--ink); }
 </style>

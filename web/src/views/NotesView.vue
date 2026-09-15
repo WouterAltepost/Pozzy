@@ -1,8 +1,13 @@
 <script setup>
 import { computed, onMounted, reactive, ref } from 'vue'
+import { PhNote, PhPushPin } from '@phosphor-icons/vue'
 import AreaDot from '../components/shared/AreaDot.vue'
 import AreaSelect from '../components/shared/AreaSelect.vue'
 import TagsInput from '../components/shared/TagsInput.vue'
+import PageHeader from '../components/ui/PageHeader.vue'
+import UiButton from '../components/ui/UiButton.vue'
+import UiEmpty from '../components/ui/UiEmpty.vue'
+import UiField from '../components/ui/UiField.vue'
 import { formatDateTime } from '../lib/dates'
 import { useNotesStore } from '../stores/notes'
 
@@ -90,71 +95,80 @@ function renderMarkdown(text) {
 
 <template>
   <div class="notes">
-    <div class="head">
-      <h1>Notes</h1>
-      <input v-model="store.filters.q" type="search" placeholder="Search" @change="store.load()" />
-      <AreaSelect v-model="store.filters.area_id" @update:model-value="store.load()" />
-      <select v-model="store.filters.tag" @change="store.load()">
+    <PageHeader title="Notes">
+      <input v-model="store.filters.q" type="search" placeholder="Search" aria-label="Search notes" class="search" @change="store.load()" />
+      <AreaSelect v-model="store.filters.area_id" aria-label="Area" @update:model-value="store.load()" />
+      <select v-model="store.filters.tag" aria-label="Tag" @change="store.load()">
         <option value="">All tags</option>
         <option v-for="t in store.allTags" :key="t" :value="t">{{ t }}</option>
       </select>
-      <button type="button" @click="startNew">New note</button>
-    </div>
+      <UiButton variant="primary" @click="startNew">New note</UiButton>
+    </PageHeader>
     <p v-if="error || store.error" class="error">{{ error || store.error }}</p>
 
     <div class="layout">
       <ul class="list">
-        <li v-if="!store.items.length" class="muted">No notes.</li>
-        <li v-for="n in store.items" :key="n.id" :class="{ active: n.id === selectedId }" @click="open(n)">
-          <div class="title"><span v-if="n.pinned" title="pinned">&#9733;</span> {{ n.title }}</div>
-          <div class="meta"><AreaDot :area-id="n.area_id" label /> <span v-for="t in n.tags" :key="t" class="tag">{{ t }}</span> <span class="muted">{{ formatDateTime(n.updated_at) }}</span></div>
+        <li v-if="!store.items.length" class="empty-item">
+          <UiEmpty compact title="No notes" hint="Deliberately minimal: an area, tags and markdown.">
+            <template #icon><PhNote /></template>
+          </UiEmpty>
+        </li>
+        <li v-for="n in store.items" :key="n.id" class="note-item" :class="{ active: n.id === selectedId }">
+          <button type="button" class="note-btn" @click="open(n)">
+            <span class="title"><PhPushPin v-if="n.pinned" class="pin" weight="fill" aria-label="Pinned" /> {{ n.title }}</span>
+            <span class="meta"><AreaDot :area-id="n.area_id" label /> <span v-for="t in n.tags" :key="t" class="tag">{{ t }}</span> <span class="muted xs num">{{ formatDateTime(n.updated_at) }}</span></span>
+          </button>
         </li>
       </ul>
 
       <div v-if="creating || selected" class="card editor">
         <form @submit.prevent="save">
-          <input v-model="form.title" type="text" placeholder="Title" required maxlength="200" />
+          <UiField label="Title"><input v-model="form.title" type="text" required maxlength="200" /></UiField>
           <div class="row">
-            <AreaSelect v-model="form.area_id" />
-            <TagsInput v-model="form.tags" />
-            <label class="check"><input v-model="form.pinned" type="checkbox" /> pinned</label>
+            <UiField label="Area"><AreaSelect v-model="form.area_id" /></UiField>
+            <UiField label="Tags" class="grow"><TagsInput v-model="form.tags" /></UiField>
+            <label class="check"><input v-model="form.pinned" type="checkbox" /> Pinned</label>
           </div>
-          <textarea v-model="form.body" rows="14" placeholder="Markdown body"></textarea>
+          <UiField label="Body" hint="Markdown: headings, lists, bold, links"><textarea v-model="form.body" rows="14" class="body"></textarea></UiField>
           <div class="actions">
-            <button type="submit">{{ creating ? 'Create' : 'Save' }}</button>
-            <button v-if="selected" type="button" class="danger" @click="remove">Delete</button>
+            <UiButton type="submit" variant="primary">{{ creating ? 'Create' : 'Save' }}</UiButton>
+            <UiButton v-if="selected" variant="danger" class="push" @click="remove">Delete</UiButton>
           </div>
         </form>
         <div v-if="form.body" class="preview" v-html="renderMarkdown(form.body)"></div>
       </div>
-      <p v-else class="muted">Select a note or create one.</p>
+      <div v-else class="card placeholder">
+        <UiEmpty title="Select a note or create one" hint="Pinned notes stay on top of the list.">
+          <template #icon><PhNote /></template>
+        </UiEmpty>
+      </div>
     </div>
   </div>
 </template>
 
 <style scoped>
-h1 { font-size: 1.3rem; margin: 0; }
-.head { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; margin-bottom: 1rem; }
-.head input, .head select { font: inherit; padding: 0.35rem; border: 1px solid #d1d5db; border-radius: 4px; }
-.layout { display: grid; grid-template-columns: 1fr; gap: 1rem; }
-@media (min-width: 860px) { .layout { grid-template-columns: 280px 1fr; } }
-.list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 0.3rem; }
-.list li { background: #fff; border: 1px solid #e5e7eb; border-radius: 4px; padding: 0.45rem 0.6rem; cursor: pointer; }
-.list li.active { border-color: #2563eb; }
-.title { font-size: 0.92rem; }
-.meta { display: flex; flex-wrap: wrap; gap: 0.4rem; font-size: 0.75rem; margin-top: 0.15rem; }
-.tag { background: #f3f4f6; padding: 0 0.35rem; border-radius: 3px; }
-.editor form { display: flex; flex-direction: column; gap: 0.5rem; }
-.editor input[type='text'], .editor textarea { font: inherit; padding: 0.4rem; border: 1px solid #d1d5db; border-radius: 4px; width: 100%; }
-.editor textarea { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.85rem; }
-.row { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; }
-.row :deep(input[type='text']), .row select { font: inherit; padding: 0.35rem; border: 1px solid #d1d5db; border-radius: 4px; }
-.check { display: flex; align-items: center; gap: 0.3rem; font-size: 0.85rem; }
-.actions { display: flex; gap: 0.5rem; }
-.danger { color: #b91c1c; margin-left: auto; }
-.preview { border-top: 1px solid #e5e7eb; margin-top: 1rem; padding-top: 0.5rem; font-size: 0.92rem; }
-.preview :deep(h3) { font-size: 1.1rem; margin: 0.6rem 0 0.2rem; }
-.preview :deep(h4), .preview :deep(h5) { font-size: 1rem; margin: 0.5rem 0 0.2rem; }
-.preview :deep(p) { margin: 0.3rem 0; }
-.preview :deep(code) { background: #f3f4f6; padding: 0 0.25rem; border-radius: 3px; }
+.search { width: 160px; }
+.layout { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--sp-4); align-items: start; }
+@media (min-width: 900px) { .layout { grid-template-columns: 300px minmax(0, 1fr); gap: var(--sp-5); } }
+.list { display: flex; flex-direction: column; gap: var(--sp-2); }
+.note-btn { display: flex; flex-direction: column; align-items: stretch; gap: 4px; width: 100%; text-align: left; padding: var(--sp-2) var(--sp-3); border: 1px solid var(--line); border-radius: var(--r-md); background: var(--surface); color: inherit; transition: border-color var(--dur-hover) ease, box-shadow var(--dur-hover) ease; }
+.note-item.active .note-btn { border-color: var(--ink); box-shadow: 0 0 0 1px var(--ink) inset; }
+@media (hover: hover) and (pointer: fine) { .note-item:not(.active) .note-btn:hover { border-color: var(--line-2); box-shadow: var(--shadow-1); } }
+.title { display: flex; align-items: center; gap: 6px; font-weight: 500; }
+.pin { width: 13px; height: 13px; color: var(--brand); }
+.meta { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.editor form { display: flex; flex-direction: column; gap: var(--sp-3); }
+.editor .body { font-family: ui-monospace, 'SF Mono', Menlo, monospace; font-size: var(--fs-md); line-height: 1.6; }
+.row { display: flex; flex-wrap: wrap; gap: var(--sp-3); align-items: end; }
+.grow { flex: 1 1 160px; }
+.check { display: flex; align-items: center; gap: 6px; height: var(--control-h); }
+.actions { display: flex; gap: var(--sp-2); }
+.push { margin-left: auto; }
+.placeholder { margin: 0; }
+.preview { border-top: 1px solid var(--line); margin-top: var(--sp-4); padding-top: var(--sp-4); max-width: 68ch; font-size: var(--fs-base); line-height: 1.6; }
+.preview :deep(h3) { font-size: var(--fs-xl); margin: var(--sp-4) 0 var(--sp-2); }
+.preview :deep(h4) { font-size: var(--fs-lg); margin: var(--sp-3) 0 var(--sp-1); }
+.preview :deep(h5) { font-size: var(--fs-base); margin: var(--sp-3) 0 var(--sp-1); }
+.preview :deep(p) { margin: 0 0 var(--sp-2); }
+.preview :deep(ul) { list-style: disc; padding-left: 1.2em; margin: 0 0 var(--sp-2); }
 </style>

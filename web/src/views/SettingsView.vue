@@ -1,5 +1,11 @@
 <script setup>
 import { computed, onMounted, reactive, ref } from 'vue'
+import PageHeader from '../components/ui/PageHeader.vue'
+import UiBadge from '../components/ui/UiBadge.vue'
+import UiButton from '../components/ui/UiButton.vue'
+import UiField from '../components/ui/UiField.vue'
+import UiSkeleton from '../components/ui/UiSkeleton.vue'
+import { useToast } from '../composables/useToast'
 import { formatDateTime } from '../lib/dates'
 import { useAreasStore } from '../stores/areas'
 import { useSettingsStore } from '../stores/settings'
@@ -9,7 +15,7 @@ import MailAccounts from '../components/settings/MailAccounts.vue'
 
 const store = useSettingsStore()
 const areas = useAreasStore()
-const saved = ref('')
+const toast = useToast()
 const form = reactive({ working_days: [], start: '08:00', end: '18:00', timezone: 'Europe/Amsterdam', briefing_time: '07:00', hour_targets: {}, ai_enabled: {}, deadline_urgent_days: 3, default_task_minutes: 60, slot_lookahead_days: 7, three_dos_count: 3 })
 
 const DAYS = [
@@ -45,7 +51,6 @@ onMounted(async () => {
 })
 
 async function save() {
-  saved.value = ''
   const hour_targets = {}
   for (const [name, hours] of Object.entries(form.hour_targets)) if (hours) hour_targets[name] = Math.round(Number(hours) * 60)
   try {
@@ -60,7 +65,7 @@ async function save() {
       slot_lookahead_days: Number(form.slot_lookahead_days),
       three_dos_count: Number(form.three_dos_count),
     })
-    saved.value = 'Saved.'
+    toast.success('Settings saved.')
   } catch {
     // store.error is shown
   }
@@ -69,96 +74,93 @@ async function save() {
 
 <template>
   <div class="settings">
-    <h1>Settings</h1>
+    <PageHeader title="Settings" />
     <p v-if="store.error" class="error">{{ store.error }}</p>
-    <p v-if="!ready && !store.error" class="muted">Loading...</p>
+    <div v-if="!ready && !store.error" class="card"><UiSkeleton :lines="5" /></div>
 
     <form v-if="ready" @submit.prevent="save">
       <section class="card">
-        <h2>Working window</h2>
+        <div class="card-head"><h2>Working window</h2></div>
         <div class="days">
-          <label v-for="[n, name] in DAYS" :key="n"><input v-model="form.working_days" type="checkbox" :value="n" /> {{ name }}</label>
+          <label v-for="[n, name] in DAYS" :key="n" class="check"><input v-model="form.working_days" type="checkbox" :value="n" /> {{ name }}</label>
         </div>
-        <div class="row">
-          <label>Start <input v-model="form.start" type="time" /></label>
-          <label>End <input v-model="form.end" type="time" /></label>
-          <label>Timezone <input v-model="form.timezone" type="text" /></label>
-          <label>Briefing time <input v-model="form.briefing_time" type="time" /></label>
-        </div>
-      </section>
-
-      <section class="card">
-        <h2>Hour targets per week</h2>
-        <div class="row">
-          <label v-for="a in areas.items" :key="a.id"><span class="dot" :style="{ background: a.color }"></span>{{ a.name }} <input v-model.number="form.hour_targets[a.name]" type="number" min="0" step="0.5" placeholder="hours" /></label>
+        <div class="fields">
+          <UiField label="Start"><input v-model="form.start" type="time" /></UiField>
+          <UiField label="End"><input v-model="form.end" type="time" /></UiField>
+          <UiField label="Timezone"><input v-model="form.timezone" type="text" /></UiField>
+          <UiField label="Briefing time"><input v-model="form.briefing_time" type="time" /></UiField>
         </div>
       </section>
 
       <section class="card">
-        <h2>Tasks and planning</h2>
-        <div class="row">
-          <label>Urgent when due within (days) <input v-model.number="form.deadline_urgent_days" type="number" min="0" max="30" /></label>
-          <label>Default task length (min) <input v-model.number="form.default_task_minutes" type="number" min="5" max="480" step="5" /></label>
-          <label>Slot lookahead (days) <input v-model.number="form.slot_lookahead_days" type="number" min="1" max="30" /></label>
-          <label>Do's per day <input v-model.number="form.three_dos_count" type="number" min="1" max="10" /></label>
+        <div class="card-head"><h2>Hour targets per week</h2></div>
+        <div class="fields">
+          <UiField v-for="a in areas.items" :key="a.id" :label="a.name">
+            <span class="with-dot"><span class="dot" :style="{ background: a.color }" aria-hidden="true"></span><input v-model.number="form.hour_targets[a.name]" type="number" min="0" step="0.5" placeholder="hours" /></span>
+          </UiField>
         </div>
       </section>
 
       <section class="card">
-        <h2>AI kill switches</h2>
-        <p class="muted small">Off means the feature uses its deterministic fallback and makes no Anthropic call.</p>
+        <div class="card-head"><h2>Tasks and planning</h2></div>
+        <div class="fields">
+          <UiField label="Urgent when due within (days)"><input v-model.number="form.deadline_urgent_days" type="number" min="0" max="30" /></UiField>
+          <UiField label="Default task length (min)"><input v-model.number="form.default_task_minutes" type="number" min="5" max="480" step="5" /></UiField>
+          <UiField label="Slot lookahead (days)"><input v-model.number="form.slot_lookahead_days" type="number" min="1" max="30" /></UiField>
+          <UiField label="Do's per day"><input v-model.number="form.three_dos_count" type="number" min="1" max="10" /></UiField>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="card-head"><h2>AI kill switches</h2><span class="meta">Off means the deterministic fallback, no Anthropic call</span></div>
         <div class="days">
-          <label v-for="[key, label] in AI_FEATURES" :key="key"><input v-model="form.ai_enabled[key]" type="checkbox" /> {{ label }}</label>
+          <label v-for="[key, label] in AI_FEATURES" :key="key" class="check"><input v-model="form.ai_enabled[key]" type="checkbox" /> {{ label }}</label>
         </div>
       </section>
 
       <div class="actions">
-        <button type="submit" :disabled="store.saving">Save settings</button>
-        <span class="ok">{{ saved }}</span>
+        <UiButton type="submit" variant="primary" :loading="store.saving">Save settings</UiButton>
       </div>
     </form>
 
     <section class="card">
-      <h2>Integrations</h2>
+      <div class="card-head"><h2>Integrations</h2></div>
       <CalendarAccounts />
       <MailAccounts />
     </section>
 
     <section class="card">
-      <div class="row head">
+      <div class="card-head">
         <h2>Background jobs</h2>
-        <button type="button" @click="store.loadJobRuns()">Refresh</button>
+        <span class="meta"><button type="button" class="link-btn" @click="store.loadJobRuns()">Refresh</button></span>
       </div>
       <p v-if="!store.jobRuns.length" class="muted">No job runs recorded yet.</p>
-      <table v-else class="jobs">
-        <thead><tr><th>Job</th><th>Started</th><th>Result</th><th>Message</th></tr></thead>
-        <tbody>
-          <tr v-for="r in store.jobRuns" :key="r.id">
-            <td>{{ r.name }}</td>
-            <td class="muted">{{ formatDateTime(r.started_at) }}</td>
-            <td><span :class="r.ok === false ? 'error' : r.ok ? 'ok' : 'muted'">{{ r.ok === null ? 'running' : r.ok ? 'ok' : 'failed' }}</span></td>
-            <td class="msg">{{ r.message }}</td>
-          </tr>
-        </tbody>
-      </table>
+      <div v-else class="table-wrap">
+        <table class="ui jobs">
+          <thead><tr><th>Job</th><th>Started</th><th>Result</th><th>Message</th></tr></thead>
+          <tbody>
+            <tr v-for="r in store.jobRuns" :key="r.id">
+              <td class="jname">{{ r.name }}</td>
+              <td class="muted num nowrap">{{ formatDateTime(r.started_at) }}</td>
+              <td><UiBadge :tone="r.ok === false ? 'danger' : r.ok ? 'ok' : 'neutral'">{{ r.ok === null ? 'running' : r.ok ? 'ok' : 'failed' }}</UiBadge></td>
+              <td class="msg">{{ r.message }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
     </section>
   </div>
 </template>
 
 <style scoped>
-h1 { font-size: 1.3rem; }
-h2 { font-size: 1rem; margin: 0 0 0.5rem; }
-.row { display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: flex-end; }
-.row.head { align-items: center; justify-content: space-between; }
-.row label { display: flex; flex-direction: column; gap: 0.2rem; font-size: 0.85rem; color: #4b5563; }
-.row input { font: inherit; padding: 0.35rem; border: 1px solid #d1d5db; border-radius: 4px; width: 140px; }
-.days { display: flex; flex-wrap: wrap; gap: 0.75rem; margin-bottom: 0.5rem; font-size: 0.9rem; }
-.days label { display: flex; align-items: center; gap: 0.3rem; }
-.dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; margin-right: 0.3rem; }
-.small { font-size: 0.8rem; }
-.actions { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1rem; }
-.jobs { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
-.jobs th { text-align: left; font-weight: 500; color: #6b7280; padding: 0.2rem 0.4rem; }
-.jobs td { padding: 0.25rem 0.4rem; border-top: 1px solid #f3f4f6; vertical-align: top; }
-.msg { word-break: break-word; }
+.settings { max-width: 760px; }
+.fields { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: var(--sp-3); }
+.days { display: flex; flex-wrap: wrap; gap: var(--sp-2) var(--sp-4); margin-bottom: var(--sp-3); }
+.check { display: flex; align-items: center; gap: 6px; font-size: var(--fs-base); }
+.with-dot { display: flex; align-items: center; gap: 8px; width: 100%; }
+.dot { width: 8px; height: 8px; border-radius: 50%; flex: none; }
+.actions { display: flex; align-items: center; gap: var(--sp-3); margin-bottom: var(--sp-5); }
+.jname { font-weight: 500; white-space: nowrap; }
+.nowrap { white-space: nowrap; }
+.msg { word-break: break-word; font-size: var(--fs-sm); color: var(--ink-2); }
 </style>

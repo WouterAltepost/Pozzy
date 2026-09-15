@@ -1,5 +1,13 @@
 <script setup>
 import { onMounted, reactive, ref } from 'vue'
+import { PhGraduationCap, PhX } from '@phosphor-icons/vue'
+import PageHeader from '../components/ui/PageHeader.vue'
+import UiBadge from '../components/ui/UiBadge.vue'
+import UiButton from '../components/ui/UiButton.vue'
+import UiEmpty from '../components/ui/UiEmpty.vue'
+import UiField from '../components/ui/UiField.vue'
+import UiSheet from '../components/ui/UiSheet.vue'
+import { useMediaQuery } from '../composables/useMediaQuery'
 import { daysUntil, formatDateTime, formatDay } from '../lib/dates'
 import { APPLICATION_STATUSES, useStudyStore } from '../stores/study'
 
@@ -10,6 +18,8 @@ const deadlineForm = reactive({ course_id: '', title: '', due_date: '', due_time
 const appForm = reactive({ company: '', role: '', link: '' })
 const editingApp = ref(null)
 const dragOver = ref(null)
+const lifting = ref(null)
+const narrow = useMediaQuery('(max-width: 899px)')
 
 onMounted(() => store.load())
 
@@ -43,11 +53,12 @@ function addDeadline() {
   })
 }
 
-function dueClass(d) {
-  const days = daysUntil(d.due_at.slice(0, 10))
-  if (days < 0) return 'overdue'
-  if (days <= 3) return 'soon'
-  return ''
+function dueTone(day) {
+  const days = daysUntil(day)
+  if (days === null) return 'neutral'
+  if (days < 0) return 'danger'
+  if (days <= 3) return 'warn'
+  return 'neutral'
 }
 
 function addApplication() {
@@ -59,6 +70,7 @@ function addApplication() {
 }
 
 function onDragStart(a, event) {
+  lifting.value = a.id
   event.dataTransfer.setData('text/plain', a.id)
 }
 
@@ -85,82 +97,91 @@ function removeApp(a) {
 
 <template>
   <div class="study">
-    <h1>Study</h1>
+    <PageHeader title="Study" />
     <p v-if="error || store.error" class="error">{{ error || store.error }}</p>
 
     <section class="card">
-      <div class="row head">
+      <div class="card-head">
         <h2>Deadlines</h2>
-        <label class="check"><input v-model="store.includeDoneDeadlines" type="checkbox" @change="store.load()" /> show done</label>
+        <span class="meta"><label class="check"><input v-model="store.includeDoneDeadlines" type="checkbox" @change="store.load()" /> Show done</label></span>
       </div>
       <ul class="deadlines">
-        <li v-if="!store.deadlines.length" class="muted">No deadlines.</li>
-        <li v-for="d in store.deadlines" :key="d.id" :class="{ done: d.done }">
-          <input type="checkbox" :checked="d.done" @change="run(() => store.updateDeadline(d.id, { done: !d.done }))" />
-          <span class="course">{{ d.course_code || d.course_name }}</span>
+        <li v-if="!store.deadlines.length" class="muted small hint">No deadlines.</li>
+        <li v-for="d in store.deadlines" :key="d.id" class="list-row" :class="{ done: d.done }">
+          <input type="checkbox" :checked="d.done" :aria-label="d.title" @change="run(() => store.updateDeadline(d.id, { done: !d.done }))" />
+          <UiBadge tone="info">{{ d.course_code || d.course_name }}</UiBadge>
           <span class="title">{{ d.title }} <span class="muted small">{{ d.type }}</span></span>
-          <span :class="dueClass(d)">{{ formatDateTime(d.due_at) }}</span>
+          <UiBadge :tone="dueTone(d.due_at.slice(0, 10))" class="num">{{ formatDateTime(d.due_at) }}</UiBadge>
           <RouterLink v-if="d.task_id" :to="{ name: 'tasks' }" class="muted small">task</RouterLink>
-          <button type="button" class="x" @click="run(() => store.removeDeadline(d.id))">&times;</button>
+          <button type="button" class="icon-btn" aria-label="Remove deadline" @click="run(() => store.removeDeadline(d.id))"><PhX /></button>
         </li>
       </ul>
       <form class="inline" @submit.prevent="addDeadline">
-        <select v-model="deadlineForm.course_id" required>
-          <option value="" disabled>course</option>
-          <option v-for="c in store.courses" :key="c.id" :value="c.id">{{ c.code || c.name }}</option>
-        </select>
-        <input v-model="deadlineForm.title" type="text" placeholder="Deadline title" required />
-        <input v-model="deadlineForm.due_date" type="date" required />
-        <input v-model="deadlineForm.due_time" type="time" />
-        <select v-model="deadlineForm.type">
-          <option value="assignment">assignment</option>
-          <option value="exam">exam</option>
-          <option value="presentation">presentation</option>
-          <option value="other">other</option>
-        </select>
-        <button type="submit" :disabled="!store.courses.length">Add deadline</button>
+        <UiField label="Course">
+          <select v-model="deadlineForm.course_id" required>
+            <option value="" disabled>Choose</option>
+            <option v-for="c in store.courses" :key="c.id" :value="c.id">{{ c.code || c.name }}</option>
+          </select>
+        </UiField>
+        <UiField label="Title" class="grow"><input v-model="deadlineForm.title" type="text" required /></UiField>
+        <UiField label="Due"><input v-model="deadlineForm.due_date" type="date" required /></UiField>
+        <UiField label="Time"><input v-model="deadlineForm.due_time" type="time" /></UiField>
+        <UiField label="Type">
+          <select v-model="deadlineForm.type">
+            <option value="assignment">assignment</option>
+            <option value="exam">exam</option>
+            <option value="presentation">presentation</option>
+            <option value="other">other</option>
+          </select>
+        </UiField>
+        <UiButton type="submit" variant="primary" :disabled="!store.courses.length">Add deadline</UiButton>
         <span v-if="!store.courses.length" class="muted small">Add a course first.</span>
       </form>
     </section>
 
     <section class="card">
-      <div class="row head">
+      <div class="card-head">
         <h2>Courses</h2>
-        <label class="check"><input v-model="store.includeClosedCourses" type="checkbox" @change="store.load()" /> show finished</label>
+        <span class="meta"><label class="check"><input v-model="store.includeClosedCourses" type="checkbox" @change="store.load()" /> Show finished</label></span>
       </div>
-      <table class="courses">
-        <thead><tr><th>Code</th><th>Name</th><th>Period</th><th>ECTS</th><th>Status</th><th></th></tr></thead>
-        <tbody>
-          <tr v-for="c in store.courses" :key="c.id">
-            <td>{{ c.code }}</td>
-            <td>{{ c.name }} <span class="muted small">{{ c.deadlines?.length || 0 }} deadlines</span></td>
-            <td>{{ c.period }}</td>
-            <td>{{ c.ects }}</td>
-            <td>
-              <select :value="c.status" @change="run(() => store.updateCourse(c.id, { status: $event.target.value }))">
-                <option v-for="s in ['planned', 'active', 'passed', 'failed', 'dropped']" :key="s" :value="s">{{ s }}</option>
-              </select>
-            </td>
-            <td><button type="button" class="x" @click="removeCourse(c)">&times;</button></td>
-          </tr>
-        </tbody>
-      </table>
+      <div v-if="store.courses.length" class="table-wrap">
+        <table class="ui courses">
+          <thead><tr><th>Code</th><th>Name</th><th>Period</th><th class="num">ECTS</th><th>Status</th><th></th></tr></thead>
+          <tbody>
+            <tr v-for="c in store.courses" :key="c.id">
+              <td class="num">{{ c.code }}</td>
+              <td>{{ c.name }} <span class="muted small num">{{ c.deadlines?.length || 0 }} deadlines</span></td>
+              <td>{{ c.period }}</td>
+              <td class="num">{{ c.ects }}</td>
+              <td>
+                <select :value="c.status" aria-label="Status" @change="run(() => store.updateCourse(c.id, { status: $event.target.value }))">
+                  <option v-for="s in ['planned', 'active', 'passed', 'failed', 'dropped']" :key="s" :value="s">{{ s }}</option>
+                </select>
+              </td>
+              <td class="actions"><button type="button" class="icon-btn" aria-label="Remove course" @click="removeCourse(c)"><PhX /></button></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <UiEmpty v-else compact title="No courses yet" hint="Add a course to attach deadlines to it.">
+        <template #icon><PhGraduationCap /></template>
+      </UiEmpty>
       <form class="inline" @submit.prevent="addCourse">
-        <input v-model="courseForm.name" type="text" placeholder="Course name" required />
-        <input v-model="courseForm.code" type="text" placeholder="code" class="short" />
-        <input v-model="courseForm.period" type="text" placeholder="period" class="short" />
-        <input v-model.number="courseForm.ects" type="number" min="0" step="0.5" placeholder="ECTS" class="short" />
-        <button type="submit">Add course</button>
+        <UiField label="Course name" class="grow"><input v-model="courseForm.name" type="text" required /></UiField>
+        <UiField label="Code"><input v-model="courseForm.code" type="text" class="short" /></UiField>
+        <UiField label="Period"><input v-model="courseForm.period" type="text" class="short" /></UiField>
+        <UiField label="ECTS"><input v-model.number="courseForm.ects" type="number" min="0" step="0.5" class="short" /></UiField>
+        <UiButton type="submit" variant="primary">Add course</UiButton>
       </form>
     </section>
 
     <section class="card">
-      <h2>Internship applications</h2>
+      <div class="card-head"><h2>Internship applications</h2></div>
       <form class="inline" @submit.prevent="addApplication">
-        <input v-model="appForm.company" type="text" placeholder="Company" required />
-        <input v-model="appForm.role" type="text" placeholder="Role" />
-        <input v-model="appForm.link" type="url" placeholder="https://" />
-        <button type="submit">Add</button>
+        <UiField label="Company" class="grow"><input v-model="appForm.company" type="text" required /></UiField>
+        <UiField label="Role" class="grow"><input v-model="appForm.role" type="text" /></UiField>
+        <UiField label="Link" class="grow"><input v-model="appForm.link" type="url" placeholder="https://" /></UiField>
+        <UiButton type="submit" variant="primary">Add</UiButton>
       </form>
       <div class="kanban">
         <div
@@ -172,73 +193,91 @@ function removeApp(a) {
           @dragleave="dragOver = null"
           @drop.prevent="onDrop(status, $event)"
         >
-          <header>{{ status }} <span class="muted">{{ store.applicationsByStatus(status).length }}</span></header>
-          <div v-for="a in store.applicationsByStatus(status)" :key="a.id" class="app" draggable="true" @dragstart="onDragStart(a, $event)" @click="editingApp = { ...a }">
-            <strong>{{ a.company }}</strong>
-            <div class="muted small">{{ a.role }}</div>
-            <div v-if="a.next_step" class="small next" :class="{ soon: daysUntil(a.next_step_date) !== null && daysUntil(a.next_step_date) <= 2 }">
+          <header><span>{{ status }}</span> <span class="muted num">{{ store.applicationsByStatus(status).length }}</span></header>
+          <button
+            v-for="a in store.applicationsByStatus(status)"
+            :key="a.id"
+            type="button"
+            class="app"
+            :class="{ lifting: lifting === a.id }"
+            draggable="true"
+            @dragstart="onDragStart(a, $event)"
+            @dragend="lifting = null"
+            @click="editingApp = { ...a }"
+          >
+            <span class="company">{{ a.company }}</span>
+            <span v-if="a.role" class="muted small">{{ a.role }}</span>
+            <span v-if="a.next_step" class="small next" :class="{ soon: daysUntil(a.next_step_date) !== null && daysUntil(a.next_step_date) <= 2 }">
               {{ a.next_step }}<span v-if="a.next_step_date">, {{ formatDay(a.next_step_date) }}</span>
-            </div>
-          </div>
+            </span>
+          </button>
         </div>
       </div>
 
-      <div v-if="editingApp" class="app-edit">
+      <div v-if="editingApp && !narrow" class="app-edit">
         <h3>{{ editingApp.company }}</h3>
-        <form @submit.prevent="saveApp">
-          <label>Company <input v-model="editingApp.company" type="text" required /></label>
-          <label>Role <input v-model="editingApp.role" type="text" /></label>
-          <label>Link <input v-model="editingApp.link" type="url" /></label>
-          <label>Applied on <input v-model="editingApp.applied_at" type="date" /></label>
-          <label>Next step <input v-model="editingApp.next_step" type="text" /></label>
-          <label>Next step date <input v-model="editingApp.next_step_date" type="date" /></label>
-          <label class="wide">Notes <textarea v-model="editingApp.notes" rows="3"></textarea></label>
+        <form class="app-form" @submit.prevent="saveApp">
+          <UiField label="Company"><input v-model="editingApp.company" type="text" required /></UiField>
+          <UiField label="Role"><input v-model="editingApp.role" type="text" /></UiField>
+          <UiField label="Link"><input v-model="editingApp.link" type="url" /></UiField>
+          <UiField label="Applied on"><input v-model="editingApp.applied_at" type="date" /></UiField>
+          <UiField label="Next step"><input v-model="editingApp.next_step" type="text" /></UiField>
+          <UiField label="Next step date"><input v-model="editingApp.next_step_date" type="date" /></UiField>
+          <UiField label="Notes" class="wide"><textarea v-model="editingApp.notes" rows="3"></textarea></UiField>
           <div class="actions wide">
-            <button type="submit">Save</button>
-            <button type="button" @click="editingApp = null">Cancel</button>
-            <a v-if="editingApp.link" :href="editingApp.link" target="_blank" rel="noopener">open link</a>
-            <button type="button" class="danger" @click="removeApp(editingApp); editingApp = null">Delete</button>
+            <UiButton type="submit" variant="primary">Save</UiButton>
+            <UiButton @click="editingApp = null">Cancel</UiButton>
+            <a v-if="editingApp.link" :href="editingApp.link" target="_blank" rel="noopener" class="small">Open link</a>
+            <UiButton variant="danger" class="push" @click="removeApp(editingApp); editingApp = null">Delete</UiButton>
           </div>
         </form>
       </div>
     </section>
+
+    <UiSheet :open="Boolean(editingApp) && narrow" :title="editingApp?.company || 'Application'" @close="editingApp = null">
+      <form v-if="editingApp" class="app-form" @submit.prevent="saveApp">
+        <UiField label="Company"><input v-model="editingApp.company" type="text" required /></UiField>
+        <UiField label="Role"><input v-model="editingApp.role" type="text" /></UiField>
+        <UiField label="Link"><input v-model="editingApp.link" type="url" /></UiField>
+        <UiField label="Applied on"><input v-model="editingApp.applied_at" type="date" /></UiField>
+        <UiField label="Next step"><input v-model="editingApp.next_step" type="text" /></UiField>
+        <UiField label="Next step date"><input v-model="editingApp.next_step_date" type="date" /></UiField>
+        <UiField label="Notes" class="wide"><textarea v-model="editingApp.notes" rows="3"></textarea></UiField>
+        <div class="actions wide">
+          <UiButton type="submit" variant="primary">Save</UiButton>
+          <UiButton @click="editingApp = null">Cancel</UiButton>
+          <UiButton variant="danger" class="push" @click="removeApp(editingApp); editingApp = null">Delete</UiButton>
+        </div>
+      </form>
+    </UiSheet>
   </div>
 </template>
 
 <style scoped>
-h1 { font-size: 1.3rem; }
-h2 { font-size: 1rem; margin: 0 0 0.5rem; }
-h3 { font-size: 0.95rem; margin: 0 0 0.4rem; }
-.row { display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; }
-.check { display: flex; align-items: center; gap: 0.3rem; font-size: 0.85rem; }
-.small { font-size: 0.78rem; }
-ul { list-style: none; padding: 0; margin: 0 0 0.5rem; }
-.deadlines li { display: flex; align-items: center; gap: 0.5rem; padding: 0.25rem 0; font-size: 0.9rem; }
-.deadlines li.done .title { text-decoration: line-through; color: #9ca3af; }
-.course { background: #e0e7ff; color: #3730a3; padding: 0 0.35rem; border-radius: 3px; font-size: 0.78rem; }
-.title { flex: 1; }
-.overdue { color: #b91c1c; font-weight: 600; }
-.soon { color: #d97706; font-weight: 600; }
-.x { border: none; background: none; color: #9ca3af; font-size: 1.1rem; }
-.inline { display: flex; flex-wrap: wrap; gap: 0.4rem; align-items: center; margin-top: 0.5rem; }
-.inline input, .inline select { font: inherit; padding: 0.35rem; border: 1px solid #d1d5db; border-radius: 4px; }
-.inline .short { width: 90px; }
-.courses { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
-.courses th { text-align: left; font-weight: 500; color: #6b7280; padding: 0.2rem 0.4rem; }
-.courses td { padding: 0.25rem 0.4rem; border-top: 1px solid #f3f4f6; }
-.kanban { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.5rem; margin-top: 0.75rem; }
-@media (min-width: 900px) { .kanban { grid-template-columns: repeat(5, 1fr); } }
-.column { background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 6px; padding: 0.4rem; min-height: 120px; }
-.column.over { border-color: #2563eb; background: #eff6ff; }
-.column header { font-weight: 600; text-transform: capitalize; font-size: 0.85rem; margin-bottom: 0.3rem; display: flex; justify-content: space-between; }
-.app { background: #fff; border: 1px solid #e5e7eb; border-radius: 4px; padding: 0.4rem 0.5rem; margin-bottom: 0.3rem; cursor: grab; font-size: 0.85rem; }
-.next { color: #374151; margin-top: 0.2rem; }
-.next.soon { color: #d97706; font-weight: 600; }
-.app-edit { border-top: 1px solid #e5e7eb; margin-top: 0.75rem; padding-top: 0.75rem; }
-.app-edit form { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; }
-.app-edit label { display: flex; flex-direction: column; gap: 0.2rem; font-size: 0.82rem; color: #4b5563; }
-.app-edit input, .app-edit textarea { font: inherit; padding: 0.35rem; border: 1px solid #d1d5db; border-radius: 4px; }
+.check { display: flex; align-items: center; gap: 6px; font-size: var(--fs-md); }
+.hint { padding: var(--sp-2) 0; }
+.deadlines .title { flex: 1; min-width: 0; }
+.inline { display: flex; flex-wrap: wrap; gap: var(--sp-3); align-items: end; margin-top: var(--sp-4); }
+.grow { flex: 1 1 160px; min-width: 140px; }
+.short { width: 96px; }
+.courses .actions { text-align: right; }
+.kanban { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--sp-2); margin-top: var(--sp-4); }
+@media (min-width: 900px) { .kanban { grid-template-columns: repeat(5, minmax(0, 1fr)); } }
+.column { background: var(--surface-2); border: 1px solid transparent; border-radius: var(--r-lg); padding: var(--sp-2); min-height: 140px; display: flex; flex-direction: column; gap: var(--sp-2); transition: background-color var(--dur-hover) ease, border-color var(--dur-hover) ease; }
+.column.over { background: var(--surface-3); border-color: var(--ink); }
+.column header { display: flex; justify-content: space-between; align-items: baseline; font-weight: 600; font-size: var(--fs-md); text-transform: capitalize; padding: 2px 4px; }
+.app { display: flex; flex-direction: column; align-items: stretch; gap: 2px; text-align: left; width: 100%; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-md); padding: var(--sp-2) var(--sp-3); cursor: grab; color: inherit; font-size: var(--fs-md); transition: box-shadow var(--dur-hover) var(--ease-out), transform var(--dur-hover) var(--ease-out), border-color var(--dur-hover) ease; }
+.app:active { cursor: grabbing; }
+.app.lifting { box-shadow: var(--shadow-2); transform: rotate(1.5deg) scale(1.02); }
+@media (hover: hover) and (pointer: fine) { .app:hover { border-color: var(--line-2); box-shadow: var(--shadow-1); } }
+.company { font-weight: 500; }
+.next { color: var(--ink-2); margin-top: 2px; }
+.next.soon { color: var(--warn); font-weight: 500; }
+.app-edit { border-top: 1px solid var(--line); margin-top: var(--sp-4); padding-top: var(--sp-4); }
+.app-edit h3 { margin-bottom: var(--sp-3); }
+.app-form { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-3); }
 .wide { grid-column: 1 / -1; }
-.actions { display: flex; gap: 0.5rem; align-items: center; }
-.danger { color: #b91c1c; margin-left: auto; }
+.actions { display: flex; gap: var(--sp-2); align-items: center; }
+.push { margin-left: auto; }
+@media (prefers-reduced-motion: reduce) { .app.lifting { transform: none; } }
 </style>
