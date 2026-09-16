@@ -1,5 +1,11 @@
 # Pozzy progress
 
+## Plan the week on the Agenda, 2026-09-16 (deployed)
+
+- `POST /api/ai/plan {start, days}` (`modules/ai/planner.py`) proposes placements for open unscheduled tasks, prep blocks for upcoming study deadlines and work blocks for this week's unmet goals. Free slots come from the existing deterministic engine and the working window; items are placed greedily, at most three a day, never overlapping. With `ai_enabled.scheduling` on, Claude (`plan_week`, prompt in api/app/prompts) picks one of up to three offered options per item and phrases the reason; anything outside the options is dropped. Nothing is written by the planner.
+- Agenda: a Plan button in the header. Suggestions appear as dashed ghost blocks in the grid with accept and deny buttons, and in a tray card above the grid with reasons, Accept all and Deny all. Accepting a task calls the existing schedule endpoint (creates the linked calendar event); accepting an event calls the existing create endpoint. Denying removes the ghost. Ids are stable per item so re-planning does not duplicate.
+- Tests: `api/tests/d/test_plan.py` (working window, no overlap, nothing written with AI off, Claude picks only offered options). Contract in docs/AI_CONTRACTS.md.
+
 ## Account names on mail, steadier loader, galaxy blue mark, event drag on the agenda, 2026-09-15 (deployed)
 
 - Mail: email cards, the detail dialog, the account filter, the top emails widget and Settings show the account name derived from the address (wout.altepost, altepostwout, wjaltepost, wout@alpacaai) with the MAIL_ACCOUNTS_JSON label (Mail 1, Personal, Important, Work) as a tag. Presentation only (`web/src/lib/mail.js`), so env syncs, which reset labels, cannot undo it.

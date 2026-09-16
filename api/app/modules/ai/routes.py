@@ -61,6 +61,20 @@ def briefing_context():
     return ok(briefing.build_context(_day_arg()))
 
 
+@bp.post("/plan")
+@require_auth
+def plan():
+    """Suggest placements for open tasks, deadline prep and goal work. Nothing is written;
+    the client accepts each suggestion through the task schedule or event create endpoints."""
+    from ...utils.validation import parse_int, require_object
+    from . import planner
+
+    body = require_object(request.get_json(silent=True) or {})
+    start = date_from_str(body["start"], "start") if body.get("start") else today_local()
+    days = parse_int(body, "days", default=7, min_value=1, max_value=14)
+    return ok(planner.build_plan(start, days))
+
+
 @bp.get("/spend")
 @require_auth
 def spend():

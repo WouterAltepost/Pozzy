@@ -390,6 +390,25 @@ def reply_briefing(payload: dict) -> dict | None:
     return {"reply": answer.reply.strip(), "text": answer.text.strip(), "actions": [a.model_dump() for a in answer.actions[:6]]}
 
 
+class _PlanPick(BaseModel):
+    id: str
+    option: int
+    reason: str = ""
+
+
+class PlanAnswer(BaseModel):
+    items: list[_PlanPick] = []
+
+
+def plan_week(payload: dict) -> dict | None:
+    """Pick one offered option per plan item. Returns {item_id: {option, reason}} or None.
+    See docs/AI_CONTRACTS.md 'plan_week'. The caller validates option indexes and overlaps."""
+    answer = _call(feature="plan_week", switch="scheduling", tier="smart", prompt="plan_week", payload=payload, schema=PlanAnswer, max_tokens=1200)
+    if answer is None:
+        return None
+    return {p.id: {"option": p.option, "reason": p.reason.strip()} for p in answer.items}
+
+
 class _FocusItem(BaseModel):
     title: str
     area: str | None = None

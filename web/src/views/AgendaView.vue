@@ -1,6 +1,6 @@
 <script setup>
 import { computed, ref } from 'vue'
-import { PhCaretLeft, PhCaretRight } from '@phosphor-icons/vue'
+import { PhCaretLeft, PhCaretRight, PhCheck, PhSparkle, PhX } from '@phosphor-icons/vue'
 import AgendaGrid from '../components/agenda/AgendaGrid.vue'
 import EventForm from '../components/agenda/EventForm.vue'
 import EventPopover from '../components/agenda/EventPopover.vue'
@@ -15,6 +15,9 @@ import { useReady } from '../composables/useReady'
 import { useToast } from '../composables/useToast'
 import { formatDay, mondayOf, today } from '../lib/dates'
 import { useCalendarStore } from '../stores/calendar'
+import { planWeek } from '../api/ai'
+import { scheduleTask } from '../api/tasks'
+import { formatDateTime } from '../lib/dates'
 
 const store = useCalendarStore()
 const toast = useToast()
@@ -23,6 +26,11 @@ const quick = ref(null) // { day, hour, minute, endHour, endMinute, anchor } for
 const saving = ref(false)
 const formError = ref('')
 const narrow = useMediaQuery('(max-width: 899px)')
+const suggestions = ref([]) // planner items still waiting for a decision
+const planning = ref(false)
+const planned = ref(false)
+const deciding = ref({}) // id -> true while an accept is in flight
+const trayOpen = ref(true)
 
 const title = computed(() => (store.view === 'week' ? `Week of ${formatDay(mondayOf(store.anchor))}` : formatDay(store.anchor)))
 const VIEWS = [
@@ -54,6 +62,46 @@ function onSlot(defaults) {
   quick.value = defaults
 }
 const draft = computed(() => (quick.value ? { day: quick.value.day, from: quick.value.hour * 60 + quick.value.minute, to: quick.value.endHour * 60 + quick.value.endMinute } : null))
+
+// Plan: Pozzy proposes placements for the shown range. Nothing is written until accepted.
+async function plan() {
+  planning.value = true
+  try {
+    const data = await planWeek(store.days[0], store.days.length)
+    suggestions.value = data.items
+    planned.value = true
+    trayOpen.value = true
+    if (!data.items.length) toast.success('Nothing to place: no open tasks, deadlines or goals fit the free slots.')
+  } catch (err) {
+    toast.error(err.message)
+  } finally {
+    planning.value = false
+  }
+}
+async function accept(item) {
+  if (deciding.value[item.id]) return
+  deciding.value[item.id] = true
+  try {
+    if (item.kind === 'task') await scheduleTask(item.task_id, { start: item.start, end: item.end })
+    else await store.createEvent({ title: item.title, start: item.start, end: item.end, all_day: false, description: item.description || null })
+    suggestions.value = suggestions.value.filter((s) => s.id !== item.id)
+    if (item.kind === 'task') await store.load()
+    toast.success(`Placed "${item.title}"`)
+  } catch (err) {
+    toast.error(err.message)
+  } finally {
+    delete deciding.value[item.id]
+  }
+}
+function deny(item) {
+  suggestions.value = suggestions.value.filter((s) => s.id !== item.id)
+}
+async function acceptAll() {
+  for (const item of [...suggestions.value]) await accept(item)
+}
+function denyAll() {
+  suggestions.value = []
+}
 
 // Dropped or resized on the grid: write the new times to iCloud through the API.
 async function onMove({ event, day, from, to }) {
@@ -123,6 +171,10 @@ function pickDay(evt) {
         <input type="date" :value="store.anchor" aria-label="Go to date" @change="pickDay" />
       </div>
       <UiSegmented v-model="view" :options="VIEWS" />
+      <UiButton :loading="planning" title="Suggest where open tasks, deadline prep and goal work could go" @click="plan">
+        <PhSparkle :size="16" weight="fill" aria-hidden="true" />
+        Plan
+      </UiButton>
       <UiButton variant="primary" @click="openNew({ day: store.anchor })">New event</UiButton>
     </PageHeader>
 
@@ -132,9 +184,35 @@ function pickDay(evt) {
     </div>
 
     <UiLoadGate :ready="ready" label="Loading your week">
+      <Transition name="tray">
+        <section v-if="suggestions.length" class="card tray">
+          <div class="tray-head">
+            <PhSparkle weight="fill" class="spark" aria-hidden="true" />
+            <strong>Pozzy suggests {{ suggestions.length }} {{ suggestions.length === 1 ? 'placement' : 'placements' }}</strong>
+            <span class="muted small">Dashed blocks on the grid. Accept or deny each one, or all at once.</span>
+            <span class="tray-actions">
+              <button type="button" class="link-btn" @click="trayOpen = !trayOpen">{{ trayOpen ? 'Hide list' : 'Show list' }}</button>
+              <UiButton size="sm" variant="primary" @click="acceptAll">Accept all</UiButton>
+              <UiButton size="sm" variant="ghost" @click="denyAll">Deny all</UiButton>
+            </span>
+          </div>
+          <ul v-if="trayOpen" class="tray-list">
+            <li v-for="s in suggestions" :key="s.id" class="tray-row" :class="s.kind">
+              <span class="kind">{{ s.kind === 'task' ? 'task' : 'event' }}</span>
+              <span class="t truncate">{{ s.title }}</span>
+              <span class="when num">{{ formatDateTime(s.start) }}, {{ s.minutes }} min</span>
+              <span class="why muted small truncate">{{ s.reason }}</span>
+              <span class="row-actions">
+                <button type="button" class="icon-btn ok" :aria-label="'Accept: ' + s.title" :disabled="deciding[s.id]" @click="accept(s)"><PhCheck weight="bold" /></button>
+                <button type="button" class="icon-btn" :aria-label="'Deny: ' + s.title" @click="deny(s)"><PhX weight="bold" /></button>
+              </span>
+            </li>
+          </ul>
+        </section>
+      </Transition>
       <div class="gridwrap">
         <div class="gridpos">
-          <AgendaGrid :days="store.days" :events="store.events" :tasks="store.tasks" :draft="draft" @select-event="openEvent" @create="onSlot" @move="onMove" />
+          <AgendaGrid :days="store.days" :events="store.events" :tasks="store.tasks" :draft="draft" :suggestions="suggestions" @select-event="openEvent" @create="onSlot" @move="onMove" @accept="accept" @deny="deny" />
           <Transition name="pop">
             <EventPopover
               v-if="quick"
@@ -178,6 +256,23 @@ function pickDay(evt) {
 .nav input[type='date'] { margin-left: 4px; }
 .status { display: flex; align-items: center; gap: var(--sp-3); flex-wrap: wrap; margin: calc(var(--sp-5) * -1) 0 var(--sp-3); }
 .gridwrap { min-width: 0; }
+.tray { margin-bottom: var(--sp-4); border-style: dashed; }
+.tray-head { display: flex; align-items: center; gap: var(--sp-3); flex-wrap: wrap; }
+.spark { color: var(--brand); width: 18px; height: 18px; }
+.tray-actions { display: inline-flex; align-items: center; gap: var(--sp-2); margin-left: auto; }
+.tray-list { margin-top: var(--sp-3); display: flex; flex-direction: column; }
+.tray-row { display: grid; grid-template-columns: auto minmax(0, 1.2fr) auto minmax(0, 1.6fr) auto; align-items: center; gap: var(--sp-3); padding: 6px 0; border-top: 1px solid var(--line); font-size: var(--fs-md); }
+.tray-row .kind { font-size: var(--fs-xs); font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; padding: 1px 6px; border-radius: var(--r-sm); }
+.tray-row.task .kind { color: var(--ok); background: var(--ok-soft); }
+.tray-row.event .kind { color: var(--info); background: var(--info-soft); }
+.tray-row .when { white-space: nowrap; color: var(--ink-2); }
+.row-actions { display: inline-flex; gap: 2px; }
+.icon-btn.ok { color: var(--ok); }
+@media (max-width: 720px) { .tray-row { grid-template-columns: auto minmax(0, 1fr) auto; } .tray-row .why { display: none; } .tray-row .when { grid-column: 2; font-size: var(--fs-xs); } }
+.tray-enter-active { transition: opacity var(--dur-ui) ease, transform var(--dur-modal) var(--ease-spring); }
+.tray-leave-active { transition: opacity var(--dur-hover) ease; }
+.tray-enter-from { opacity: 0; transform: translateY(-6px); }
+.tray-leave-to { opacity: 0; }
 .gridpos { position: relative; }
 .pop-enter-active { transition: opacity var(--dur-ui) var(--ease-out), transform var(--dur-ui) var(--ease-out); }
 .pop-leave-active { transition: opacity var(--dur-hover) ease, transform var(--dur-hover) ease; }

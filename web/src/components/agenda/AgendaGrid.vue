@@ -15,8 +15,9 @@ const props = defineProps({
   hourStart: { type: Number, default: 6 },
   hourEnd: { type: Number, default: 23 },
   draft: { type: Object, default: null }, // { day, from, to } in minutes from midnight
+  suggestions: { type: Array, default: () => [] }, // planner items: { id, kind, title, start, end, reason }
 })
-const emit = defineEmits(['select-event', 'create', 'move'])
+const emit = defineEmits(['select-event', 'create', 'move', 'accept', 'deny'])
 
 const HOUR_PX = 44
 const hours = computed(() => Array.from({ length: props.hourEnd - props.hourStart }, (_, i) => props.hourStart + i))
@@ -85,6 +86,19 @@ const columns = computed(() =>
     return { day, allDay, timed: withLanes(timed), isToday: day === today() }
   }),
 )
+
+// Planner suggestions placed like events, but rendered as ghosts with their own buttons.
+const suggested = computed(() => {
+  const out = {}
+  for (const day of props.days) out[day] = []
+  for (const sg of props.suggestions) {
+    for (const day of props.days) {
+      const pos = place(sg, day)
+      if (pos) out[day].push({ ...pos, item: sg })
+    }
+  }
+  return out
+})
 
 const nowLine = computed(() => {
   const now = new Date()
@@ -277,6 +291,21 @@ function timeLabel(h) {
     >
       <div v-for="h in hours" :key="h" class="hour-line" :style="{ top: (h - hourStart) * HOUR_PX + 'px' }"></div>
       <div v-if="ghost(c.day)" class="ghost" :style="{ top: ghost(c.day).top, height: ghost(c.day).height }"><span class="num">{{ ghost(c.day).label }}</span></div>
+      <div
+        v-for="sg in suggested[c.day]"
+        :key="sg.item.id"
+        class="suggest"
+        :class="sg.item.kind"
+        :style="{ top: sg.top + 'px', height: sg.height + 'px' }"
+        :title="sg.item.reason"
+      >
+        <span class="s-time num">{{ formatTime(sg.item.start) }}</span>
+        <span class="s-title">{{ sg.item.title }}</span>
+        <span class="s-actions">
+          <button type="button" class="s-btn ok" :aria-label="'Accept: ' + sg.item.title" @click.stop="emit('accept', sg.item)" @pointerdown.stop><svg viewBox="0 0 256 256" width="12" height="12" fill="none" stroke="currentColor" stroke-width="28" stroke-linecap="round" stroke-linejoin="round"><path d="M216 72 104 184l-56-56" /></svg></button>
+          <button type="button" class="s-btn no" :aria-label="'Deny: ' + sg.item.title" @click.stop="emit('deny', sg.item)" @pointerdown.stop><svg viewBox="0 0 256 256" width="12" height="12" fill="none" stroke="currentColor" stroke-width="28" stroke-linecap="round"><path d="M200 56 56 200M56 56l144 144" /></svg></button>
+        </span>
+      </div>
       <div v-if="moveGhost(c.day)" class="ghost moving" :style="{ top: moveGhost(c.day).top, height: moveGhost(c.day).height }"><span class="num">{{ moveGhost(c.day).label }}</span><span class="ghost-title">{{ moveGhost(c.day).title }}</span></div>
       <div v-if="c.isToday && nowLine !== null" class="now" :style="{ top: nowLine + 'px' }"></div>
       <template v-for="b in c.timed" :key="b.key">
@@ -333,6 +362,24 @@ function timeLabel(h) {
 .grip { position: absolute; left: 0; right: 0; bottom: 0; height: 7px; cursor: ns-resize; }
 .ghost.moving { z-index: 4; background: color-mix(in srgb, var(--info) 18%, transparent); border-color: var(--info); color: var(--ink); box-shadow: var(--shadow-2); }
 .ghost-title { display: block; font-weight: 500; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.suggest {
+  position: absolute; left: 1px; right: 1px; z-index: 3; box-sizing: border-box;
+  margin: 1px; padding: 2px 6px 2px 8px; border-radius: var(--r-sm); overflow: hidden;
+  display: flex; flex-direction: column; gap: 1px; font-size: var(--fs-sm); line-height: 1.25;
+  border: 1.5px dashed var(--accent); background: color-mix(in srgb, var(--accent) 10%, var(--surface)); color: var(--ink);
+  animation: suggest-in 320ms var(--ease-spring) both;
+}
+.suggest.task { --accent: var(--ok); }
+.suggest.event { --accent: var(--info); }
+.s-time { font-size: var(--fs-xs); color: var(--accent); font-weight: 600; }
+.s-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 500; }
+.s-actions { position: absolute; right: 3px; top: 3px; display: inline-flex; gap: 3px; }
+.s-btn { width: 20px; height: 20px; border-radius: 50%; border: 0; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; padding: 0; transition: transform var(--dur-press) var(--ease-out), background-color var(--dur-hover) ease; }
+.s-btn.ok { background: var(--ok); color: #fff; }
+.s-btn.no { background: var(--surface-3); color: var(--ink-2); }
+.s-btn:active { transform: scale(0.9); }
+@keyframes suggest-in { from { opacity: 0; transform: translateY(6px) scale(0.98); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .suggest { animation: none; } }
 .ghost { position: absolute; left: 1px; right: 1px; z-index: 2; border-radius: var(--r-sm); background: color-mix(in srgb, var(--ink) 10%, transparent); border: 1px dashed var(--ink-3); padding: 2px 6px; font-size: var(--fs-xs); color: var(--ink-2); pointer-events: none; overflow: hidden; }
 .col.today { background: color-mix(in srgb, var(--brand-soft) 30%, transparent); }
 .hour-line { position: absolute; left: 0; right: 0; border-top: 1px solid var(--line); opacity: 0.7; pointer-events: none; }

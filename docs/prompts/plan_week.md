@@ -1,0 +1,1 @@
+../../api/app/prompts/plan_week.md
