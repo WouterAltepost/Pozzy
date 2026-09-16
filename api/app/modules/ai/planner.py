@@ -206,12 +206,34 @@ def _apply_claude(items: list[dict], start_day: date) -> None:
         if pick is not None and (pick["option"] < 0 or pick.get("place") is False):
             log.info("plan_week: %s skipped by Claude: %s", it["title"], pick.get("reason", "")[:120])
             continue
-        kept.append(it)
-        option = it["options"][0]
+        # Python enforces the minutes Claude says the rules require next to each option (rule 7 in spirit:
+        # the model states numbers, the code compares them with the real gaps).
+        checks = (pick or {}).get("checks") or {}
+        def passes(idx: int) -> bool:
+            need_before, need_after = checks.get(idx, (0, 0))
+            o = it["options"][idx]
+            if o.get("before") and o["before"]["gap_minutes"] < need_before:
+                return False
+            if o.get("after") and o["after"]["gap_minutes"] < need_after:
+                return False
+            return True
+        option = None
         reason = it["reason"]
-        if pick is not None and 0 <= pick["option"] < len(it["options"]):
+        if pick is not None and 0 <= pick["option"] < len(it["options"]) and passes(pick["option"]):
             option = it["options"][pick["option"]]
             reason = pick["reason"] or reason
+        elif pick is not None:
+            for idx in range(len(it["options"])):
+                if passes(idx):
+                    option = it["options"][idx]
+                    reason = f"{it['reason']} (Claude's first choice broke a rule, this option keeps the required gaps)"
+                    break
+            if option is None:
+                log.info("plan_week: %s dropped, no option keeps the gaps Claude derived from the rules", it["title"])
+                continue
+        else:
+            option = it["options"][0]
+        kept.append(it)
         s, e = datetime.fromisoformat(option["start"]), datetime.fromisoformat(option["end"])
         if any(s < te and e > ts for ts, te in taken):
             option, reason = it["options"][0], it["reason"]
