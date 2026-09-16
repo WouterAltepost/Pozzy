@@ -68,12 +68,14 @@ def test_rules_reach_every_system_prompt_and_planner_can_skip(client, headers, f
     fake_claude.reply = json.dumps({"text": "Quiet day."})
     client.post("/api/ai/briefing", headers=headers)
     system = fake_claude.last["system"][0]["text"]
-    assert "Standing rules from the user" in system and "Never plan anything before 09:00." in system and "About the user" in system and "Amsterdam" in system
+    assert system.startswith("## Standing rules from the user") and "Never plan anything before 09:00." in system and "About the user" in system and "Amsterdam" in system
+    assert system.index("Standing rules") < system.index("## Task instructions") < system.index("chief of staff")
     fake_claude.reply = json.dumps({"items": []})
     client.post("/api/ai/plan", json={"start": monday.isoformat()}, headers=headers)
     sent = json.loads(fake_claude.last_user_text().split("\n\nReply exactly")[0])
+    assert sent["rules"] == ["Never plan anything before 09:00.", "My commute to school takes 45 minutes."]
     item_id = sent["items"][0]["id"]
-    fake_claude.reply = json.dumps({"items": [{"id": item_id, "option": -1, "reason": "Every option is before 09:00."}]})
+    fake_claude.reply = json.dumps({"items": [{"id": item_id, "option": -1, "rule_check": "all options before 09:00", "reason": "Every option is before 09:00."}]})
     data = client.post("/api/ai/plan", json={"start": monday.isoformat()}, headers=headers).get_json()["data"]
     assert data["items"] == []
 

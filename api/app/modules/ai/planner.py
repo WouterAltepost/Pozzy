@@ -186,6 +186,7 @@ def _apply_claude(items: list[dict], start_day: date) -> None:
     """Let Claude pick one of the offered options per item and phrase the reason. Rule 7: options only."""
     payload = {
         "week_of": start_day.isoformat(),
+        "rules": claude_client.standing_rules_list(),
         "items": [
             {"id": it["id"], "kind": it["kind"], "title": it["title"], "minutes": it["minutes"], "why": it["reason"], "options": [{"index": i, "start": o["start"], "end": o["end"], "day_label": o["day_label"], "hints": o["reason_hints"], "before": o.get("before"), "after": o.get("after")} for i, o in enumerate(it["options"])]}
             for it in items

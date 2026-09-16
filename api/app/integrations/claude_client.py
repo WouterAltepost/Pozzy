@@ -218,10 +218,20 @@ def standing_rules_block() -> str:
         return ""
     parts = []
     if rules:
-        parts.append("## Standing rules from the user\nThese always apply, also when the instructions above would allow otherwise. When a rule makes an item impossible, leave it out and say why.\n" + "\n".join(f"- {r}" for r in rules[:40]))
+        parts.append("## Standing rules from the user\nThese are hard constraints. They win over every instruction that follows, including preferences about mornings, spreading work or focus time. When a rule leaves no acceptable choice, leave the item out and say which rule.\n" + "\n".join(f"- {r}" for r in rules[:40]))
     if context:
         parts.append("## About the user\n" + context[:2000])
-    return "\n\n" + "\n\n".join(parts)
+    return "\n\n".join(parts) + "\n\n## Task instructions\n"
+
+
+def standing_rules_list() -> list[str]:
+    """The rules alone, for features that want to repeat them next to the data."""
+    try:
+        from ..settings_defaults import get_setting
+
+        return [str(r).strip() for r in (get_setting("ai_rules") or []) if str(r).strip()][:40]
+    except Exception:
+        return []
 
 
 def _call(
@@ -255,7 +265,7 @@ def _call(
         if client is None:
             raise ClaudeCallError("ANTHROPIC_API_KEY is not set")
         sections = load_prompt(prompt)
-        system_block: dict = {"type": "text", "text": sections["system"] + standing_rules_block()}
+        system_block: dict = {"type": "text", "text": standing_rules_block() + sections["system"]}
         if cache_system:
             system_block["cache_control"] = {"type": "ephemeral"}
         response = client.messages.create(
@@ -414,6 +424,7 @@ def reply_briefing(payload: dict) -> dict | None:
 class _PlanPick(BaseModel):
     id: str
     option: int
+    rule_check: str = ""
     reason: str = ""
 
 

@@ -6,6 +6,7 @@ Wouter's test: with the rules saved, the planner still put a task at 09:00 befor
 - Every option sent to Claude now carries `before` and `after`: the appointment ending before it and the one starting after it on that day, with title, location, time and the gap in minutes (`calendar_read.get_event_rows_between`, planner `_neighbours`). The prompt tells Claude to check those gaps against the standing rules and skip (option -1) when none fits.
 - New Settings key `plan_buffer_minutes` ("Buffer around events (min)" in Tasks and planning): the deterministic engine pads every calendar event and scheduled task by that many minutes on both sides, for the week planner and for single-task slot suggestions. This is the hard guarantee; the free-text rules cover the rest.
 - Tests in `api/tests/d/test_plan.py`: a 45 minute buffer keeps a slot out of 08:45 to 12:45 around a 09:30 class, and the payload shows the class as `after` with its location and gap.
+- Second round: with the context present Claude still reasoned past the rules ("at 09:00 before your class at 09:30"). The standing rules now open every system prompt as hard constraints above the feature text, the planner payload repeats them as `rules`, and the model must write a `rule_check` line per item (gap against each rule) before choosing; only options that pass may be picked, otherwise -1.
 
 ## Rules for Pozzy, 2026-09-16 (deployed)
 
