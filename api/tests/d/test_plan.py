@@ -78,6 +78,10 @@ def test_rules_reach_every_system_prompt_and_planner_can_skip(client, headers, f
     fake_claude.reply = json.dumps({"items": [{"id": item_id, "option": -1, "rule_check": "all options before 09:00", "reason": "Every option is before 09:00."}]})
     data = client.post("/api/ai/plan", json={"start": monday.isoformat()}, headers=headers).get_json()["data"]
     assert data["items"] == []
+    # place false wins even when the model also returns an index.
+    fake_claude.reply = json.dumps({"items": [{"id": item_id, "place": False, "option": 0, "rule_check": "30 min before a campus class", "reason": "Commute rule."}]})
+    data = client.post("/api/ai/plan", json={"start": monday.isoformat()}, headers=headers).get_json()["data"]
+    assert data["items"] == []
 
 
 def test_options_carry_neighbours_and_buffer_keeps_distance(client, headers, fake_claude, app):

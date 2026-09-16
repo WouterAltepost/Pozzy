@@ -423,7 +423,8 @@ def reply_briefing(payload: dict) -> dict | None:
 
 class _PlanPick(BaseModel):
     id: str
-    option: int
+    place: bool = True
+    option: int = 0
     rule_check: str = ""
     reason: str = ""
 
@@ -438,7 +439,7 @@ def plan_week(payload: dict) -> dict | None:
     answer = _call(feature="plan_week", switch="scheduling", tier="smart", prompt="plan_week", payload=payload, schema=PlanAnswer, max_tokens=1200)
     if answer is None:
         return None
-    return {p.id: {"option": p.option, "reason": p.reason.strip()} for p in answer.items}
+    return {p.id: {"option": p.option if p.place else -1, "place": p.place, "reason": p.reason.strip()} for p in answer.items}
 
 
 class _FocusItem(BaseModel):

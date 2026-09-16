@@ -203,7 +203,7 @@ def _apply_claude(items: list[dict], start_day: date) -> None:
     kept = []
     for it in items:
         pick = answer.get(it["id"])
-        if pick is not None and pick["option"] < 0:
+        if pick is not None and (pick["option"] < 0 or pick.get("place") is False):
             log.info("plan_week: %s skipped by Claude: %s", it["title"], pick.get("reason", "")[:120])
             continue
         kept.append(it)
