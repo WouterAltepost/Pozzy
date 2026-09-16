@@ -171,7 +171,7 @@ function remove(t) {
           <div class="wrow">
             <button type="button" class="tname" :aria-expanded="Boolean(charts[t.id])" @click="toggleChart(t)"><span class="dot" :style="{ background: t.area_color || 'var(--ink-3)' }"></span>{{ t.name }}</button>
             <span class="cells">
-              <button v-for="d in t.days" :key="d.date" type="button" class="cell" :class="[cellState(t, d), { today: d.date === today() }]" :aria-label="`${t.name} ${d.date}`" :disabled="d.date > today()" @click="cellTap(t, d)">{{ cellText(t, d) }}</button>
+              <button v-for="d in t.days" :key="d.date" type="button" class="dcell" :class="[cellState(t, d), { today: d.date === today() }]" :aria-label="`${t.name} ${d.date}`" :disabled="d.date > today()" @click="cellTap(t, d)">{{ cellText(t, d) }}</button>
             </span>
             <button type="button" class="link-btn edit" @click="editing = t">edit</button>
           </div>
@@ -265,11 +265,11 @@ function remove(t) {
 .wrow .tname { overflow: hidden; text-overflow: ellipsis; display: block; }
 .wrow .tname .dot { display: inline-block; margin-right: 8px; vertical-align: middle; }
 .cells { display: flex; gap: 4px; }
-.cell { width: 22px; height: 22px; border-radius: var(--r-sm); border: 0; padding: 0; background: var(--surface-2); color: var(--ink-3); font-size: var(--fs-xs); font-weight: 500; display: inline-flex; align-items: center; justify-content: center; }
-.cell.hit { background: var(--ok-soft); color: var(--ok); }
-.cell.part { background: var(--warn-soft); color: var(--warn); }
-.cell.future { background: transparent; }
-.cell.today { box-shadow: 0 0 0 1px var(--brand) inset; }
+.dcell { width: 22px; height: 22px; border-radius: var(--r-sm); border: 0; padding: 0; background: var(--surface-2); color: var(--ink-3); font-size: var(--fs-xs); font-weight: 500; display: inline-flex; align-items: center; justify-content: center; }
+.dcell.hit { background: var(--ok-soft); color: var(--ok); }
+.dcell.part { background: var(--warn-soft); color: var(--warn); }
+.dcell.future { background: transparent; }
+.dcell.today { box-shadow: 0 0 0 1px var(--brand) inset; }
 .wrow .edit { font-size: var(--fs-xs); }
 .pchart { padding: 4px 0 10px; }
 .check { display: flex; align-items: center; gap: 6px; font-size: var(--fs-md); white-space: nowrap; }
