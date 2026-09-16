@@ -206,6 +206,7 @@ const tip = computed(() => {
 <style scoped>
 .chart-card { padding-bottom: var(--sp-3); }
 .meta { display: inline-flex; align-items: center; gap: var(--sp-3); flex-wrap: wrap; }
+@media (max-width: 699px) { .chart-card .card-head { flex-wrap: wrap; } .chart-card .card-head h2 { white-space: nowrap; } .meta { width: 100%; justify-content: space-between; } }
 .plot { position: relative; width: 100%; min-width: 0; touch-action: pan-y; }
 .plot svg { width: 100%; display: block; }
 .grid line { stroke: var(--line); stroke-width: 1; }

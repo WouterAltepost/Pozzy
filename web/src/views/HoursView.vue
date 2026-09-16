@@ -10,6 +10,8 @@ import UiLoadGate from '../components/ui/UiLoadGate.vue'
 import { useReady } from '../composables/useReady'
 import UiButton from '../components/ui/UiButton.vue'
 import UiField from '../components/ui/UiField.vue'
+import UiModal from '../components/ui/UiModal.vue'
+import { useMediaQuery } from '../composables/useMediaQuery'
 import { formatDay, minutesToHours, today, weekDays } from '../lib/dates'
 import { useHoursStore } from '../stores/hours'
 
@@ -19,6 +21,9 @@ const now = ref(Date.now())
 let ticker = null
 
 const form = reactive({ date: today(), minutes: 30, area_id: null, tags: [], note: '' })
+const phone = useMediaQuery('(max-width: 699px)')
+const logOpen = ref(false)
+const entriesDay = ref(today())
 const timerForm = reactive({ area_id: null, note: '', tags: [] })
 
 const elapsed = computed(() => {
@@ -58,7 +63,11 @@ function addLog() {
   run(async () => {
     await store.create({ date: form.date, minutes: Number(form.minutes), area_id: form.area_id || null, tags: form.tags, note: form.note || null })
     form.note = ''
+    logOpen.value = false
   })
+}
+function dayNum(day) {
+  return Number(day.slice(8))
 }
 
 function startTimer() {
@@ -80,9 +89,13 @@ function pct(row) {
 
 <template>
   <div class="hours">
-    <PageHeader title="Hours">
+    <PageHeader v-if="!phone" title="Hours">
       <WeekNav :week-start="store.weekStart" @change="run(() => store.setWeek($event))" />
     </PageHeader>
+    <div v-else class="phead">
+      <div><h1>Hours</h1><span class="muted small num">{{ store.summary ? minutesToHours(store.summary.total_minutes) : '0m' }} this week</span></div>
+      <UiButton variant="primary" size="sm" @click="logOpen = true">Log time</UiButton>
+    </div>
     <p v-if="error || store.error" class="error">{{ error || store.error }}</p>
     <UiLoadGate :ready="ready" label="Loading hours">
 
@@ -104,7 +117,31 @@ function pct(row) {
       <p v-if="store.timerRunning" class="muted small started">Started {{ new Date(store.timer.startedAt).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) }}. The timer survives a page reload.</p>
     </section>
 
-    <section v-if="store.summary" class="card">
+    <section v-if="store.summary && phone" class="card">
+      <div class="card-head"><h2>By life area</h2><span class="meta"><WeekNav :week-start="store.weekStart" compact @change="run(() => store.setWeek($event))" /></span></div>
+      <div v-for="row in store.summary.areas.filter((r) => r.area_id || r.minutes)" :key="row.area" class="arow">
+        <span class="aname"><span class="dot" :style="{ background: row.color }" aria-hidden="true"></span>{{ row.area }}</span>
+        <div class="bar"><div class="fill" :class="{ full: pct(row) >= 100 }" :style="{ width: (row.target_minutes ? pct(row) : row.minutes ? 100 : 0) + '%' }"></div></div>
+        <span class="num small">{{ minutesToHours(row.minutes) }}<span v-if="row.target_minutes" class="muted"> / {{ minutesToHours(row.target_minutes) }}</span></span>
+      </div>
+    </section>
+    <section v-if="phone" class="card">
+      <div class="card-head"><h2>Entries</h2><span class="meta">{{ formatDay(entriesDay) }}</span></div>
+      <div class="strip">
+        <button v-for="day in Object.keys(byDay)" :key="day" type="button" class="dbtn" :class="{ active: day === entriesDay, today: day === today() }" @click="entriesDay = day"><span class="wd">{{ formatDay(day).slice(0, 3) }}</span><span class="dn num">{{ dayNum(day) }}</span></button>
+      </div>
+      <ul v-if="byDay[entriesDay]?.length">
+        <li v-for="log in byDay[entriesDay]" :key="log.id" class="list-row">
+          <span class="mins num">{{ minutesToHours(log.minutes) }}</span>
+          <span class="note truncate">{{ log.note || 'No note' }}</span>
+          <AreaDot :area-id="log.area_id" />
+          <button type="button" class="icon-btn" aria-label="Remove log" @click="run(() => store.remove(log.id))"><PhX /></button>
+        </li>
+      </ul>
+      <p v-else class="muted small nothing">Nothing logged.</p>
+    </section>
+
+    <section v-if="store.summary && !phone" class="card">
       <div class="card-head"><h2>Week totals</h2><span class="meta num">{{ minutesToHours(store.summary.total_minutes) }} total</span></div>
       <table class="ui totals">
         <tbody>
@@ -120,7 +157,7 @@ function pct(row) {
       </table>
     </section>
 
-    <section class="card">
+    <section v-if="!phone" class="card">
       <div class="card-head"><h2>Log time</h2></div>
       <form class="log-form" @submit.prevent="addLog">
         <UiField label="Date"><input v-model="form.date" type="date" required /></UiField>
@@ -132,7 +169,7 @@ function pct(row) {
       </form>
     </section>
 
-    <section class="card">
+    <section v-if="!phone" class="card">
       <div class="card-head"><h2>Logs this week</h2></div>
       <div v-for="(logs, day) in byDay" :key="day" class="day">
         <div class="day-head"><span class="dname">{{ formatDay(day) }}</span> <span class="muted small num">{{ minutesToHours(logs.reduce((s, l) => s + l.minutes, 0)) }}</span></div>
@@ -149,10 +186,41 @@ function pct(row) {
       </div>
     </section>
     </UiLoadGate>
+
+    <UiModal :open="logOpen" title="Log time" size="sm" @close="logOpen = false">
+      <form class="log-form stacked" @submit.prevent="addLog">
+        <div class="pair">
+          <UiField label="Date"><input v-model="form.date" type="date" required /></UiField>
+          <UiField label="Minutes"><input v-model.number="form.minutes" type="number" min="1" max="1440" step="5" required /></UiField>
+        </div>
+        <UiField label="Area"><AreaSelect v-model="form.area_id" /></UiField>
+        <UiField label="Note"><input v-model="form.note" type="text" /></UiField>
+        <UiField label="Tags"><TagsInput v-model="form.tags" placeholder="tags" /></UiField>
+        <div class="actions"><UiButton type="submit" variant="primary">Add</UiButton><UiButton variant="ghost" @click="logOpen = false">Cancel</UiButton></div>
+      </form>
+    </UiModal>
   </div>
 </template>
 
 <style scoped>
+.phead { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-2); margin-bottom: var(--sp-4); }
+.phead h1 { font-size: var(--fs-2xl); }
+.arow { display: grid; grid-template-columns: 84px minmax(0, 1fr) auto; gap: 12px; align-items: center; font-size: var(--fs-md); padding: 6px 0; }
+.aname { display: flex; align-items: center; gap: 8px; color: var(--ink-2); }
+.strip { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; margin-bottom: var(--sp-3); }
+.dbtn { height: 44px; border: 0; border-radius: var(--r-md); background: var(--surface); color: var(--ink-2); box-shadow: 0 0 0 1px var(--line) inset; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; }
+.dbtn.today { background: var(--brand-soft); color: var(--brand); }
+.dbtn.active { background: var(--ink); color: var(--on-ink); box-shadow: none; }
+.dbtn .wd { font-size: 10px; letter-spacing: 0.02em; font-weight: 500; }
+.dbtn .dn { font-size: var(--fs-base); font-weight: 600; }
+.log-form.stacked { flex-direction: column; align-items: stretch; }
+.log-form.stacked .pair { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-2); }
+.log-form.stacked .actions { display: flex; gap: var(--sp-2); }
+@media (max-width: 699px) {
+  .timer-row { gap: var(--sp-2); }
+  .timer-row .grow { flex-basis: 100%; }
+  .tags { width: 100%; }
+}
 .timer { transition: border-color var(--dur-ui) ease; }
 .timer.running { border-color: var(--brand); }
 .timer-row { display: flex; flex-wrap: wrap; gap: var(--sp-2); align-items: center; }

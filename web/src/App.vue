@@ -20,7 +20,7 @@ import {
   PhTimer,
 } from '@phosphor-icons/vue'
 import CaptureBar from './components/CaptureBar.vue'
-import UiSheet from './components/ui/UiSheet.vue'
+import NavDrawer from './components/NavDrawer.vue'
 import UiToast from './components/ui/UiToast.vue'
 import { useTheme } from './composables/useTheme'
 import { NAV } from './router'
@@ -62,6 +62,7 @@ watch(() => route.fullPath, () => (menuOpen.value = false))
   <div class="shell">
     <div class="ambient" aria-hidden="true"></div>
     <header class="topbar">
+      <button v-if="auth.isAuthenticated" type="button" class="icon-btn menu-toggle" aria-label="Menu" :aria-expanded="menuOpen" @click="menuOpen = true"><PhList /></button>
       <RouterLink to="/" class="brand" aria-label="Pozzy home">
         <img :src="theme.isDark.value ? '/mark-dark.svg' : '/favicon.svg'" alt="" class="mark" width="26" height="26" />
         <span class="wordmark">Pozzy</span>
@@ -73,8 +74,7 @@ watch(() => route.fullPath, () => (menuOpen.value = false))
           <PhSun v-if="theme.isDark.value" />
           <PhMoon v-else />
         </button>
-        <button type="button" class="icon-btn" title="Log out" aria-label="Log out" @click="logout"><PhSignOut /></button>
-        <button type="button" class="icon-btn menu-toggle" aria-label="Menu" :aria-expanded="menuOpen" @click="menuOpen = true"><PhList /></button>
+        <button type="button" class="icon-btn logout" title="Log out" aria-label="Log out" @click="logout"><PhSignOut /></button>
       </div>
     </header>
 
@@ -94,20 +94,7 @@ watch(() => route.fullPath, () => (menuOpen.value = false))
       </main>
     </div>
 
-    <UiSheet :open="menuOpen" title="Go to" @close="menuOpen = false">
-      <nav class="sheet-nav" aria-label="Main">
-        <RouterLink v-for="item in items" :key="item.name" :to="{ name: item.name }" class="nav-item" :class="{ active: route.name === item.name }">
-          <component :is="item.icon" class="nav-icon" aria-hidden="true" />
-          <span>{{ item.label }}</span>
-        </RouterLink>
-      </nav>
-      <button type="button" class="sheet-row" @click="theme.toggle()">
-        <PhSun v-if="theme.isDark.value" class="nav-icon" /><PhMoon v-else class="nav-icon" />
-        {{ theme.isDark.value ? 'Light mode' : 'Dark mode' }}
-        <span class="muted small">{{ theme.preference.value === 'system' ? 'following system' : 'set here' }}</span>
-      </button>
-      <button type="button" class="sheet-row" @click="logout"><PhSignOut class="nav-icon" /> Log out <span class="muted small">{{ auth.user?.email }}</span></button>
-    </UiSheet>
+    <NavDrawer :open="menuOpen" :items="items" :current="String(route.name || '')" :email="auth.user?.email || ''" @close="menuOpen = false" @logout="logout" />
     <UiToast />
   </div>
 </template>
@@ -123,7 +110,8 @@ watch(() => route.fullPath, () => (menuOpen.value = false))
   position: sticky;
   top: 0;
   z-index: var(--z-bar);
-  height: var(--bar-h);
+  height: calc(var(--bar-h) + env(safe-area-inset-top));
+  padding-top: env(safe-area-inset-top);
   display: flex;
   align-items: center;
   gap: var(--sp-4);
@@ -157,7 +145,7 @@ watch(() => route.fullPath, () => (menuOpen.value = false))
   overflow-y: auto;
   border-right: 1px solid var(--line);
 }
-.page { flex: 1; min-width: 0; width: 100%; }
+.page { flex: 1; min-width: 0; width: 100%; padding-bottom: env(safe-area-inset-bottom); }
 
 .nav-item {
   display: flex;
@@ -176,19 +164,18 @@ watch(() => route.fullPath, () => (menuOpen.value = false))
 .nav-icon { width: 18px; height: 18px; flex: none; }
 @media (hover: hover) and (pointer: fine) { .nav-item:not(.active):hover { background: var(--surface-2); color: var(--ink); } }
 
-.sheet-nav { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
-.sheet-nav .nav-item { height: 44px; }
-.sheet-row { display: flex; align-items: center; gap: 10px; width: 100%; height: 44px; padding: 0 var(--sp-3); border: 0; border-top: 1px solid var(--line); border-radius: 0; background: none; color: var(--ink-2); font-weight: 500; }
-.sheet-row:first-of-type { margin-top: var(--sp-3); }
-.sheet-row .small { margin-left: auto; font-weight: 400; }
 
 @media (max-width: 1023px) {
   .rail { display: none; }
   .menu-toggle { display: inline-flex; }
+  .logout { display: none; }
 }
+/* Phone (design: Pozzy Phone): menu, full-width capture, theme. The mark lives in the drawer. */
 @media (max-width: 720px) {
-  .topbar { padding: 0 var(--sp-4); gap: var(--sp-3); }
+  .topbar { padding-left: var(--sp-3); padding-right: var(--sp-3); gap: 10px; }
   .topbar-email { display: none; }
-  .wordmark { display: none; }
+  .brand { display: none; }
+  .topbar-capture { justify-content: stretch; }
+  .topbar-user { margin-left: 0; }
 }
 </style>

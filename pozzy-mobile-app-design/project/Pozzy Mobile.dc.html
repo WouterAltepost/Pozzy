@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <meta name="design_doc_mode" content="canvas">
+  <link rel="stylesheet" href="_ds/pozzy-design-system-379c1d97-7b25-4487-b44d-5ddb4a1b43a6/styles.css">
+  <script src="https://unpkg.com/@phosphor-icons/web@2.1.1"></script>
+  <script src="_ds/pozzy-design-system-379c1d97-7b25-4487-b44d-5ddb4a1b43a6/_ds_bundle.js"></script>
+  <style>body{margin:0;background:#E4E3DE}a{color:#191A1C}a:hover{color:#4A4C52}</style>
+</helmet>
+<section data-screen-label="Turn 2" style="display:flex;flex-wrap:wrap;gap:32px;padding:24px;align-items:flex-start;font-family:var(--font, Geist, system-ui);color:#191A1C;border-bottom:1px solid #C3C2BB">
+  <div id="2a" style="display:flex;flex-direction:column;gap:16px">
+    <div style="display:flex;align-items:center;gap:10px"><a href="#2a" style="display:inline-flex;align-items:center;height:22px;padding:0 8px;border-radius:6px;background:#191A1C;color:#F7F6F2;font-size:12px;font-weight:600;text-decoration:none;letter-spacing:0.02em">2a</a><span style="font-size:14px;font-weight:600">Home</span><span style="font-size:13px;color:#6F727A">Briefing third, after Today</span></div>
+    <x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" width="{{ 390 }}" height="{{ 844 }}" hint-size="390px,844px">
+      <div style="position:relative;height:844px"><dc-import name="Pozzy Phone" nav="drawer" start-route="home" show-briefing="{{ showBriefing }}" hint-size="100%,100%"></dc-import></div>
+    </x-import>
+  </div>
+  <div id="2b" style="display:flex;flex-direction:column;gap:16px">
+    <div style="display:flex;align-items:center;gap:10px"><a href="#2b" style="display:inline-flex;align-items:center;height:22px;padding:0 8px;border-radius:6px;background:#191A1C;color:#F7F6F2;font-size:12px;font-weight:600;text-decoration:none;letter-spacing:0.02em">2b</a><span style="font-size:14px;font-weight:600">Tasks</span><span style="font-size:13px;color:#6F727A">Grouped by due date, tap a row for the editor</span></div>
+    <x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" width="{{ 390 }}" height="{{ 844 }}" hint-size="390px,844px">
+      <div style="position:relative;height:844px"><dc-import name="Pozzy Phone" nav="drawer" start-route="tasks" show-briefing="{{ showBriefing }}" hint-size="100%,100%"></dc-import></div>
+    </x-import>
+  </div>
+  <div id="2c" style="display:flex;flex-direction:column;gap:16px">
+    <div style="display:flex;align-items:center;gap:10px"><a href="#2c" style="display:inline-flex;align-items:center;height:22px;padding:0 8px;border-radius:6px;background:#191A1C;color:#F7F6F2;font-size:12px;font-weight:600;text-decoration:none;letter-spacing:0.02em">2c</a><span style="font-size:14px;font-weight:600">Agenda</span><span style="font-size:13px;color:#6F727A">Week and Day views</span></div>
+    <x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" width="{{ 390 }}" height="{{ 844 }}" hint-size="390px,844px">
+      <div style="position:relative;height:844px"><dc-import name="Pozzy Phone" nav="drawer" start-route="agenda" start-view="week" show-briefing="{{ showBriefing }}" hint-size="100%,100%"></dc-import></div>
+    </x-import>
+  </div>
+</section>
+<section data-screen-label="Turn 1" style="display:flex;flex-wrap:wrap;gap:32px;padding:24px;align-items:flex-start;font-family:var(--font, Geist, system-ui);color:#191A1C">
+  <div id="1a" style="display:flex;flex-direction:column;gap:16px">
+    <div style="display:flex;align-items:center;gap:10px"><a href="#1a" style="display:inline-flex;align-items:center;height:22px;padding:0 8px;border-radius:6px;background:#191A1C;color:#F7F6F2;font-size:12px;font-weight:600;text-decoration:none;letter-spacing:0.02em">1a</a><span style="font-size:14px;font-weight:600">Tab bar</span><span style="font-size:13px;color:#6F727A">Home, Agenda, Tasks, Tracking + More sheet</span></div>
+    <x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" width="{{ 390 }}" height="{{ 844 }}" hint-size="390px,844px">
+      <div style="position:relative;height:844px"><dc-import name="Pozzy Phone" nav="tabs" start-route="{{ startRoute }}" show-briefing="{{ showBriefing }}" hint-size="100%,100%"></dc-import></div>
+    </x-import>
+  </div>
+  <div id="1b" style="display:flex;flex-direction:column;gap:16px">
+    <div style="display:flex;align-items:center;gap:10px"><a href="#1b" style="display:inline-flex;align-items:center;height:22px;padding:0 8px;border-radius:6px;background:#191A1C;color:#F7F6F2;font-size:12px;font-weight:600;text-decoration:none;letter-spacing:0.02em">1b</a><span style="font-size:14px;font-weight:600">Top-bar drawer</span><span style="font-size:13px;color:#6F727A">All twelve routes behind the menu icon</span></div>
+    <x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" width="{{ 390 }}" height="{{ 844 }}" hint-size="390px,844px">
+      <div style="position:relative;height:844px"><dc-import name="Pozzy Phone" nav="drawer" start-route="{{ startRoute }}" show-briefing="{{ showBriefing }}" hint-size="100%,100%"></dc-import></div>
+    </x-import>
+  </div>
+</section>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;startRoute&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;default&quot;:&quot;home&quot;,&quot;options&quot;:[&quot;home&quot;,&quot;agenda&quot;,&quot;tasks&quot;,&quot;trackers&quot;,&quot;hours&quot;],&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Shell&quot;},&quot;showBriefing&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Home&quot;}}">
+class Component extends DCLogic {
+  renderVals() { return { startRoute: this.props.startRoute ?? 'home', showBriefing: this.props.showBriefing ?? true }; }
+}
+</script>
+</body>
+</html>

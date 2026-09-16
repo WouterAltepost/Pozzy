@@ -1,5 +1,16 @@
 # Pozzy progress
 
+## Phone PWA layout from the Claude Design handoff, 2026-09-16 (deployed)
+
+Implemented `pozzy-mobile-app-design/project/Pozzy Mobile.dc.html` (with `Pozzy Phone.dc.html`, `ios-frame.jsx`, `support.js` and the design system tokens read in full). The design carried two shell variants; the drawer one (Turn 2, the design's default) is implemented. Everything under 700px:
+- Shell: `components/NavDrawer.vue` (272px drawer, all twelve routes, theme, log out, email; pz-slide motion), top bar with menu at the left, a full-width capture pill and the theme toggle; safe-area padding for standalone iOS. `UiModal` is a centred popup at every width now (the design's editor is a popup on the phone); the nav sheet is gone.
+- Home: design order, briefing third after Today, then the remaining widgets.
+- Agenda: `components/agenda/AgendaMobile.vue` with the compact week grid (tap a day) and the day list (strip, now line, swipe to change day); planner suggestions as dashed blocks and rows with accept and deny; Plan and New event as icons in the status row.
+- Tasks: groups as cards, hairline rows, due label at the right. Tracking: Today chips and This week rows with day cells, chart kept. Hours: By life area, Entries per day, Log time dialog.
+- Desktop is unchanged (verified: rail visible, menu hidden, seven-column grid).
+
+Verification: Playwright at 390 by 844 with touch, light and dark. Home order matches the design, the drawer lists 12 routes plus theme and log out, capture and the task editor open as centred dialogs, week grid renders and a tap opens the day, a 200px swipe moves to the next day, an event row opens its dialog, tracker chips and rows render, no horizontal overflow on any screen, zero console errors, zero failed API calls. Screenshots: docs/design-screens/m-*.png. Design spec section "Mobile" in docs/briefs/DESIGN.md rewritten.
+
 ## New logo everywhere, 2026-09-16 (deployed)
 
 Wouter delivered a new mark in Branding (pozzy-new.svg and pozzy-new2.png; navy, gold, teal and white on transparent; the old files are in Branding/Archive). Applied:

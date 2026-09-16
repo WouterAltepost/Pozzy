@@ -25,16 +25,16 @@ const date = now.toLocaleDateString('en-GB', { day: 'numeric', month: 'long' })
     <h1 class="display"><span class="weekday">{{ weekday }}</span> <span class="date">{{ date }}</span></h1>
     <UiLoadGate :ready="ready" label="Loading your day">
     <div class="widgets">
-      <ThreeDosWidget />
-      <TodayEventsWidget />
-      <TopEmailsWidget />
-      <TasksDueWidget />
-      <TrackerRowWidget class="span" />
-      <HoursWeekWidget />
-      <WeeklyGoalsWidget />
-      <DeadlinesWidget />
-      <BriefingWidget class="span" />
-      <AiSpendWidget />
+      <ThreeDosWidget class="w-dos" />
+      <TodayEventsWidget class="w-today" />
+      <TopEmailsWidget class="w-mail" />
+      <TasksDueWidget class="w-due" />
+      <TrackerRowWidget class="span w-trackers" />
+      <HoursWeekWidget class="w-hours" />
+      <WeeklyGoalsWidget class="w-goals" />
+      <DeadlinesWidget class="w-deadlines" />
+      <BriefingWidget class="span w-briefing" />
+      <AiSpendWidget class="w-spend" />
     </div>
     </UiLoadGate>
   </div>
@@ -49,4 +49,11 @@ const date = now.toLocaleDateString('en-GB', { day: 'numeric', month: 'long' })
   .widgets > .span { grid-column: 1 / -1; }
 }
 .widgets :deep(.card) { margin-bottom: 0; }
+/* Phone order (design: Pozzy Phone, Home): briefing third, after Today. */
+@media (max-width: 899px) {
+  .widgets > .w-dos { order: 1; } .widgets > .w-today { order: 2; } .widgets > .w-briefing { order: 3; } .widgets > .w-due { order: 4; }
+  .widgets > .w-trackers { order: 5; } .widgets > .w-hours { order: 6; } .widgets > .w-mail { order: 7; } .widgets > .w-goals { order: 8; }
+  .widgets > .w-deadlines { order: 9; } .widgets > .w-spend { order: 10; }
+  .display { margin-bottom: var(--sp-4); }
+}
 </style>

@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="_ds/pozzy-design-system-379c1d97-7b25-4487-b44d-5ddb4a1b43a6/tokens/fonts.css">
+  <link rel="stylesheet" href="_ds/pozzy-design-system-379c1d97-7b25-4487-b44d-5ddb4a1b43a6/tokens/colors.css">
+  <link rel="stylesheet" href="_ds/pozzy-design-system-379c1d97-7b25-4487-b44d-5ddb4a1b43a6/tokens/typography.css">
+  <link rel="stylesheet" href="_ds/pozzy-design-system-379c1d97-7b25-4487-b44d-5ddb4a1b43a6/tokens/spacing.css">
+  <link rel="stylesheet" href="_ds/pozzy-design-system-379c1d97-7b25-4487-b44d-5ddb4a1b43a6/tokens/elevation.css">
+  <link rel="stylesheet" href="_ds/pozzy-design-system-379c1d97-7b25-4487-b44d-5ddb4a1b43a6/tokens/motion.css">
+  <link rel="stylesheet" href="_ds/pozzy-design-system-379c1d97-7b25-4487-b44d-5ddb4a1b43a6/tokens/base.css">
+  <link rel="stylesheet" href="_ds/pozzy-design-system-379c1d97-7b25-4487-b44d-5ddb4a1b43a6/styles.css">
+  <script src="https://unpkg.com/@phosphor-icons/web@2.1.1"></script>
+  <script src="_ds/pozzy-design-system-379c1d97-7b25-4487-b44d-5ddb4a1b43a6/_ds_bundle.js"></script>
+  <style>.pz-capture input[type='text']{height:34px;padding:0 12px 0 34px;border-radius:999px;background:var(--surface-2);border:1px solid transparent}.pz-capture input[type='text']:hover{border-color:var(--line-2)}.pz-capture input[type='text']:focus-visible{background:var(--surface);border-color:var(--line-2)}@keyframes pz-rise{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}@keyframes pz-slide{from{transform:translateX(-8px);opacity:0}to{transform:none;opacity:1}}@keyframes pz-pop{from{transform:scale(0.97);opacity:0}to{transform:none;opacity:1}}</style>
+</helmet>
+<div style="position:absolute;inset:0;display:flex;flex-direction:column;background:var(--bg);color:var(--ink);font-family:var(--font);font-size:14px;line-height:1.5;overflow:hidden">
+  <header style="flex:none;display:flex;align-items:center;gap:10px;padding:54px 12px 8px 12px;background:color-mix(in srgb, var(--surface) 88%, transparent);backdrop-filter:blur(14px) saturate(160%);border-bottom:1px solid var(--line)">
+    <sc-if value="{{ isDrawer }}" hint-placeholder-val="{{ true }}">
+      <x-import component-from-global-scope="PozzyDesignSystem_379c1d.IconButton" icon="list" label="Menu" onClick="{{ openDrawer }}" hint-size="30px,30px"></x-import>
+    </sc-if>
+    <sc-if value="{{ isTabs }}" hint-placeholder-val="{{ false }}">
+      <img src="assets/logo-mark.svg" alt="Pozzy" width="26" height="26" style="width:26px;height:26px;flex:none">
+    </sc-if>
+    <div style="flex:1;min-width:0">
+      <x-import component-from-global-scope="PozzyDesignSystem_379c1d.CaptureBar" proposal="{{ proposal }}" onSubmit="{{ capture }}" onConfirm="{{ confirmCapture }}" onDiscard="{{ discardCapture }}" hint-size="100%,34px"></x-import>
+    </div>
+    <x-import component-from-global-scope="PozzyDesignSystem_379c1d.IconButton" icon="moon" label="Switch to dark mode" onClick="{{ toggleTheme }}" hint-size="30px,30px"></x-import>
+  </header>
+
+  <main style="flex:1;min-height:0;overflow-y:auto;padding:16px 16px 28px;display:flex;flex-direction:column;gap:16px">
+
+    <sc-if value="{{ isHome }}" hint-placeholder-val="{{ true }}">
+      <h1 style="font-size:28px;letter-spacing:-0.02em;line-height:1.15;font-weight:600;margin:4px 0 0">Tuesday <span style="color:var(--ink-3);font-weight:500">15 September</span></h1>
+
+      <section style="background:var(--surface);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow-1);padding:16px">
+        <div style="display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-bottom:8px"><h2 style="margin:0;font-size:16px;font-weight:600;letter-spacing:-0.01em">Today's three do's</h2><span style="font-size:12px;color:var(--ink-3)">{{ dosMeta }}</span></div>
+        <ul style="margin:0;padding:0;list-style:none">
+          <sc-for list="{{ dos }}" as="d" hint-placeholder-count="3">
+            <li style="display:flex;align-items:center;gap:12px;padding:10px 0;border-top:1px solid var(--line)"><input type="checkbox" checked="{{ d.done }}" onChange="{{ d.toggle }}" aria-label="{{ d.title }}" style="width:18px;height:18px;accent-color:var(--ink)"><span style="flex:1;min-width:0;text-decoration:{{ d.deco }};color:{{ d.color }};font-size:14px">{{ d.title }}</span><sc-if value="{{ d.rolled }}" hint-placeholder-val="{{ false }}"><x-import component-from-global-scope="PozzyDesignSystem_379c1d.Badge" tone="warn" hint-size="auto,20px">{{ d.rolledText }}</x-import></sc-if></li>
+          </sc-for>
+        </ul>
+      </section>
+
+      <section style="background:var(--surface);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow-1);padding:16px">
+        <div style="display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-bottom:8px"><h2 style="margin:0;font-size:16px;font-weight:600;letter-spacing:-0.01em">Today</h2><a href="#" onClick="{{ goAgenda }}" style="font-size:12px;color:var(--ink-3)">Agenda</a></div>
+        <ul style="margin:0;padding:0;list-style:none">
+          <sc-for list="{{ todayEvents }}" as="e" hint-placeholder-count="4">
+            <li style="display:flex;align-items:center;gap:12px;padding:10px 0;border-top:1px solid var(--line);font-size:14px"><span style="color:var(--ink-3);font-size:12px;min-width:88px;flex:none;font-variant-numeric:tabular-nums">{{ e.time }}</span><span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ e.title }}</span></li>
+          </sc-for>
+        </ul>
+      </section>
+
+      <sc-if value="{{ showBriefing }}" hint-placeholder-val="{{ true }}">
+        <section style="background:var(--surface);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow-1);padding:16px">
+          <div style="display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-bottom:8px"><h2 style="margin:0;font-size:16px;font-weight:600;letter-spacing:-0.01em">Briefing</h2><span style="font-size:12px;color:var(--ink-3)">Claude, 07:00</span></div>
+          <div style="font-size:14px;line-height:1.6;color:var(--ink);text-wrap:pretty">
+            <p style="margin:0 0 10px">Tuesday is structured end to end: two NGS project sessions through 15:30, two hours on I&amp;T until 18:45, then training at 20:00. You have two tasks due and one deadline on Friday, so this is mostly about showing up and executing what is scheduled.</p>
+            <p style="margin:0 0 10px">Three things need attention before you start. Your Pozzy production builds are failing on Railway, three alerts in a row means something broke. Your Anthropic payment bounced, so update the card or the service stops. Ace &amp; Tate flagged a data breach at their logistics partner; review what is exposed.</p>
+            <p style="margin:0">Work hours are at zero against a sixteen-hour target for the week. Today will close that gap if you log the sessions properly.</p>
+          </div>
+        </section>
+      </sc-if>
+
+      <section style="background:var(--surface);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow-1);padding:16px">
+        <div style="display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-bottom:8px"><h2 style="margin:0;font-size:16px;font-weight:600;letter-spacing:-0.01em">Due today or overdue</h2><a href="#" onClick="{{ goTasks }}" style="font-size:12px;color:var(--ink-3)">All tasks</a></div>
+        <sc-if value="{{ hasDue }}" hint-placeholder-val="{{ true }}">
+          <ul style="margin:0;padding:0;list-style:none">
+            <sc-for list="{{ dueTasks }}" as="t" hint-placeholder-count="2">
+              <li style="display:flex;align-items:center;gap:12px;padding:10px 0;border-top:1px solid var(--line);font-size:14px"><input type="checkbox" onChange="{{ t.complete }}" aria-label="{{ t.title }}" style="width:18px;height:18px;accent-color:var(--ink)"><span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ t.title }}</span><span style="width:8px;height:8px;border-radius:50%;flex:none;background:{{ t.areaColor }}" title="{{ t.areaName }}"></span><x-import component-from-global-scope="PozzyDesignSystem_379c1d.Badge" tone="{{ t.dueTone }}" hint-size="auto,20px">{{ t.dueLabel }}</x-import></li>
+            </sc-for>
+          </ul>
+        </sc-if>
+        <sc-if value="{{ noDue }}" hint-placeholder-val="{{ false }}">
+          <x-import component-from-global-scope="PozzyDesignSystem_379c1d.Empty" compact="{{ true }}" icon="check-square" title="Nothing due" hint="No tasks due today and nothing overdue." hint-size="100%,40px"></x-import>
+        </sc-if>
+      </section>
+
+      <section style="background:var(--surface);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow-1);padding:16px">
+        <div style="display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-bottom:10px"><h2 style="margin:0;font-size:16px;font-weight:600;letter-spacing:-0.01em">Trackers today</h2><a href="#" onClick="{{ goTrackers }}" style="font-size:12px;color:var(--ink-3)">Tracking</a></div>
+        <div style="display:flex;flex-wrap:wrap;gap:8px">
+          <sc-for list="{{ trackers }}" as="t" hint-placeholder-count="4">
+            <x-import component-from-global-scope="PozzyDesignSystem_379c1d.TrackerChip" name="{{ t.name }}" area-color="{{ t.color }}" met="{{ t.met }}" some="{{ t.some }}" count="{{ t.count }}" target="{{ t.target }}" onClick="{{ t.tap }}" hint-size="96px,32px"></x-import>
+          </sc-for>
+        </div>
+      </section>
+
+      <section style="background:var(--surface);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow-1);padding:16px">
+        <div style="display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-bottom:8px"><h2 style="margin:0;font-size:16px;font-weight:600;letter-spacing:-0.01em">Hours this week</h2><a href="#" onClick="{{ goHours }}" style="font-size:12px;color:var(--ink-3);font-variant-numeric:tabular-nums">{{ hoursTotal }}</a></div>
+        <sc-for list="{{ hours }}" as="h" hint-placeholder-count="4">
+          <div style="display:grid;grid-template-columns:84px minmax(0,1fr) auto;gap:12px;align-items:center;font-size:13px;padding:6px 0"><span style="display:flex;align-items:center;gap:8px;color:var(--ink-2)"><span style="width:8px;height:8px;border-radius:50%;background:{{ h.color }}"></span>{{ h.name }}</span><x-import component-from-global-scope="PozzyDesignSystem_379c1d.ProgressBar" value="{{ h.min }}" max="{{ h.max }}" tone="auto" hint-size="100%,6px"></x-import><span style="white-space:nowrap;font-variant-numeric:tabular-nums;font-size:12px">{{ h.label }}<span style="color:var(--ink-3)">{{ h.targetLabel }}</span></span></div>
+        </sc-for>
+      </section>
+    </sc-if>
+
+    <sc-if value="{{ isAgenda }}" hint-placeholder-val="{{ false }}">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+        <div><h1 style="font-size:22px;font-weight:600;letter-spacing:-0.01em;margin:0">Agenda</h1><span style="font-size:12px;color:var(--ink-3)">Week of Mon 14 Sept</span></div>
+        <x-import component-from-global-scope="PozzyDesignSystem_379c1d.Segmented" value="{{ view }}" options="{{ viewOptions }}" onChange="{{ setView }}" hint-size="auto,34px"></x-import>
+      </div>
+      <div style="display:flex;align-items:center;gap:12px;font-size:12px;color:var(--ink-3)"><x-import component-from-global-scope="PozzyDesignSystem_379c1d.Badge" tone="ok" dot="{{ true }}" hint-size="auto,20px">synced 08:31</x-import><span>iCloud</span><span style="flex:1"></span><span style="font-variant-numeric:tabular-nums">{{ agendaCount }}</span></div>
+
+      <sc-if value="{{ isWeek }}" hint-placeholder-val="{{ false }}">
+        <div style="display:grid;grid-template-columns:30px repeat(7,minmax(0,1fr));background:var(--surface);border:1px solid var(--line);border-radius:12px;overflow:hidden;font-size:11px">
+          <div style="border-bottom:1px solid var(--line)"></div>
+          <sc-for list="{{ dayStrip }}" as="d" hint-placeholder-count="7">
+            <button type="button" onClick="{{ d.select }}" style="border:0;border-left:1px solid var(--line);border-bottom:1px solid var(--line);padding:6px 0;background:{{ d.headBg }};color:{{ d.headColor }};font-family:inherit;display:flex;flex-direction:column;align-items:center;gap:0;cursor:pointer;font-variant-numeric:tabular-nums;line-height:1.3"><span style="font-size:10px;letter-spacing:0.02em;font-weight:500">{{ d.wd }}</span><span style="font-size:13px;font-weight:600">{{ d.num }}</span></button>
+          </sc-for>
+          <div style="position:relative;height:{{ gridH }}">
+            <sc-for list="{{ hourLabels }}" as="h" hint-placeholder-count="16">
+              <span style="position:absolute;right:4px;top:{{ h.top }};font-size:10px;color:var(--ink-3);font-variant-numeric:tabular-nums;transform:translateY(-50%)">{{ h.label }}</span>
+            </sc-for>
+          </div>
+          <sc-for list="{{ weekCols }}" as="c" hint-placeholder-count="7">
+            <div onClick="{{ c.open }}" style="position:relative;height:{{ gridH }};border-left:1px solid var(--line);background:{{ c.bg }};cursor:pointer">
+              <sc-for list="{{ hourLines }}" as="l" hint-placeholder-count="16">
+                <span style="position:absolute;left:0;right:0;top:{{ l.top }};border-top:1px solid var(--line);opacity:0.7;pointer-events:none"></span>
+              </sc-for>
+              <sc-if value="{{ c.isToday }}" hint-placeholder-val="{{ false }}">
+                <span style="position:absolute;left:0;right:0;top:{{ nowTop }};border-top:2px solid var(--brand);z-index:3;pointer-events:none"><span style="position:absolute;left:-1px;top:-4px;width:6px;height:6px;border-radius:50%;background:var(--brand)"></span></span>
+              </sc-if>
+              <sc-for list="{{ c.events }}" as="e" hint-placeholder-count="2">
+                <span style="position:absolute;left:2px;right:2px;top:{{ e.top }};height:{{ e.h }};border-radius:4px;overflow:hidden;background:{{ e.bg }};border:1px {{ e.bs }} {{ e.bc }};border-left:3px solid {{ e.bar }};padding:2px 3px;z-index:2;display:flex;flex-direction:column;gap:0;line-height:1.2"><span style="font-size:9px;color:{{ e.bar }};font-weight:500;font-variant-numeric:tabular-nums">{{ e.startText }}</span><span style="font-size:10px;font-weight:500;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ e.title }}</span></span>
+              </sc-for>
+            </div>
+          </sc-for>
+        </div>
+        <p style="margin:0;font-size:12px;color:var(--ink-3);text-align:center">Tap a day to open it</p>
+      </sc-if>
+
+      <sc-if value="{{ isDay }}" hint-placeholder-val="{{ false }}">
+        <div style="display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px">
+          <sc-for list="{{ dayStrip }}" as="d" hint-placeholder-count="7">
+            <button type="button" onClick="{{ d.select }}" aria-pressed="{{ d.active }}" style="height:52px;border:0;border-radius:8px;background:{{ d.bg }};color:{{ d.color }};font-family:inherit;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;cursor:pointer;font-variant-numeric:tabular-nums;box-shadow:{{ d.ring }}"><span style="font-size:11px;letter-spacing:0.02em;font-weight:500">{{ d.wd }}</span><span style="font-size:16px;font-weight:600">{{ d.num }}</span></button>
+          </sc-for>
+        </div>
+        <section onPointerDown="{{ swipeStart }}" onPointerUp="{{ swipeEnd }}" style="background:var(--surface);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow-1);padding:4px 16px;touch-action:pan-y;user-select:none">
+          <sc-if value="{{ dayEmpty }}" hint-placeholder-val="{{ false }}">
+            <div style="padding:12px 0"><x-import component-from-global-scope="PozzyDesignSystem_379c1d.Empty" compact="{{ true }}" icon="calendar-blank" title="No events" hint="Nothing on the calendar mirror for this day." hint-size="100%,40px"></x-import></div>
+          </sc-if>
+          <ul style="margin:0;padding:0;list-style:none">
+            <sc-for list="{{ dayEvents }}" as="e" hint-placeholder-count="4">
+              <li style="border-top:{{ e.top }}">
+                <sc-if value="{{ e.nowBefore }}" hint-placeholder-val="{{ false }}">
+                  <div style="display:flex;align-items:center;gap:8px;height:0;position:relative;z-index:1"><span style="width:8px;height:8px;border-radius:50%;background:var(--brand);flex:none;margin-left:-4px"></span><span style="flex:1;border-top:2px solid var(--brand)"></span><span style="font-size:11px;color:var(--brand);font-weight:500;font-variant-numeric:tabular-nums">10:45</span></div>
+                </sc-if>
+                <div style="display:flex;gap:12px;padding:12px 0;align-items:flex-start">
+                  <span style="color:var(--ink-3);font-size:12px;width:40px;flex:none;font-variant-numeric:tabular-nums;line-height:1.5;display:flex;flex-direction:column"><span style="color:var(--ink)">{{ e.startText }}</span><span>{{ e.endText }}</span></span>
+                  <span style="width:3px;border-radius:2px;background:{{ e.bar }};align-self:stretch;flex:none"></span>
+                  <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><span style="font-size:14px;font-weight:500;line-height:1.35">{{ e.title }}</span><span style="display:flex;gap:8px;align-items:center;font-size:12px;color:var(--ink-3)">{{ e.location }}<sc-if value="{{ e.isTask }}" hint-placeholder-val="{{ false }}"><x-import component-from-global-scope="PozzyDesignSystem_379c1d.Badge" tone="ok" hint-size="auto,20px">task</x-import></sc-if><sc-if value="{{ e.isLinked }}" hint-placeholder-val="{{ false }}"><x-import component-from-global-scope="PozzyDesignSystem_379c1d.Badge" tone="ok" hint-size="auto,20px">linked</x-import></sc-if></span></span>
+                </div>
+              </li>
+            </sc-for>
+          </ul>
+        </section>
+        <p style="margin:0;font-size:12px;color:var(--ink-3);text-align:center">Swipe the list to change day</p>
+      </sc-if>
+    </sc-if>
+
+    <sc-if value="{{ isTasks }}" hint-placeholder-val="{{ false }}">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+        <div><h1 style="font-size:22px;font-weight:600;letter-spacing:-0.01em;margin:0">Tasks</h1><span style="font-size:12px;color:var(--ink-3);font-variant-numeric:tabular-nums">{{ openCount }}</span></div>
+        <x-import component-from-global-scope="PozzyDesignSystem_379c1d.Button" variant="primary" size="sm" onClick="{{ newTask }}" hint-size="auto,32px">New task</x-import>
+      </div>
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:12px">
+        <x-import component-from-global-scope="PozzyDesignSystem_379c1d.Segmented" value="{{ filter }}" options="{{ filterOptions }}" onChange="{{ setFilter }}" hint-size="auto,34px"></x-import>
+        <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--ink-2);cursor:pointer;white-space:nowrap"><input type="checkbox" checked="{{ showDone }}" onChange="{{ toggleDone }}">Show done</label>
+      </div>
+      <sc-if value="{{ noTasks }}" hint-placeholder-val="{{ false }}">
+        <section style="background:var(--surface);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow-1);padding:24px 16px"><x-import component-from-global-scope="PozzyDesignSystem_379c1d.Empty" icon="check-square" title="Nothing here" hint="No tasks match this filter." hint-size="100%,80px"></x-import></section>
+      </sc-if>
+      <sc-for list="{{ groups }}" as="g" hint-placeholder-count="3">
+        <section style="background:var(--surface);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow-1);padding:12px 16px 4px">
+          <div style="display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-bottom:2px"><h2 style="margin:0;font-size:13px;font-weight:600;letter-spacing:0.01em;color:{{ g.color }}">{{ g.label }}</h2><span style="font-size:12px;color:var(--ink-3);font-variant-numeric:tabular-nums">{{ g.count }}</span></div>
+          <ul style="margin:0;padding:0;list-style:none">
+            <sc-for list="{{ g.tasks }}" as="t" hint-placeholder-count="2">
+              <li style="display:flex;align-items:flex-start;gap:12px;padding:10px 0;border-top:1px solid var(--line)">
+                <input type="checkbox" checked="{{ t.done }}" onChange="{{ t.complete }}" aria-label="{{ t.title }}" style="width:18px;height:18px;accent-color:var(--ink);margin-top:2px">
+                <button type="button" onClick="{{ t.edit }}" style="flex:1;min-width:0;border:0;background:none;padding:0;text-align:left;font-family:inherit;color:inherit;cursor:pointer;display:flex;flex-direction:column;gap:5px">
+                  <span style="font-size:14px;line-height:1.4;text-decoration:{{ t.deco }};color:{{ t.color }}">{{ t.title }}</span>
+                  <span style="display:flex;flex-wrap:wrap;align-items:center;gap:6px">
+                    <sc-if value="{{ t.urgent }}" hint-placeholder-val="{{ false }}"><x-import component-from-global-scope="PozzyDesignSystem_379c1d.Badge" tone="danger" hint-size="auto,20px">urgent</x-import></sc-if>
+                    <sc-if value="{{ t.important }}" hint-placeholder-val="{{ false }}"><x-import component-from-global-scope="PozzyDesignSystem_379c1d.Badge" tone="info" hint-size="auto,20px">important</x-import></sc-if>
+                    <span style="display:inline-flex;align-items:center;gap:5px;font-size:12px;color:var(--ink-3)"><span style="width:8px;height:8px;border-radius:50%;background:{{ t.areaColor }}"></span>{{ t.areaName }}</span>
+                    <sc-if value="{{ t.minutesText }}" hint-placeholder-val="{{ false }}"><span style="font-size:12px;color:var(--ink-3);font-variant-numeric:tabular-nums">{{ t.minutesText }}</span></sc-if>
+                    <sc-if value="{{ t.scheduled }}" hint-placeholder-val="{{ false }}"><x-import component-from-global-scope="PozzyDesignSystem_379c1d.Badge" tone="ok" hint-size="auto,20px">scheduled</x-import></sc-if>
+                    <sc-if value="{{ t.inbox }}" hint-placeholder-val="{{ false }}"><x-import component-from-global-scope="PozzyDesignSystem_379c1d.Badge" tone="neutral" hint-size="auto,20px">inbox</x-import></sc-if>
+                  </span>
+                </button>
+                <sc-if value="{{ t.dueLabel }}" hint-placeholder-val="{{ false }}"><span style="font-size:12px;color:{{ t.dueColor }};font-variant-numeric:tabular-nums;white-space:nowrap;margin-top:2px">{{ t.dueLabel }}</span></sc-if>
+              </li>
+            </sc-for>
+          </ul>
+        </section>
+      </sc-for>
+    </sc-if>
+
+    <sc-if value="{{ isTrackers }}" hint-placeholder-val="{{ false }}">
+      <div><h1 style="font-size:22px;font-weight:600;letter-spacing:-0.01em;margin:0">Tracking</h1><span style="font-size:12px;color:var(--ink-3)">{{ trackersMeta }}</span></div>
+      <section style="background:var(--surface);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow-1);padding:16px">
+        <h2 style="margin:0 0 10px;font-size:16px;font-weight:600;letter-spacing:-0.01em">Today</h2>
+        <div style="display:flex;flex-wrap:wrap;gap:8px">
+          <sc-for list="{{ trackers }}" as="t" hint-placeholder-count="4">
+            <x-import component-from-global-scope="PozzyDesignSystem_379c1d.TrackerChip" name="{{ t.name }}" area-color="{{ t.color }}" met="{{ t.met }}" some="{{ t.some }}" count="{{ t.count }}" target="{{ t.target }}" onClick="{{ t.tap }}" hint-size="96px,32px"></x-import>
+          </sc-for>
+        </div>
+      </section>
+      <section style="background:var(--surface);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow-1);padding:16px">
+        <div style="display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-bottom:8px"><h2 style="margin:0;font-size:16px;font-weight:600;letter-spacing:-0.01em">This week</h2><span style="font-size:12px;color:var(--ink-3)">Mon 14 to Sun 20</span></div>
+        <sc-for list="{{ trackers }}" as="t" hint-placeholder-count="4">
+          <div style="display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;align-items:center;padding:10px 0;border-top:1px solid var(--line)">
+            <span style="display:flex;align-items:center;gap:8px;font-size:14px"><span style="width:8px;height:8px;border-radius:50%;background:{{ t.color }}"></span>{{ t.name }}</span>
+            <span style="display:flex;gap:4px">
+              <sc-for list="{{ t.week }}" as="d" hint-placeholder-count="7">
+                <span style="width:22px;height:22px;border-radius:6px;background:{{ d.bg }};color:{{ d.color }};font-size:11px;display:flex;align-items:center;justify-content:center;font-weight:500">{{ d.l }}</span>
+              </sc-for>
+            </span>
+          </div>
+        </sc-for>
+      </section>
+    </sc-if>
+
+    <sc-if value="{{ isHours }}" hint-placeholder-val="{{ false }}">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+        <div><h1 style="font-size:22px;font-weight:600;letter-spacing:-0.01em;margin:0">Hours</h1><span style="font-size:12px;color:var(--ink-3);font-variant-numeric:tabular-nums">{{ hoursTotal }} this week</span></div>
+        <x-import component-from-global-scope="PozzyDesignSystem_379c1d.Button" variant="primary" size="sm" onClick="{{ logTime }}" hint-size="auto,32px">Log time</x-import>
+      </div>
+      <section style="background:var(--surface);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow-1);padding:16px">
+        <div style="display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-bottom:8px"><h2 style="margin:0;font-size:16px;font-weight:600;letter-spacing:-0.01em">By life area</h2><span style="font-size:12px;color:var(--ink-3)">Week of Mon 14 Sept</span></div>
+        <sc-for list="{{ hours }}" as="h" hint-placeholder-count="4">
+          <div style="display:grid;grid-template-columns:84px minmax(0,1fr) auto;gap:12px;align-items:center;font-size:13px;padding:6px 0"><span style="display:flex;align-items:center;gap:8px;color:var(--ink-2)"><span style="width:8px;height:8px;border-radius:50%;background:{{ h.color }}"></span>{{ h.name }}</span><x-import component-from-global-scope="PozzyDesignSystem_379c1d.ProgressBar" value="{{ h.min }}" max="{{ h.max }}" tone="auto" hint-size="100%,6px"></x-import><span style="white-space:nowrap;font-variant-numeric:tabular-nums;font-size:12px">{{ h.label }}<span style="color:var(--ink-3)">{{ h.targetLabel }}</span></span></div>
+        </sc-for>
+      </section>
+      <section style="background:var(--surface);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow-1);padding:16px">
+        <div style="display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-bottom:8px"><h2 style="margin:0;font-size:16px;font-weight:600;letter-spacing:-0.01em">Entries</h2><span style="font-size:12px;color:var(--ink-3)">Tue 15 Sept</span></div>
+        <ul style="margin:0;padding:0;list-style:none">
+          <sc-for list="{{ entries }}" as="e" hint-placeholder-count="3">
+            <li style="display:flex;align-items:center;gap:12px;padding:10px 0;border-top:1px solid var(--line);font-size:14px"><span style="color:var(--ink-3);font-size:12px;min-width:88px;flex:none;font-variant-numeric:tabular-nums">{{ e.time }}</span><span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ e.title }}</span><span style="width:8px;height:8px;border-radius:50%;flex:none;background:{{ e.color }}"></span><span style="font-size:12px;font-variant-numeric:tabular-nums;color:{{ e.durColor }};font-weight:{{ e.durWeight }}">{{ e.dur }}</span></li>
+          </sc-for>
+        </ul>
+      </section>
+    </sc-if>
+
+    <sc-if value="{{ isOther }}" hint-placeholder-val="{{ false }}">
+      <div><h1 style="font-size:22px;font-weight:600;letter-spacing:-0.01em;margin:0">{{ routeLabel }}</h1></div>
+      <section style="background:var(--surface);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow-1);padding:24px 16px">
+        <x-import component-from-global-scope="PozzyDesignSystem_379c1d.Empty" icon="{{ routeIcon }}" title="Not designed yet" hint="This route is outside the current mobile pass." hint-size="100%,80px"></x-import>
+      </section>
+    </sc-if>
+  </main>
+
+  <sc-if value="{{ isTabs }}" hint-placeholder-val="{{ false }}">
+    <nav aria-label="Main" style="flex:none;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));padding:6px 8px 30px;background:color-mix(in srgb, var(--surface) 88%, transparent);backdrop-filter:blur(14px) saturate(160%);border-top:1px solid var(--line)">
+      <sc-for list="{{ tabs }}" as="t" hint-placeholder-count="5">
+        <button type="button" onClick="{{ t.go }}" aria-current="{{ t.current }}" style="height:48px;border:0;background:none;font-family:inherit;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;color:{{ t.color }};cursor:pointer;border-radius:8px"><x-import component-from-global-scope="PozzyDesignSystem_379c1d.Icon" name="{{ t.icon }}" size="{{ 20 }}" weight="{{ t.weight }}" hint-size="20px,20px"></x-import><span style="font-size:11px;letter-spacing:0.02em;font-weight:500">{{ t.label }}</span></button>
+      </sc-for>
+    </nav>
+  </sc-if>
+
+  <x-import component-from-global-scope="PozzyDesignSystem_379c1d.Sheet" open="{{ moreOpen }}" inline="{{ true }}" title="More" onClose="{{ closeMore }}" hint-size="0,0">
+    <div style="display:flex;flex-direction:column;gap:2px">
+      <sc-for list="{{ moreItems }}" as="it" hint-placeholder-count="8">
+        <x-import component-from-global-scope="PozzyDesignSystem_379c1d.NavItem" item="{{ it.item }}" active="{{ it.active }}" onClick="{{ it.go }}" height="{{ 44 }}" hint-size="100%,44px"></x-import>
+      </sc-for>
+    </div>
+  </x-import>
+
+  <sc-if value="{{ drawerOpen }}" hint-placeholder-val="{{ false }}">
+    <div role="dialog" aria-modal="true" aria-label="Menu" style="position:absolute;inset:0;z-index:40;display:flex">
+      <div onClick="{{ closeDrawer }}" style="position:absolute;inset:0;background:var(--scrim)"></div>
+      <nav aria-label="Main" style="position:relative;width:272px;height:100%;background:var(--surface);border-right:1px solid var(--line);box-shadow:var(--shadow-3);padding:64px 12px 24px;display:flex;flex-direction:column;gap:2px;animation:pz-slide 240ms var(--ease-out, ease-out)">
+        <div style="display:flex;align-items:center;gap:10px;padding:0 12px 14px"><img src="assets/logo-mark.svg" alt="" width="26" height="26" style="width:26px;height:26px"><span style="font-weight:600;letter-spacing:-0.01em;font-size:16px">Pozzy</span></div>
+        <sc-for list="{{ allItems }}" as="it" hint-placeholder-count="12">
+          <x-import component-from-global-scope="PozzyDesignSystem_379c1d.NavItem" item="{{ it.item }}" active="{{ it.active }}" onClick="{{ it.go }}" height="{{ 42 }}" hint-size="100%,42px"></x-import>
+        </sc-for>
+        <span style="flex:1"></span>
+        <span style="font-size:12px;color:var(--ink-3);padding:0 12px">wout.altepost@gmail.com</span>
+      </nav>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ editorOpen }}" hint-placeholder-val="{{ false }}">
+    <div role="dialog" aria-modal="true" aria-label="{{ editorTitle }}" style="position:absolute;inset:0;z-index:45;display:flex;align-items:center;justify-content:center;padding:16px">
+      <div onClick="{{ closeEditor }}" style="position:absolute;inset:0;background:var(--scrim)"></div>
+      <div style="position:relative;width:100%;max-height:88%;overflow-y:auto;background:var(--surface);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow-3);padding:16px;display:flex;flex-direction:column;gap:12px;animation:pz-pop 200ms var(--ease-out, ease-out)">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:12px"><h2 style="margin:0;font-size:16px;font-weight:600;letter-spacing:-0.01em">{{ editorTitle }}</h2><x-import component-from-global-scope="PozzyDesignSystem_379c1d.IconButton" icon="x" label="Close" onClick="{{ closeEditor }}" hint-size="30px,30px"></x-import></div>
+        <x-import component-from-global-scope="PozzyDesignSystem_379c1d.Field" label="Title" hint-size="100%,56px"><input type="text" value="{{ ed.title }}" onChange="{{ edTitle }}" placeholder="What needs doing" style="width:100%"></x-import>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          <x-import component-from-global-scope="PozzyDesignSystem_379c1d.Field" label="Due" hint-size="100%,56px"><input type="date" value="{{ ed.dueIso }}" onChange="{{ edDue }}" style="width:100%"></x-import>
+          <x-import component-from-global-scope="PozzyDesignSystem_379c1d.Field" label="Area" hint-size="100%,56px"><select value="{{ ed.area }}" onChange="{{ edArea }}" style="width:100%"><option value="study">Study</option><option value="work">Work</option><option value="personal">Personal</option><option value="health">Health</option></select></x-import>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          <label style="display:flex;align-items:center;gap:8px;height:34px;padding:0 12px;border:1px solid var(--line-2);border-radius:8px;font-size:13px;cursor:pointer"><input type="checkbox" checked="{{ ed.urgent }}" onChange="{{ edUrgent }}">Urgent</label>
+          <label style="display:flex;align-items:center;gap:8px;height:34px;padding:0 12px;border:1px solid var(--line-2);border-radius:8px;font-size:13px;cursor:pointer"><input type="checkbox" checked="{{ ed.important }}" onChange="{{ edImportant }}">Important</label>
+        </div>
+        <x-import component-from-global-scope="PozzyDesignSystem_379c1d.Field" label="Minutes" hint-size="100%,56px"><input type="number" value="{{ ed.minutes }}" onChange="{{ edMinutes }}" min="{{ 5 }}" step="{{ 5 }}" style="width:100%"></x-import>
+        <div style="background:var(--surface-2);border-radius:8px;padding:12px">
+          <div style="display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-bottom:4px"><h3 style="margin:0;font-size:13px;font-weight:600">Slot suggestions</h3><span style="font-size:11px;color:var(--ink-3);letter-spacing:0.02em">ranked by Claude</span></div>
+          <ul style="margin:0;padding:0;list-style:none">
+            <sc-for list="{{ slots }}" as="s" hint-placeholder-count="3">
+              <li style="display:flex;align-items:center;gap:10px;padding:8px 0;border-top:1px solid var(--line)"><span style="flex:1;min-width:0;display:flex;flex-direction:column"><span style="font-size:13px;font-weight:500;font-variant-numeric:tabular-nums">{{ s.when }}</span><span style="font-size:12px;color:var(--ink-3)">{{ s.why }}</span></span><x-import component-from-global-scope="PozzyDesignSystem_379c1d.Button" variant="secondary" size="sm" onClick="{{ s.pick }}" hint-size="auto,32px">Schedule</x-import></li>
+            </sc-for>
+          </ul>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center;margin-top:4px">
+          <x-import component-from-global-scope="PozzyDesignSystem_379c1d.Button" variant="primary" onClick="{{ saveEditor }}" hint-size="auto,34px">Save</x-import>
+          <x-import component-from-global-scope="PozzyDesignSystem_379c1d.Button" variant="ghost" onClick="{{ closeEditor }}" hint-size="auto,34px">Cancel</x-import>
+          <span style="flex:1"></span>
+          <sc-if value="{{ ed.existing }}" hint-placeholder-val="{{ false }}"><x-import component-from-global-scope="PozzyDesignSystem_379c1d.Button" variant="danger" onClick="{{ deleteTask }}" hint-size="auto,34px">Delete</x-import></sc-if>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ hasToast }}" hint-placeholder-val="{{ false }}">
+    <div role="status" style="position:absolute;left:16px;right:16px;bottom:{{ toastBottom }};z-index:50;background:var(--ink);color:var(--on-ink);border-radius:8px;padding:10px 14px;font-size:13px;box-shadow:var(--shadow-3);animation:pz-rise 200ms ease-out">{{ toast }}</div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:390,&quot;height&quot;:844},&quot;nav&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;default&quot;:&quot;drawer&quot;,&quot;options&quot;:[&quot;tabs&quot;,&quot;drawer&quot;],&quot;tsType&quot;:&quot;'tabs' | 'drawer'&quot;,&quot;section&quot;:&quot;Shell&quot;},&quot;startRoute&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;default&quot;:&quot;home&quot;,&quot;options&quot;:[&quot;home&quot;,&quot;agenda&quot;,&quot;tasks&quot;,&quot;trackers&quot;,&quot;hours&quot;],&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Shell&quot;},&quot;startView&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;default&quot;:&quot;day&quot;,&quot;options&quot;:[&quot;week&quot;,&quot;day&quot;],&quot;tsType&quot;:&quot;'week' | 'day'&quot;,&quot;section&quot;:&quot;Agenda&quot;},&quot;showBriefing&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Home&quot;}}">
+const AREAS = { study: { name: 'Study', color: '#2563eb' }, work: { name: 'Work', color: '#dc2626' }, personal: { name: 'Personal', color: '#059669' }, health: { name: 'Health', color: '#d97706' } };
+const NAV = [
+  { name: 'home', label: 'Home', icon: 'house' }, { name: 'agenda', label: 'Agenda', icon: 'calendar-blank' }, { name: 'tasks', label: 'Tasks', icon: 'check-square' }, { name: 'goals', label: 'Goals', icon: 'target' },
+  { name: 'mail', label: 'Mail', icon: 'envelope-simple' }, { name: 'trackers', label: 'Tracking', icon: 'chart-line-up' }, { name: 'hours', label: 'Hours', icon: 'timer' }, { name: 'capture', label: 'Capture', icon: 'lightning' },
+  { name: 'study', label: 'Study', icon: 'graduation-cap' }, { name: 'notes', label: 'Notes', icon: 'note' }, { name: 'review', label: 'Review', icon: 'clipboard-text' }, { name: 'settings', label: 'Settings', icon: 'gear-six' },
+];
+const TAB_ROUTES = ['home', 'agenda', 'tasks', 'trackers'];
+const EVENTS = [
+  { id: 'e1', day: 1, start: 9.5, end: 12, title: 'Sprint 1 NGS Projectbegeleiding', location: 'AM00.02.270', kind: 'event' },
+  { id: 'e2', day: 1, start: 12.5, end: 15.5, title: 'Sprint 2 NGS Projectbegeleiding & Ondernemerschap', location: 'AM00.02.270', kind: 'event' },
+  { id: 'e3', day: 1, start: 16.75, end: 18.75, title: '2u aan I&T zitten', kind: 'task' },
+  { id: 'e4', day: 1, start: 20, end: 22, title: 'Training', location: 'AVV FIT', kind: 'recurring' },
+  { id: 'e5', day: 0, start: 10, end: 11, title: 'Weekly review', kind: 'recurring' },
+  { id: 'e6', day: 2, start: 9, end: 12.5, title: 'Hoorcollege Ondernemerschap', location: 'C0.110', kind: 'event' },
+  { id: 'e7', day: 2, start: 14, end: 16, title: 'alpaca AI: klantcall Vermeer', kind: 'event' },
+  { id: 'e8', day: 3, start: 9.5, end: 12, title: 'Sprint 3 NGS Projectbegeleiding', location: 'AM00.02.270', kind: 'event' },
+  { id: 'e9', day: 3, start: 13, end: 15, title: 'UDefine landing page fixes', kind: 'linked' },
+  { id: 'e10', day: 3, start: 20, end: 22, title: 'Training', location: 'AVV FIT', kind: 'recurring' },
+  { id: 'e11', day: 4, start: 11, end: 12, title: 'Tandarts', kind: 'event' },
+  { id: 'e12', day: 4, start: 15, end: 17, title: 'Stage sollicitatie voorbereiden', kind: 'task' },
+  { id: 'e13', day: 5, start: 10, end: 13, title: 'Wielrennen', kind: 'recurring' },
+];
+const KIND = { event: ['var(--info-soft)', 'var(--info)', 'solid'], recurring: ['var(--surface-2)', 'var(--ink-3)', 'solid'], linked: ['var(--ok-soft)', 'var(--ok)', 'solid'], task: ['transparent', 'var(--ok)', 'dashed'] };
+const DAYS = [['Mon', 14], ['Tue', 15], ['Wed', 16], ['Thu', 17], ['Fri', 18], ['Sat', 19], ['Sun', 20]];
+const H0 = 7, H1 = 23, HOUR_PX = 30, NOW = 10.75;
+const BASE = new Date(2026, 8, 15);
+const WD = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'], MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'June', 'July', 'Aug', 'Sept', 'Oct', 'Nov', 'Dec'];
+const dateAt = (o) => new Date(BASE.getFullYear(), BASE.getMonth(), BASE.getDate() + o);
+const fmtDate = (o) => { const d = dateAt(o); return WD[d.getDay()] + ' ' + d.getDate() + ' ' + MON[d.getMonth()]; };
+const isoAt = (o) => { const d = dateAt(o); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
+const offsetOf = (iso) => { if (!iso) return null; const [y, m, d] = iso.split('-').map(Number); return Math.round((new Date(y, m - 1, d) - BASE) / 86400000); };
+const hm = (h) => String(Math.floor(h)).padStart(2, '0') + ':' + String(Math.round((h % 1) * 60)).padStart(2, '0');
+const fmtMin = (m) => !m ? '0m' : m >= 60 ? Math.floor(m / 60) + 'h' + (m % 60 ? ' ' + (m % 60) + 'm' : '') : m + 'm';
+const GROUPS = [
+  { key: 'overdue', label: 'Overdue', color: 'var(--danger)', test: (o) => o !== null && o < 0 },
+  { key: 'today', label: 'Today', color: 'var(--ink)', test: (o) => o === 0 },
+  { key: 'tomorrow', label: 'Tomorrow', color: 'var(--ink)', test: (o) => o === 1 },
+  { key: 'week', label: 'Next seven days', color: 'var(--ink-2)', test: (o) => o !== null && o > 1 && o <= 7 },
+  { key: 'later', label: 'Later', color: 'var(--ink-2)', test: (o) => o !== null && o > 7 },
+  { key: 'none', label: 'No date', color: 'var(--ink-3)', test: (o) => o === null },
+];
+const rank = (t) => (t.urgent && t.important ? 0 : t.important ? 1 : t.urgent ? 2 : 3);
+const EMPTY_ED = { title: '', due: null, area: 'work', urgent: false, important: false, minutes: 30 };
+
+class Component extends DCLogic {
+  state = {
+    route: null, moreOpen: false, drawerOpen: false, toast: null, proposal: null, pending: null, day: 1, view: null, filter: 'all', showDone: false, editor: null,
+    dos: [{ id: 1, title: 'Fix the Railway build before 09:30', done: true }, { id: 2, title: 'Log both NGS sessions in Hours', done: false }, { id: 3, title: 'Reply to Petra about sprint roles', done: false, rolled: 2 }],
+    tasks: [
+      { id: 't2', title: 'Update Anthropic payment card', due: -1, area: 'work', urgent: true, important: true, minutes: 10, status: 'inbox' },
+      { id: 't1', title: 'Fix Railway production build', due: 0, area: 'work', urgent: true, important: true, minutes: 45 },
+      { id: 't8', title: 'Check exposure after Ace & Tate breach', due: 0, area: 'personal', urgent: true, important: false, minutes: 15, status: 'inbox' },
+      { id: 't6', title: 'Reply to alpaca AI lead (Vermeer)', due: 1, area: 'work', urgent: true, important: false, minutes: 20 },
+      { id: 't3', title: 'Write NGS sprint 1 report', due: 3, area: 'study', urgent: false, important: true, minutes: 120 },
+      { id: 't9', title: 'Book dentist follow-up', due: 6, area: 'health', urgent: false, important: false, minutes: 5 },
+      { id: 't4', title: 'Prepare internship application (Booking)', due: 9, area: 'study', urgent: false, important: true, minutes: 90, status: 'scheduled' },
+      { id: 't5', title: 'Order new bike chain', due: null, area: 'health', urgent: false, important: false, minutes: 15 },
+      { id: 't7', title: 'Sort old screenshots', due: null, area: 'personal', urgent: false, important: false },
+      { id: 't10', title: 'Send invoice to Vermeer', due: -2, area: 'work', urgent: false, important: true, minutes: 20, status: 'done' },
+    ],
+    trackers: [
+      { id: 'gym', name: 'Gym', area: 'health', met: true, week: [1, 1, 0, 0, 0, 0, 0] },
+      { id: 'reading', name: 'Reading', area: 'personal', count: 3, target: 5, week: [1, 1, 0, 0, 0, 0, 0] },
+      { id: 'dutch', name: 'Dutch practice', area: 'study', count: 1, target: 4, week: [0, 2, 0, 0, 0, 0, 0] },
+      { id: 'sugar', name: 'No sugar', area: 'health', met: false, week: [1, 0, 0, 0, 0, 0, 0] },
+    ],
+  };
+  say(t) { clearTimeout(this._tt); this.setState({ toast: t }); this._tt = setTimeout(() => this.setState({ toast: null }), 3000); }
+  go(route) { this.setState({ route, moreOpen: false, drawerOpen: false }); }
+  patchTask(id, patch) { this.setState({ tasks: this.state.tasks.map((x) => x.id === id ? { ...x, ...patch } : x) }); }
+  setEd(patch) { this.setState({ editor: { ...this.state.editor, ...patch } }); }
+  renderVals() {
+    const s = this.state, p = this.props;
+    const nav = p.nav ?? 'tabs';
+    const route = s.route ?? p.startRoute ?? 'home';
+    const isTabs = nav === 'tabs', isDrawer = !isTabs;
+    const routeItem = NAV.find((n) => n.name === route) || NAV[0];
+    const designed = ['home', 'agenda', 'tasks', 'trackers', 'hours'];
+    const dos = s.dos.map((d) => ({ ...d, deco: d.done ? 'line-through' : 'none', color: d.done ? 'var(--ink-3)' : 'inherit', rolledText: 'rolled ' + d.rolled + 'x', toggle: () => this.setState({ dos: s.dos.map((x) => x.id === d.id ? { ...x, done: !x.done } : x) }) }));
+    const doneCount = s.dos.filter((d) => d.done).length;
+    const todayEvents = EVENTS.filter((e) => e.day === 1).map((e) => ({ ...e, time: hm(e.start) + ' to ' + hm(e.end) }));
+    const open = s.tasks.filter((t) => t.status !== 'done');
+    const dueTasks = open.filter((t) => t.due !== null && t.due <= 0).sort((a, b) => rank(a) - rank(b)).map((t) => ({ ...t, areaColor: AREAS[t.area].color, areaName: AREAS[t.area].name, dueTone: t.due < 0 ? 'danger' : 'warn', dueLabel: (t.due < 0 ? 'overdue ' : '') + fmtDate(t.due), complete: () => { this.patchTask(t.id, { status: 'done' }); this.say('Task completed.'); } }));
+    const trackers = s.trackers.map((t) => {
+      const counted = t.target !== undefined;
+      const met = counted ? t.count >= t.target : t.met;
+      const some = counted && t.count > 0 && t.count < t.target;
+      const tap = () => this.setState({ trackers: s.trackers.map((x) => x.id !== t.id ? x : counted ? { ...x, count: x.count >= x.target ? 0 : x.count + 1 } : { ...x, met: !x.met }) });
+      const week = t.week.map((v, i) => {
+        const today = i === 1, val = today ? (counted ? t.count : (met ? 1 : 0)) : v, future = i > 1;
+        const hit = counted ? val >= t.target : val > 0, part = counted && val > 0 && !hit;
+        return { l: future ? '' : (counted ? String(val) : (hit ? '•' : '')), bg: future ? 'transparent' : hit ? 'var(--ok-soft)' : part ? 'var(--warn-soft)' : 'var(--surface-2)', color: hit ? 'var(--ok)' : part ? 'var(--warn)' : 'var(--ink-3)' };
+      });
+      return { ...t, color: AREAS[t.area].color, met, some, tap, week };
+    });
+    const metCount = trackers.filter((t) => t.met).length;
+    const hoursData = [['study', 0, 0], ['work', 0, 960], ['personal', 45, 0], ['health', 120, 0]];
+    const total = hoursData.reduce((a, h) => a + h[1], 0);
+    const hours = hoursData.map(([a, min, target]) => ({ name: AREAS[a].name, color: AREAS[a].color, min, max: target || (min || 1), label: fmtMin(min), targetLabel: target ? ' / ' + target / 60 + 'h' : '' }));
+    // Agenda
+    const view = s.view ?? p.startView ?? 'day';
+    const isWeek = view === 'week', isDay = !isWeek;
+    const gridH = (H1 - H0) * HOUR_PX;
+    const hourLabels = Array.from({ length: H1 - H0 }, (_, i) => ({ label: String(H0 + i).padStart(2, '0'), top: i * HOUR_PX + 'px' }));
+    const hourLines = hourLabels.map((h) => ({ top: h.top }));
+    const weekCols = DAYS.map((_, d) => ({ isToday: d === 1, bg: d === 1 ? 'color-mix(in srgb, var(--brand-soft) 35%, transparent)' : 'transparent', open: () => this.setState({ day: d, view: 'day' }),
+      events: EVENTS.filter((e) => e.day === d).map((e) => { const [bg, ac, bs] = KIND[e.kind]; return { ...e, top: (e.start - H0) * HOUR_PX + 'px', h: Math.max((e.end - e.start) * HOUR_PX - 2, 16) + 'px', bg: e.kind === 'task' ? 'var(--surface)' : bg, bar: ac, bs, bc: 'color-mix(in srgb, ' + ac + ' 35%, transparent)', startText: hm(e.start) }; }) }));
+    const dayEvents = EVENTS.filter((e) => e.day === s.day).sort((a, b) => a.start - b.start);
+    let nowPlaced = false;
+    const dayEventsV = dayEvents.map((e, i) => { const nowBefore = s.day === 1 && !nowPlaced && e.start > NOW; if (nowBefore) nowPlaced = true; return { ...e, startText: hm(e.start), endText: hm(e.end), bar: KIND[e.kind][1], location: e.location || '', isTask: e.kind === 'task', isLinked: e.kind === 'linked', nowBefore, top: i ? '1px solid var(--line)' : '0' }; });
+    const dayStrip = DAYS.map(([wd, num], i) => { const active = i === s.day, today = i === 1; return { wd, num, active, select: () => this.setState({ day: i, view: 'day' }), bg: active ? 'var(--ink)' : today ? 'var(--brand-soft)' : 'var(--surface)', color: active ? 'var(--on-ink)' : today ? 'var(--brand)' : 'var(--ink-2)', ring: active ? 'none' : '0 0 0 1px var(--line) inset', headBg: today ? 'var(--brand-soft)' : 'transparent', headColor: today ? 'var(--brand)' : 'var(--ink-2)' }; });
+    // Tasks list
+    const passes = (t) => s.filter === 'all' || (s.filter === 'urgent' && t.urgent) || (s.filter === 'important' && t.important);
+    const rowOf = (t) => ({ ...t, done: t.status === 'done', deco: t.status === 'done' ? 'line-through' : 'none', color: t.status === 'done' ? 'var(--ink-3)' : 'inherit', areaColor: AREAS[t.area].color, areaName: AREAS[t.area].name, minutesText: t.minutes ? t.minutes + ' min' : '', scheduled: t.status === 'scheduled', inbox: t.status === 'inbox',
+      dueLabel: t.due === null ? '' : fmtDate(t.due), dueColor: t.status !== 'done' && t.due !== null && t.due < 0 ? 'var(--danger)' : t.due === 0 ? 'var(--warn)' : 'var(--ink-3)',
+      complete: () => { this.patchTask(t.id, { status: t.status === 'done' ? undefined : 'done' }); if (t.status !== 'done') this.say('Task completed.'); },
+      edit: () => this.setState({ editor: { id: t.id, title: t.title, due: t.due, area: t.area, urgent: !!t.urgent, important: !!t.important, minutes: t.minutes || 30 } }) });
+    const groups = GROUPS.map((g) => ({ key: g.key, label: g.label, color: g.color, tasks: open.filter((t) => g.test(t.due) && passes(t)).sort((a, b) => rank(a) - rank(b)).map(rowOf) })).filter((g) => g.tasks.length);
+    groups.forEach((g) => { g.count = g.tasks.length + (g.tasks.length === 1 ? ' task' : ' tasks'); });
+    if (s.showDone) { const done = s.tasks.filter((t) => t.status === 'done' && passes(t)).map(rowOf); if (done.length) groups.push({ key: 'done', label: 'Done', color: 'var(--ok)', tasks: done, count: done.length + (done.length === 1 ? ' task' : ' tasks') }); }
+    // Editor
+    const ed = s.editor;
+    const edV = ed ? { ...ed, dueIso: ed.due === null ? '' : isoAt(ed.due), existing: !!ed.id } : { ...EMPTY_ED, dueIso: '', existing: false };
+    const slots = [
+      { when: 'Today, 15:30 to 16:15', why: 'Gap before the I&T block' },
+      { when: 'Wed 16 Sept, 12:30 to 13:15', why: 'After Hoorcollege, before the klantcall' },
+      { when: 'Thu 17 Sept, 15:00 to 15:45', why: 'Free afternoon' },
+    ].map((sl) => ({ ...sl, pick: () => { if (ed && ed.id) this.patchTask(ed.id, { status: 'scheduled', title: ed.title }); this.setState({ editor: null }); this.say('Scheduled: ' + sl.when + '.'); } }));
+    const navItem = (n) => ({ item: n, active: n.name === route, go: () => this.go(n.name) });
+    const tabs = TAB_ROUTES.map((r) => NAV.find((n) => n.name === r)).map((n) => ({ label: n.label, icon: n.icon, current: n.name === route ? 'page' : undefined, color: n.name === route ? 'var(--ink)' : 'var(--ink-3)', weight: n.name === route ? 'fill' : 'regular', go: () => this.go(n.name) }));
+    const moreActive = !TAB_ROUTES.includes(route);
+    tabs.push({ label: 'More', icon: 'dots-three', current: undefined, color: moreActive ? 'var(--ink)' : 'var(--ink-3)', weight: moreActive ? 'fill' : 'regular', go: () => this.setState({ moreOpen: true }) });
+    return {
+      isTabs, isDrawer, showBriefing: p.showBriefing ?? true,
+      isHome: route === 'home', isAgenda: route === 'agenda', isTasks: route === 'tasks', isTrackers: route === 'trackers', isHours: route === 'hours', isOther: !designed.includes(route),
+      routeLabel: routeItem.label, routeIcon: routeItem.icon,
+      goAgenda: (e) => { e.preventDefault(); this.go('agenda'); }, goTasks: (e) => { e.preventDefault(); this.go('tasks'); }, goTrackers: (e) => { e.preventDefault(); this.go('trackers'); }, goHours: (e) => { e.preventDefault(); this.go('hours'); },
+      openDrawer: () => this.setState({ drawerOpen: true }), closeDrawer: () => this.setState({ drawerOpen: false }), drawerOpen: s.drawerOpen,
+      moreOpen: s.moreOpen, closeMore: () => this.setState({ moreOpen: false }), moreItems: NAV.filter((n) => !TAB_ROUTES.includes(n.name)).map(navItem), allItems: NAV.map(navItem), tabs,
+      toggleTheme: () => { const r = document.documentElement; r.setAttribute('data-theme', r.getAttribute('data-theme') === 'dark' ? 'light' : 'dark'); },
+      proposal: s.proposal,
+      capture: (text) => this.setState({ pending: text, proposal: 'task, ' + text + ', due ' + fmtDate(0) + ', Work, urgent' }),
+      confirmCapture: () => { const id = 'c' + Date.now(); this.setState({ tasks: [{ id, title: s.pending, due: 0, area: 'work', urgent: true, important: false, status: 'inbox' }, ...s.tasks], proposal: null, pending: null }); this.say('Task created, due today.'); },
+      discardCapture: () => this.setState({ proposal: null, pending: null }),
+      dos, dosMeta: doneCount + ' of ' + s.dos.length + ' done', todayEvents, dueTasks, hasDue: dueTasks.length > 0, noDue: dueTasks.length === 0,
+      trackers, trackersMeta: metCount + ' of ' + trackers.length + ' met today', hours, hoursTotal: fmtMin(total) + ' total',
+      view, viewOptions: [{ value: 'week', label: 'Week' }, { value: 'day', label: 'Day' }], setView: (v) => this.setState({ view: v }), isWeek, isDay,
+      gridH: gridH + 'px', hourLabels, hourLines, weekCols, nowTop: (NOW - H0) * HOUR_PX + 'px',
+      agendaCount: isWeek ? EVENTS.length + ' events this week' : dayEvents.length + (dayEvents.length === 1 ? ' event' : ' events'),
+      dayStrip, dayEvents: dayEventsV, dayEmpty: dayEvents.length === 0,
+      swipeStart: (e) => { this._sx = e.clientX; }, swipeEnd: (e) => { const dx = e.clientX - (this._sx ?? e.clientX); if (dx < -40) this.setState({ day: Math.min(6, s.day + 1) }); else if (dx > 40) this.setState({ day: Math.max(0, s.day - 1) }); },
+      filter: s.filter, filterOptions: [{ value: 'all', label: 'All' }, { value: 'urgent', label: 'Urgent' }, { value: 'important', label: 'Important' }], setFilter: (f) => this.setState({ filter: f }),
+      showDone: s.showDone, toggleDone: () => this.setState({ showDone: !s.showDone }),
+      groups, noTasks: groups.length === 0, openCount: open.length + ' open', newTask: () => this.setState({ editor: { ...EMPTY_ED, id: null } }),
+      editorOpen: !!ed, editorTitle: ed && ed.id ? 'Task' : 'New task', ed: edV, slots,
+      closeEditor: () => this.setState({ editor: null }),
+      edTitle: (e) => this.setEd({ title: e.target.value }), edDue: (e) => this.setEd({ due: offsetOf(e.target.value) }), edArea: (e) => this.setEd({ area: e.target.value }), edUrgent: (e) => this.setEd({ urgent: e.target.checked }), edImportant: (e) => this.setEd({ important: e.target.checked }), edMinutes: (e) => this.setEd({ minutes: Number(e.target.value) || 0 }),
+      saveEditor: () => { if (!ed) return; if (!ed.title.trim()) { this.say('Give the task a title.'); return; } const patch = { title: ed.title.trim(), due: ed.due, area: ed.area, urgent: ed.urgent, important: ed.important, minutes: ed.minutes || undefined }; if (ed.id) this.patchTask(ed.id, patch); else this.setState({ tasks: [{ id: 'n' + Date.now(), ...patch }, ...s.tasks] }); this.setState({ editor: null }); this.say(ed.id ? 'Task saved.' : 'Task created.'); },
+      deleteTask: () => { if (ed && ed.id) this.setState({ tasks: s.tasks.filter((x) => x.id !== ed.id), editor: null }); this.say('Task deleted.'); },
+      entries: [{ time: '09:30 to 12:00', title: 'Sprint 1 NGS Projectbegeleiding', color: AREAS.study.color, dur: '2h 30m', durColor: 'inherit', durWeight: 400 }, { time: '12:30 to now', title: 'Sprint 2 NGS Projectbegeleiding', color: AREAS.study.color, dur: '0:14:32', durColor: 'var(--brand)', durWeight: 500 }],
+      logTime: () => this.say('Timer running on Sprint 2 NGS.'),
+      toast: s.toast, hasToast: !!s.toast, toastBottom: isTabs ? '100px' : '40px',
+    };
+  }
+}
+</script>
+</body>
+</html>

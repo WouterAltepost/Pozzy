@@ -1,0 +1,18 @@
+:root {
+  --sp-1: 4px; --sp-2: 8px; --sp-3: 12px; --sp-4: 16px; --sp-5: 20px; --sp-6: 24px; --sp-8: 32px; --sp-10: 40px;
+  --r-sm: 6px;    /* badges, tags, table cells */
+  --r-md: 8px;    /* buttons, inputs */
+  --r-lg: 12px;   /* cards, panels, popovers */
+  --r-xl: 16px;   /* sheets */
+  --r-pill: 999px;/* filter chips, tracker chips, nav items */
+  --bar-h: 56px;
+  --rail-w: 232px;
+  --content-w: 1180px;
+  --control-h: 34px;
+  --control-h-sm: 28px;
+  --z-raised: 1; /* @kind other */
+  --z-sticky: 10; /* @kind other */
+  --z-bar: 20; /* @kind other */
+  --z-sheet: 30; /* @kind other */
+  --z-toast: 40; /* @kind other */
+}

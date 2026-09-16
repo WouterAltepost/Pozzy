@@ -2,6 +2,7 @@
 import { computed, ref } from 'vue'
 import { PhCaretLeft, PhCaretRight, PhCheck, PhSparkle, PhX } from '@phosphor-icons/vue'
 import AgendaGrid from '../components/agenda/AgendaGrid.vue'
+import AgendaMobile from '../components/agenda/AgendaMobile.vue'
 import EventForm from '../components/agenda/EventForm.vue'
 import EventPopover from '../components/agenda/EventPopover.vue'
 import SyncBar from '../components/agenda/SyncBar.vue'
@@ -26,6 +27,7 @@ const quick = ref(null) // { day, hour, minute, endHour, endMinute, anchor } for
 const saving = ref(false)
 const formError = ref('')
 const narrow = useMediaQuery('(max-width: 899px)')
+const phone = useMediaQuery('(max-width: 699px)')
 const suggestions = ref([]) // planner items still waiting for a decision
 const planning = ref(false)
 const planned = ref(false)
@@ -162,7 +164,7 @@ function pickDay(evt) {
 
 <template>
   <div class="agenda">
-    <PageHeader title="Agenda">
+    <PageHeader v-if="!phone" title="Agenda">
       <template #meta>{{ title }}</template>
       <div class="nav">
         <button type="button" class="icon-btn" aria-label="Previous" @click="store.step(-1)"><PhCaretLeft /></button>
@@ -178,10 +180,11 @@ function pickDay(evt) {
       <UiButton variant="primary" @click="openNew({ day: store.anchor })">New event</UiButton>
     </PageHeader>
 
-    <div class="status">
+    <div v-if="!phone" class="status">
       <SyncBar />
       <p v-if="store.error" class="error">{{ store.error }}</p>
     </div>
+    <p v-else-if="store.error" class="error">{{ store.error }}</p>
 
     <UiLoadGate :ready="ready" label="Loading your week">
       <Transition name="tray">
@@ -210,7 +213,8 @@ function pickDay(evt) {
           </ul>
         </section>
       </Transition>
-      <div class="gridwrap">
+      <AgendaMobile v-if="phone" :suggestions="suggestions" :planning="planning" @select-event="openEvent" @create="openNew" @plan="plan" @accept="accept" @deny="deny" />
+      <div v-else class="gridwrap">
         <div class="gridpos">
           <AgendaGrid :days="store.days" :events="store.events" :tasks="store.tasks" :draft="draft" :suggestions="suggestions" @select-event="openEvent" @create="onSlot" @move="onMove" @accept="accept" @deny="deny" />
           <Transition name="pop">

@@ -1,11 +1,9 @@
 <script setup>
-// Centred dialog from 700px, bottom sheet below that. One component for every editor and
-// detail popup so they all open the same way: scrim fade, panel rises 12px and settles on the
-// spring curve. Escape and scrim close, focus moves in and returns, body scroll locks.
+// Centred dialog at every width (the phone design keeps editors as popups too). One component
+// for every editor and detail popup so they all open the same way: scrim fade, panel rises and
+// settles on the spring curve. Escape and scrim close, focus moves in and returns, body scroll locks.
 import { nextTick, onBeforeUnmount, ref, watch } from 'vue'
 import { PhX } from '@phosphor-icons/vue'
-import { useMediaQuery } from '../../composables/useMediaQuery'
-import UiSheet from './UiSheet.vue'
 
 const props = defineProps({
   open: { type: Boolean, default: false },
@@ -13,7 +11,6 @@ const props = defineProps({
   size: { type: String, default: 'md' }, // sm 440 | md 600 | lg 780
 })
 const emit = defineEmits(['close'])
-const wide = useMediaQuery('(min-width: 700px)')
 const panel = ref(null)
 let previousFocus = null
 
@@ -22,7 +19,7 @@ function onKey(e) {
 }
 
 watch(
-  () => props.open && wide.value,
+  () => props.open,
   async (on) => {
     if (on) {
       previousFocus = document.activeElement
@@ -47,8 +44,7 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <UiSheet v-if="!wide" :open="open" :title="title" @close="emit('close')"><slot /></UiSheet>
-  <Teleport v-else to="body">
+  <Teleport to="body">
     <Transition name="modal">
       <div v-if="open" class="modal-root" role="dialog" aria-modal="true" :aria-label="title || 'Dialog'">
         <div class="scrim" @click="emit('close')"></div>
@@ -66,6 +62,7 @@ onBeforeUnmount(() => {
 
 <style scoped>
 .modal-root { position: fixed; inset: 0; z-index: var(--z-sheet); display: flex; align-items: center; justify-content: center; padding: var(--sp-6); }
+@media (max-width: 720px) { .modal-root { padding: calc(env(safe-area-inset-top) + 16px) 16px calc(env(safe-area-inset-bottom) + 16px); } .dialog-head { padding: var(--sp-4) var(--sp-4) 0; } .dialog-body { padding: var(--sp-3) var(--sp-4) var(--sp-4); } }
 .scrim { position: absolute; inset: 0; background: var(--scrim); }
 .dialog {
   position: relative;

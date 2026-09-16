@@ -177,8 +177,8 @@ function dueLabel(key) {
       <section v-for="s in sections" :key="s.key" class="section" :class="s.key">
         <header class="section-head">
           <h2>{{ s.label }}</h2>
-          <span class="muted small num">{{ s.tasks.length }}</span>
-          <span v-if="dueLabel(s.key)" class="muted small num">{{ dueLabel(s.key) }}</span>
+          <span class="muted small num count">{{ s.tasks.length }}<span class="count-word">&nbsp;{{ s.tasks.length === 1 ? 'task' : 'tasks' }}</span></span>
+          <span v-if="dueLabel(s.key)" class="muted small num daylabel">{{ dueLabel(s.key) }}</span>
         </header>
         <div class="list">
           <TaskCard v-for="t in s.tasks" :key="t.id" :task="t" :selected="t.id === selectedId" :draggable="false" @select="select" @complete="complete" />
@@ -209,4 +209,19 @@ function dueLabel(key) {
 .section.today .section-head h2 { color: var(--ink); }
 .list { display: flex; flex-direction: column; gap: var(--sp-2); }
 .side-actions { display: flex; gap: var(--sp-2); align-items: center; margin-top: var(--sp-4); }
+.count-word { display: none; }
+/* Phone (design: Pozzy Phone, Tasks): each group is a card, rows are hairline-separated. */
+@media (max-width: 699px) {
+  .quick, .search { display: none; }
+  .section { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-lg); box-shadow: var(--shadow-1); padding: 12px 16px 4px; margin-bottom: var(--sp-4); }
+  .section-head { margin-bottom: 2px; justify-content: space-between; }
+  .section-head h2 { font-size: var(--fs-md); text-transform: none; letter-spacing: 0.01em; color: var(--ink-2); }
+  .section.overdue .section-head h2 { color: var(--danger); }
+  .section.today .section-head h2, .section.tomorrow .section-head h2 { color: var(--ink); }
+  .section.none .section-head h2 { color: var(--ink-3); }
+  .section.done .section-head h2 { color: var(--ok); }
+  .count-word { display: inline; }
+  .daylabel { display: none; }
+  .list { gap: 0; }
+}
 </style>

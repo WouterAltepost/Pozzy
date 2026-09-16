@@ -38,7 +38,10 @@ function onDragStart(event) {
       <input type="checkbox" :checked="task.status === 'done'" :aria-label="'Complete ' + task.title" @change="emit('complete', task)" />
     </label>
     <div class="body">
-      <div class="title">{{ task.title }}</div>
+      <div class="title-row">
+        <div class="title">{{ task.title }}</div>
+        <span v-if="task.due_date" class="due-right num" :class="dueTone(task)">{{ formatDay(task.due_date) }}</span>
+      </div>
       <div class="meta">
         <AreaDot :area-id="task.area_id" label />
         <UiBadge v-if="task.due_date" :tone="dueTone(task)" class="num">{{ formatDay(task.due_date) }}</UiBadge>
@@ -74,6 +77,18 @@ function onDragStart(event) {
 .tick { padding-top: 3px; display: flex; }
 .body { flex: 1; min-width: 0; }
 .title { font-size: var(--fs-base); line-height: 1.4; }
+.title-row { display: flex; align-items: flex-start; gap: var(--sp-3); }
+.title-row .title { flex: 1; min-width: 0; }
+.due-right { display: none; font-size: var(--fs-sm); color: var(--ink-3); white-space: nowrap; margin-top: 2px; }
+.due-right.danger { color: var(--danger); }
+.due-right.warn { color: var(--warn); }
+@media (max-width: 699px) {
+  .task-card { border: 0; border-top: 1px solid var(--line); border-radius: 0; box-shadow: none; padding: 10px 0; }
+  .task-card.selected { box-shadow: none; border-color: var(--line); }
+  .due-right { display: inline; }
+  .meta :deep(.badge.num) { display: none; }
+  .tick input { width: 18px; height: 18px; }
+}
 .meta { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 4px; }
 @media (prefers-reduced-motion: reduce) { .task-card.lifting { transform: none; } }
 </style>

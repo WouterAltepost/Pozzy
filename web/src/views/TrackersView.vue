@@ -1,11 +1,12 @@
 <script setup>
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import { PhCaretDown, PhChartLineUp, PhCheck } from '@phosphor-icons/vue'
 import LineChart from '../components/trackers/LineChart.vue'
 import TrackerForm from '../components/trackers/TrackerForm.vue'
 import TrackerSeriesChart from '../components/trackers/TrackerSeriesChart.vue'
 import UiLoadGate from '../components/ui/UiLoadGate.vue'
 import { useReady } from '../composables/useReady'
+import { useMediaQuery } from '../composables/useMediaQuery'
 import WeekNav from '../components/shared/WeekNav.vue'
 import PageHeader from '../components/ui/PageHeader.vue'
 import UiButton from '../components/ui/UiButton.vue'
@@ -19,6 +20,26 @@ const editing = ref(null) // null | 'new' | tracker
 const charts = ref({})
 
 const ready = useReady(() => store.load())
+const phone = useMediaQuery('(max-width: 699px)')
+
+const metToday = computed(() => store.trackers.filter((t) => isGrid(t) && t.days.find((d) => d.date === today())?.met).length)
+const gridTrackers = computed(() => store.trackers.filter(isGrid))
+function cellTap(t, d) {
+  if (d.date > today()) return
+  if (isGrid(t)) run(() => store.tick(t.id, d.date))
+  else promptValue(t, d)
+}
+function cellState(t, d) {
+  if (d.date > today()) return 'future'
+  if (d.met) return 'hit'
+  if (d.value) return 'part'
+  return 'none'
+}
+function cellText(t, d) {
+  if (d.date > today()) return ''
+  if (t.type === 'daily_bool') return d.met ? '\u2022' : ''
+  return d.value === null || d.value === undefined ? '' : String(d.value)
+}
 
 async function run(fn) {
   error.value = ''
@@ -108,11 +129,15 @@ function remove(t) {
 
 <template>
   <div class="trackers">
-    <PageHeader title="Tracking">
+    <PageHeader v-if="!phone" title="Tracking">
       <WeekNav :week-start="store.weekStart" @change="run(() => store.setWeek($event))" />
       <label class="check"><input v-model="store.includeInactive" type="checkbox" @change="store.load()" /> Show archived</label>
       <UiButton variant="primary" @click="editing = 'new'">New tracker</UiButton>
     </PageHeader>
+    <div v-else class="phead">
+      <div><h1>Tracking</h1><span class="muted small">{{ metToday }} of {{ gridTrackers.length }} met today</span></div>
+      <UiButton variant="primary" size="sm" @click="editing = 'new'">New tracker</UiButton>
+    </div>
     <p v-if="error || store.error" class="error">{{ error || store.error }}</p>
     <UiLoadGate :ready="ready" label="Loading trackers">
     <TrackerSeriesChart v-if="store.trackers.length" :refresh-key="store.week" />
@@ -128,7 +153,37 @@ function remove(t) {
       </UiEmpty>
     </div>
 
-    <section v-for="group in store.grouped" :key="group.area" class="card group">
+    <template v-if="phone && store.trackers.length">
+      <section class="card">
+        <h2 class="ptitle">Today</h2>
+        <div class="chips">
+          <button v-for="t in store.trackers" :key="t.id" type="button" class="chip" :class="{ met: t.days.find((d) => d.date === today())?.met, some: t.days.find((d) => d.date === today())?.value && !t.days.find((d) => d.date === today())?.met }" @click="cellTap(t, t.days.find((d) => d.date === today()))">
+            <span class="dot" :style="{ background: t.area_color || 'var(--ink-3)' }"></span>{{ t.name }}
+            <span v-if="t.type === 'weekly_count'" class="count num">{{ t.week_total }}<span v-if="t.target_value">/{{ t.target_value }}</span></span>
+            <span v-else-if="!isGrid(t)" class="count num">{{ cellLabel(t, t.days.find((d) => d.date === today())) || (t.unit || '') }}</span>
+            <PhCheck v-else-if="t.days.find((d) => d.date === today())?.met" class="mark" weight="bold" />
+          </button>
+        </div>
+      </section>
+      <section class="card">
+        <div class="card-head"><h2>This week</h2><span class="meta"><WeekNav :week-start="store.weekStart" compact @change="run(() => store.setWeek($event))" /></span></div>
+        <template v-for="t in store.trackers" :key="t.id">
+          <div class="wrow">
+            <button type="button" class="tname" :aria-expanded="Boolean(charts[t.id])" @click="toggleChart(t)"><span class="dot" :style="{ background: t.area_color || 'var(--ink-3)' }"></span>{{ t.name }}</button>
+            <span class="cells">
+              <button v-for="d in t.days" :key="d.date" type="button" class="cell" :class="[cellState(t, d), { today: d.date === today() }]" :aria-label="`${t.name} ${d.date}`" :disabled="d.date > today()" @click="cellTap(t, d)">{{ cellText(t, d) }}</button>
+            </span>
+            <button type="button" class="link-btn edit" @click="editing = t">edit</button>
+          </div>
+          <div v-if="charts[t.id]" class="pchart">
+            <LineChart :points="chartPoints(t, charts[t.id])" :target="chartTarget(t, charts[t.id])" :unit="weeklyChart(t, charts[t.id]) ? 'per week' : t.unit || ''" />
+            <div class="muted xs">{{ chartSummary(t, charts[t.id]) }}</div>
+          </div>
+        </template>
+      </section>
+    </template>
+
+    <section v-for="group in store.grouped" v-else :key="group.area" class="card group">
       <div class="card-head">
         <h2><span class="dot" :style="{ background: group.color }" aria-hidden="true"></span>{{ group.area }}</h2>
       </div>
@@ -194,6 +249,29 @@ function remove(t) {
 </template>
 
 <style scoped>
+.phead { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-2); margin-bottom: var(--sp-4); }
+.phead h1 { font-size: var(--fs-2xl); }
+.ptitle { margin-bottom: 10px; }
+.chips { display: flex; flex-wrap: wrap; gap: var(--sp-2); }
+.chip { display: inline-flex; align-items: center; gap: 8px; height: 32px; padding: 0 12px; border-radius: var(--r-pill); border: 1px solid var(--line-2); background: var(--surface); color: var(--ink); font-size: var(--fs-md); font-weight: 500; transition: background-color var(--dur-hover) ease, border-color var(--dur-hover) ease, color var(--dur-hover) ease, transform var(--dur-press) var(--ease-out); }
+.chip:active { transform: scale(0.97); }
+.chip.met { background: var(--ok-soft); border-color: transparent; color: var(--ok); }
+.chip.some { background: var(--warn-soft); border-color: transparent; color: var(--warn); }
+.chip .count { color: var(--ink-3); font-size: var(--fs-sm); }
+.chip.met .count { color: inherit; }
+.wrow { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 10px; align-items: center; padding: 10px 0; border-top: 1px solid var(--line); }
+.wrow .tname { display: inline-flex; align-items: center; gap: 8px; font-size: var(--fs-base); font-weight: 500; min-width: 0; max-width: 100%; }
+.wrow .tname > span:last-child, .wrow .tname { white-space: nowrap; }
+.wrow .tname { overflow: hidden; text-overflow: ellipsis; display: block; }
+.wrow .tname .dot { display: inline-block; margin-right: 8px; vertical-align: middle; }
+.cells { display: flex; gap: 4px; }
+.cell { width: 22px; height: 22px; border-radius: var(--r-sm); border: 0; padding: 0; background: var(--surface-2); color: var(--ink-3); font-size: var(--fs-xs); font-weight: 500; display: inline-flex; align-items: center; justify-content: center; }
+.cell.hit { background: var(--ok-soft); color: var(--ok); }
+.cell.part { background: var(--warn-soft); color: var(--warn); }
+.cell.future { background: transparent; }
+.cell.today { box-shadow: 0 0 0 1px var(--brand) inset; }
+.wrow .edit { font-size: var(--fs-xs); }
+.pchart { padding: 4px 0 10px; }
 .check { display: flex; align-items: center; gap: 6px; font-size: var(--fs-md); white-space: nowrap; }
 .card-head h2 { display: flex; align-items: center; gap: 8px; }
 .dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }

@@ -84,6 +84,7 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKey))
     <button type="button" class="capture-btn" title="Capture anything (Cmd or Ctrl plus K)" @click="show">
       <PhLightning class="bolt" weight="fill" aria-hidden="true" />
       <span class="label">Capture</span>
+      <span class="label-long">Capture anything</span>
       <kbd class="kbd" aria-hidden="true">{{ modKey }} K</kbd>
     </button>
 
@@ -120,7 +121,13 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKey))
 @media (hover: hover) and (pointer: fine) { .capture-btn:hover { border-color: var(--line-2); color: var(--ink); } }
 .bolt { width: 15px; height: 15px; color: var(--brand); }
 .kbd { font: inherit; font-size: var(--fs-xs); color: var(--ink-3); border: 1px solid var(--line-2); border-radius: 4px; padding: 0 5px; line-height: 16px; }
-@media (max-width: 720px) { .label, .kbd { display: none; } .capture-btn { width: 34px; padding: 0; justify-content: center; } }
+.label-long { display: none; }
+@media (max-width: 720px) {
+  .capture-bar { width: 100%; max-width: none; }
+  .label, .kbd { display: none; }
+  .label-long { display: inline; color: var(--ink-3); font-weight: 400; }
+  .capture-btn { width: 100%; justify-content: flex-start; padding-left: 12px; }
+}
 .entry { display: flex; flex-direction: column; gap: var(--sp-3); }
 .entry textarea { width: 100%; font-size: var(--fs-base); }
 .entry-row { display: flex; flex-wrap: wrap; gap: var(--sp-3); align-items: center; }

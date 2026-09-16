@@ -1,0 +1,54 @@
+/* Pozzy colour tokens. Source: web/src/style.css + docs/briefs/DESIGN.md. Light is default; dark follows the system unless data-theme forces one. */
+:root {
+  color-scheme: light dark;
+  --bg: #F2F1ED;
+  --surface: #FBFAF8;
+  --surface-2: #E9E8E3;
+  --surface-3: #DFDED8;
+  --ink: #191A1C;
+  --ink-2: #4A4C52;
+  --ink-3: #6F727A;
+  --line: #DAD9D3;
+  --line-2: #C3C2BB;
+  --brand: #AF1616;
+  --brand-soft: #F6E1E1;
+  --on-ink: #F7F6F2;
+  --ok: #1F7A4D;
+  --ok-soft: #E2F1E8;
+  --warn: #A35E08;
+  --warn-soft: #F8EBD6;
+  --danger: #B3261E;
+  --danger-soft: #F8E1DF;
+  --info: #2F5FB3;
+  --info-soft: #E1E9F6;
+  --scrim: rgb(25 26 28 / 0.4);
+  /* Seeded life-area data colours (areas table). Data, never decoration. */
+  --area-study: #2563eb;
+  --area-work: #dc2626;
+  --area-personal: #059669;
+  --area-health: #d97706;
+  /* Semantic aliases */
+  --text-body: var(--ink);
+  --text-secondary: var(--ink-2);
+  --text-muted: var(--ink-3);
+  --surface-page: var(--bg);
+  --surface-card: var(--surface);
+  --surface-inset: var(--surface-2);
+  --surface-pressed: var(--surface-3);
+  --border-hairline: var(--line);
+  --border-control: var(--line-2);
+  --focus-ring: var(--brand);
+  --now-marker: var(--brand);
+}
+/* System dark: pages set data-theme="dark" (see useTheme.js in the repo); a media-query scope is not indexed as tokens. */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #141518; --surface: #1C1E22; --surface-2: #24262B; --surface-3: #2D3036;
+  --ink: #ECEBE6; --ink-2: #B6B5B0; --ink-3: #8F9097;
+  --line: #2C2E34; --line-2: #3D4048;
+  --brand: #D94141; --brand-soft: #3B1F1F; --on-ink: #16171A;
+  --ok: #5CC48F; --ok-soft: #1B3328; --warn: #E1A64E; --warn-soft: #3A2C16;
+  --danger: #E86B62; --danger-soft: #3D2220; --info: #7FA3E6; --info-soft: #1F2A40;
+  --scrim: rgb(0 0 0 / 0.55);
+}
+:root[data-theme="light"] { color-scheme: light; }
