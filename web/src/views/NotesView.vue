@@ -7,6 +7,8 @@ import TagsInput from '../components/shared/TagsInput.vue'
 import PageHeader from '../components/ui/PageHeader.vue'
 import UiLoadGate from '../components/ui/UiLoadGate.vue'
 import { useReady } from '../composables/useReady'
+import { useMediaQuery } from '../composables/useMediaQuery'
+import UiModal from '../components/ui/UiModal.vue'
 import UiButton from '../components/ui/UiButton.vue'
 import UiEmpty from '../components/ui/UiEmpty.vue'
 import UiField from '../components/ui/UiField.vue'
@@ -22,6 +24,7 @@ const form = reactive({ title: '', body: '', area_id: null, tags: [], pinned: fa
 const selected = computed(() => store.items.find((n) => n.id === selectedId.value) || null)
 
 const ready = useReady(() => store.load())
+const phone = useMediaQuery('(max-width: 699px)')
 
 async function run(fn) {
   error.value = ''
@@ -97,7 +100,19 @@ function renderMarkdown(text) {
 
 <template>
   <div class="notes">
-    <PageHeader title="Notes">
+    <div v-if="phone" class="phead">
+      <div><h1>Notes</h1><span class="muted small num">{{ store.items.length }} {{ store.items.length === 1 ? 'note' : 'notes' }}</span></div>
+      <UiButton variant="primary" size="sm" @click="startNew">New note</UiButton>
+    </div>
+    <div v-if="phone" class="pfilters">
+      <input v-model="store.filters.q" type="search" placeholder="Search" aria-label="Search notes" class="psearch" @change="store.load()" />
+      <AreaSelect v-model="store.filters.area_id" aria-label="Area" @update:model-value="store.load()" />
+      <select v-model="store.filters.tag" aria-label="Tag" @change="store.load()">
+        <option value="">All tags</option>
+        <option v-for="t in store.allTags" :key="t" :value="t">{{ t }}</option>
+      </select>
+    </div>
+    <PageHeader v-else title="Notes">
       <input v-model="store.filters.q" type="search" placeholder="Search" aria-label="Search notes" class="search" @change="store.load()" />
       <AreaSelect v-model="store.filters.area_id" aria-label="Area" @update:model-value="store.load()" />
       <select v-model="store.filters.tag" aria-label="Tag" @change="store.load()">
@@ -124,7 +139,7 @@ function renderMarkdown(text) {
         </li>
       </ul>
 
-      <div v-if="creating || selected" class="card editor">
+      <div v-if="(creating || selected) && !phone" class="card editor">
         <form @submit.prevent="save">
           <UiField label="Title"><input v-model="form.title" type="text" required maxlength="200" /></UiField>
           <div class="row">
@@ -140,19 +155,47 @@ function renderMarkdown(text) {
         </form>
         <div v-if="form.body" class="preview" v-html="renderMarkdown(form.body)"></div>
       </div>
-      <div v-else class="card placeholder">
+      <div v-else-if="!phone" class="card placeholder">
         <UiEmpty title="Select a note or create one" hint="Pinned notes stay on top of the list.">
           <template #icon><PhNote /></template>
         </UiEmpty>
       </div>
     </div>
     </UiLoadGate>
+
+    <UiModal v-if="phone" :open="Boolean(creating || selected)" :title="creating ? 'New note' : 'Note'" size="lg" @close="creating = false; selectedId = null">
+      <form class="pform" @submit.prevent="save">
+        <UiField label="Title"><input v-model="form.title" type="text" required maxlength="200" /></UiField>
+        <div class="pair">
+          <UiField label="Area"><AreaSelect v-model="form.area_id" /></UiField>
+          <label class="check"><input v-model="form.pinned" type="checkbox" /> Pinned</label>
+        </div>
+        <UiField label="Tags"><TagsInput v-model="form.tags" /></UiField>
+        <UiField label="Body" hint="Markdown"><textarea v-model="form.body" rows="10" class="body"></textarea></UiField>
+        <div class="actions">
+          <UiButton type="submit" variant="primary">{{ creating ? 'Create' : 'Save' }}</UiButton>
+          <UiButton v-if="selected" variant="danger" class="push" @click="remove">Delete</UiButton>
+        </div>
+      </form>
+    </UiModal>
   </div>
 </template>
 
 <style scoped>
 .search { width: 160px; }
 .layout { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--sp-4); align-items: start; }
+.phead { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-2); margin-bottom: var(--sp-3); }
+.phead h1 { font-size: var(--fs-2xl); }
+.pfilters { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: var(--sp-2); margin-bottom: var(--sp-4); }
+.psearch { min-width: 0; }
+.pform { display: flex; flex-direction: column; gap: var(--sp-3); }
+.pform .pair { display: grid; grid-template-columns: 1fr auto; gap: var(--sp-3); align-items: end; }
+.pform .actions { display: flex; gap: var(--sp-2); }
+@media (max-width: 699px) {
+  .list { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-lg); box-shadow: var(--shadow-1); padding: 4px 16px; }
+  .list :deep(.note-item) { border: 0; border-top: 1px solid var(--line); border-radius: 0; box-shadow: none; }
+  .list :deep(.note-item:first-child) { border-top: 0; }
+}
 @media (min-width: 900px) { .layout { grid-template-columns: 300px minmax(0, 1fr); gap: var(--sp-5); } }
 .list { display: flex; flex-direction: column; gap: var(--sp-2); }
 .note-btn { display: flex; flex-direction: column; align-items: stretch; gap: 4px; width: 100%; text-align: left; padding: var(--sp-2) var(--sp-3); border: 1px solid var(--line); border-radius: var(--r-md); background: var(--surface); color: inherit; transition: border-color var(--dur-hover) ease, box-shadow var(--dur-hover) ease; }

@@ -155,6 +155,7 @@ function acceptSuggestion(s) {
 </template>
 
 <style scoped>
+@media (max-width: 699px) { :deep(.weeknav .label) { min-width: 0; font-size: var(--fs-sm); } :deep(.weeknav .link-btn) { display: none; } }
 .dos { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--sp-4); }
 @media (min-width: 720px) { .dos { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--sp-5); } }
 .dos .card { margin-bottom: var(--sp-4); }

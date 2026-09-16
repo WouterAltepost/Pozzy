@@ -166,6 +166,7 @@ function finalize() {
 
 <style scoped>
 .review { max-width: 820px; }
+@media (max-width: 699px) { .page-header :deep(.weeknav) { font-size: var(--fs-sm); } }
 .tiles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--sp-2); margin-bottom: var(--sp-4); }
 @media (min-width: 640px) { .tiles { grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); } }
 .tile { text-align: center; }

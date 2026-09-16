@@ -31,6 +31,8 @@ const AI_FEATURES = [
 ]
 
 const ready = computed(() => store.values && areas.loaded)
+const allJobs = ref(false)
+const jobRows = computed(() => (allJobs.value ? store.jobRuns : store.jobRuns.slice(0, 8)))
 
 onMounted(async () => {
   await Promise.all([store.load(), areas.load(), store.loadJobRuns()])
@@ -139,7 +141,7 @@ async function save() {
         <table class="ui jobs">
           <thead><tr><th>Job</th><th>Started</th><th>Result</th><th>Message</th></tr></thead>
           <tbody>
-            <tr v-for="r in store.jobRuns" :key="r.id">
+            <tr v-for="r in jobRows" :key="r.id">
               <td class="jname">{{ r.name }}</td>
               <td class="muted num nowrap">{{ formatDateTime(r.started_at) }}</td>
               <td><UiBadge :tone="r.ok === false ? 'danger' : r.ok ? 'ok' : 'neutral'">{{ r.ok === null ? 'running' : r.ok ? 'ok' : 'failed' }}</UiBadge></td>
@@ -147,6 +149,7 @@ async function save() {
             </tr>
           </tbody>
         </table>
+        <button v-if="store.jobRuns.length > 8" type="button" class="link-btn more" @click="allJobs = !allJobs">{{ allJobs ? 'Show fewer' : `Show all ${store.jobRuns.length}` }}</button>
       </div>
     </section>
     </UiLoadGate>
@@ -154,6 +157,7 @@ async function save() {
 </template>
 
 <style scoped>
+.more { margin-top: var(--sp-2); }
 .settings { max-width: 760px; }
 .fields { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: var(--sp-3); }
 .days { display: flex; flex-wrap: wrap; gap: var(--sp-2) var(--sp-4); margin-bottom: var(--sp-3); }
@@ -164,4 +168,5 @@ async function save() {
 .jname { font-weight: 500; white-space: nowrap; }
 .nowrap { white-space: nowrap; }
 .msg { word-break: break-word; font-size: var(--fs-sm); color: var(--ink-2); }
+@media (max-width: 699px) { .fields { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-3); } .fields :deep(.field) { min-width: 0; } }
 </style>

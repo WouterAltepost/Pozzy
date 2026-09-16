@@ -162,7 +162,12 @@ Mobile (390px, from the Claude Design handoff `pozzy-mobile-app-design/project/P
 - Tasks (phone): quick add and search hidden (capture does that); All / Urgent / Important switch, area select and Show done; each due group is a card with a 13px heading in the group colour and "N tasks"; rows are hairline rows with an 18px checkbox, title, due label at the right in colour, area, minutes and badges.
 - Tracking (phone): title with "N of M met today" and New tracker; the live chart card; a Today card with tracker chips (tap to tick or enter a value); a This week card with one row per habit and seven 22px day cells (met ok-soft, partial warn-soft, empty surface-2, future transparent, today outlined), tap the name for its chart, edit link per row; a compact week nav in the card head.
 - Hours (phone): title with "Xh this week" and a Log time button that opens a dialog with the log form; the timer card stacked; a By life area card with dot, bar and totals; an Entries card with a seven-day strip and that day's logs.
-- Everything else (Goals, Mail, Capture, Study, Notes, Review, Settings): the responsive desktop views at one column, as before. The loading gate, glass cards, route and dialog motion, the planner and the briefing reply all apply on the phone.
+- The seven routes the handoff did not design got the same vocabulary (2026-09-16, second pass): a 22px title with a 12px meta line and one small primary action at the right; forms behind Add buttons that open dialogs; lists as cards with hairline rows.
+  - Mail: title with the counts and Sync now; search plus a Filters toggle (badge with the active count) that reveals the filter selects; rows drop the category tag, area dot and summary, and the list shows 40 at a time with Show more.
+  - Notes: title with the count and New note; search, area and tag in one row; the list is a card of hairline rows; the editor opens as a large dialog.
+  - Study: title with open deadlines and applications; the three inline forms become Add buttons and dialogs; applications are stacked stage lists (empty stages hidden, no drag).
+  - Goals and Review: compact week nav; Settings: two-up fields and the job runs table shows eight rows with Show all; Capture unchanged apart from spacing.
+- The loading gate, glass cards, route and dialog motion, the planner and the briefing reply all apply on the phone.
 
 ## 7. Dark mode, focus, contrast, reduced motion
 

@@ -51,4 +51,11 @@ const emit = defineEmits(['open', 'handled'])
 .subject { font-size: var(--fs-base); }
 .summary { font-size: var(--fs-sm); color: var(--ink-3); }
 .tick { align-self: center; }
+@media (max-width: 699px) {
+  .row { padding: 8px 10px 8px 6px; }
+  .line1 .tag, .line1 :deep(.area-dot) { display: none; }
+  .from { max-width: 46%; }
+  .subject { font-size: var(--fs-md); }
+  .summary { display: none; }
+}
 </style>

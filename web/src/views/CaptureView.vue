@@ -117,6 +117,7 @@ function resultLink(ref) {
 
 <style scoped>
 .capture { max-width: 820px; }
+@media (max-width: 699px) { .entry textarea { font-size: var(--fs-base); } .entry-row .small { flex-basis: 100%; } }
 .entry { display: flex; flex-direction: column; gap: var(--sp-3); }
 .entry textarea { width: 100%; }
 .entry-row { display: flex; flex-wrap: wrap; gap: var(--sp-3); align-items: center; }

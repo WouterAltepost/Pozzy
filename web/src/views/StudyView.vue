@@ -9,6 +9,7 @@ import UiField from '../components/ui/UiField.vue'
 import UiLoadGate from '../components/ui/UiLoadGate.vue'
 import UiModal from '../components/ui/UiModal.vue'
 import { useReady } from '../composables/useReady'
+import { useMediaQuery } from '../composables/useMediaQuery'
 import { daysUntil, formatDateTime, formatDay } from '../lib/dates'
 import { APPLICATION_STATUSES, useStudyStore } from '../stores/study'
 
@@ -22,6 +23,8 @@ const dragOver = ref(null)
 const lifting = ref(null)
 
 const ready = useReady(() => store.load())
+const phone = useMediaQuery('(max-width: 699px)')
+const adding = ref(null) // 'deadline' | 'course' | 'application' on the phone
 
 async function run(fn) {
   error.value = ''
@@ -33,6 +36,7 @@ async function run(fn) {
 }
 
 function addCourse() {
+  adding.value = null
   if (!courseForm.name.trim()) return
   run(async () => {
     await store.createCourse({ name: courseForm.name, code: courseForm.code || null, period: courseForm.period || null, ects: courseForm.ects || null })
@@ -45,6 +49,7 @@ function removeCourse(c) {
 }
 
 function addDeadline() {
+  adding.value = null
   if (!deadlineForm.course_id || !deadlineForm.title.trim() || !deadlineForm.due_date) return
   const due = new Date(`${deadlineForm.due_date}T${deadlineForm.due_time || '23:59'}`)
   run(async () => {
@@ -62,6 +67,7 @@ function dueTone(day) {
 }
 
 function addApplication() {
+  adding.value = null
   if (!appForm.company.trim()) return
   run(async () => {
     await store.createApplication({ company: appForm.company, role: appForm.role || null, link: appForm.link || null })
@@ -97,13 +103,15 @@ function removeApp(a) {
 
 <template>
   <div class="study">
-    <PageHeader title="Study" />
+    <PageHeader v-if="!phone" title="Study" />
+    <div v-else class="phead"><div><h1>Study</h1><span class="muted small num">{{ store.deadlines.filter((d) => !d.done).length }} open deadlines, {{ store.applications.length }} applications</span></div></div>
     <p v-if="error || store.error" class="error">{{ error || store.error }}</p>
     <UiLoadGate :ready="ready" label="Loading study">
 
     <section class="card">
       <div class="card-head">
         <h2>Deadlines</h2>
+        <UiButton v-if="phone" size="sm" class="padd" @click="adding = 'deadline'">Add</UiButton>
         <span class="meta"><label class="check"><input v-model="store.includeDoneDeadlines" type="checkbox" @change="store.load()" /> Show done</label></span>
       </div>
       <ul class="deadlines">
@@ -117,7 +125,7 @@ function removeApp(a) {
           <button type="button" class="icon-btn" aria-label="Remove deadline" @click="run(() => store.removeDeadline(d.id))"><PhX /></button>
         </li>
       </ul>
-      <form class="inline" @submit.prevent="addDeadline">
+      <form v-if="!phone" class="inline" @submit.prevent="addDeadline">
         <UiField label="Course">
           <select v-model="deadlineForm.course_id" required>
             <option value="" disabled>Choose</option>
@@ -143,6 +151,7 @@ function removeApp(a) {
     <section class="card">
       <div class="card-head">
         <h2>Courses</h2>
+        <UiButton v-if="phone" size="sm" class="padd" @click="adding = 'course'">Add</UiButton>
         <span class="meta"><label class="check"><input v-model="store.includeClosedCourses" type="checkbox" @change="store.load()" /> Show finished</label></span>
       </div>
       <div v-if="store.courses.length" class="table-wrap">
@@ -167,7 +176,7 @@ function removeApp(a) {
       <UiEmpty v-else compact title="No courses yet" hint="Add a course to attach deadlines to it.">
         <template #icon><PhGraduationCap /></template>
       </UiEmpty>
-      <form class="inline" @submit.prevent="addCourse">
+      <form v-if="!phone" class="inline" @submit.prevent="addCourse">
         <UiField label="Course name" class="grow"><input v-model="courseForm.name" type="text" required /></UiField>
         <UiField label="Code"><input v-model="courseForm.code" type="text" class="short" /></UiField>
         <UiField label="Period"><input v-model="courseForm.period" type="text" class="short" /></UiField>
@@ -177,14 +186,27 @@ function removeApp(a) {
     </section>
 
     <section class="card">
-      <div class="card-head"><h2>Internship applications</h2></div>
-      <form class="inline" @submit.prevent="addApplication">
+      <div class="card-head"><h2>Internship applications</h2><UiButton v-if="phone" size="sm" class="padd" @click="adding = 'application'">Add</UiButton></div>
+      <form v-if="!phone" class="inline" @submit.prevent="addApplication">
         <UiField label="Company" class="grow"><input v-model="appForm.company" type="text" required /></UiField>
         <UiField label="Role" class="grow"><input v-model="appForm.role" type="text" /></UiField>
         <UiField label="Link" class="grow"><input v-model="appForm.link" type="url" placeholder="https://" /></UiField>
         <UiButton type="submit" variant="primary">Add</UiButton>
       </form>
-      <div class="kanban">
+      <div v-if="phone" class="stages">
+        <template v-for="status in APPLICATION_STATUSES" :key="status">
+          <div v-if="store.applicationsByStatus(status).length" class="stage">
+            <div class="stage-head"><span>{{ status }}</span><span class="muted small num">{{ store.applicationsByStatus(status).length }}</span></div>
+            <button v-for="a in store.applicationsByStatus(status)" :key="a.id" type="button" class="srow" @click="editingApp = { ...a }">
+              <span class="company">{{ a.company }}</span>
+              <span v-if="a.role" class="muted small">{{ a.role }}</span>
+              <span v-if="a.next_step" class="small next" :class="{ soon: daysUntil(a.next_step_date) !== null && daysUntil(a.next_step_date) <= 2 }">{{ a.next_step }}<span v-if="a.next_step_date">, {{ formatDay(a.next_step_date) }}</span></span>
+            </button>
+          </div>
+        </template>
+        <p v-if="!store.applications.length" class="muted small hint">No applications yet.</p>
+      </div>
+      <div v-else class="kanban">
         <div
           v-for="status in APPLICATION_STATUSES"
           :key="status"
@@ -219,6 +241,33 @@ function removeApp(a) {
 
     </UiLoadGate>
 
+    <UiModal :open="adding === 'deadline'" title="New deadline" size="sm" @close="adding = null">
+      <form class="pform" @submit.prevent="addDeadline">
+        <UiField label="Course"><select v-model="deadlineForm.course_id" required><option value="" disabled>Choose</option><option v-for="c in store.courses" :key="c.id" :value="c.id">{{ c.name }}</option></select></UiField>
+        <UiField label="Title"><input v-model="deadlineForm.title" type="text" required /></UiField>
+        <div class="pair"><UiField label="Due"><input v-model="deadlineForm.due_date" type="date" required /></UiField><UiField label="Time"><input v-model="deadlineForm.due_time" type="time" /></UiField></div>
+        <UiField label="Type"><select v-model="deadlineForm.type"><option value="assignment">assignment</option><option value="exam">exam</option><option value="presentation">presentation</option><option value="other">other</option></select></UiField>
+        <p v-if="!store.courses.length" class="muted small">Add a course first.</p>
+        <div class="actions"><UiButton type="submit" variant="primary" :disabled="!store.courses.length">Add deadline</UiButton><UiButton variant="ghost" @click="adding = null">Cancel</UiButton></div>
+      </form>
+    </UiModal>
+    <UiModal :open="adding === 'course'" title="New course" size="sm" @close="adding = null">
+      <form class="pform" @submit.prevent="addCourse">
+        <UiField label="Course name"><input v-model="courseForm.name" type="text" required /></UiField>
+        <div class="pair"><UiField label="Code"><input v-model="courseForm.code" type="text" /></UiField><UiField label="Period"><input v-model="courseForm.period" type="text" /></UiField></div>
+        <UiField label="ECTS"><input v-model.number="courseForm.ects" type="number" min="0" step="0.5" /></UiField>
+        <div class="actions"><UiButton type="submit" variant="primary">Add course</UiButton><UiButton variant="ghost" @click="adding = null">Cancel</UiButton></div>
+      </form>
+    </UiModal>
+    <UiModal :open="adding === 'application'" title="New application" size="sm" @close="adding = null">
+      <form class="pform" @submit.prevent="addApplication">
+        <UiField label="Company"><input v-model="appForm.company" type="text" required /></UiField>
+        <UiField label="Role"><input v-model="appForm.role" type="text" /></UiField>
+        <UiField label="Link"><input v-model="appForm.link" type="url" placeholder="https://" /></UiField>
+        <div class="actions"><UiButton type="submit" variant="primary">Add</UiButton><UiButton variant="ghost" @click="adding = null">Cancel</UiButton></div>
+      </form>
+    </UiModal>
+
     <UiModal :open="Boolean(editingApp)" :title="editingApp?.company || 'Application'" size="md" @close="editingApp = null">
       <form v-if="editingApp" class="app-form" @submit.prevent="saveApp">
         <UiField label="Company"><input v-model="editingApp.company" type="text" required /></UiField>
@@ -240,6 +289,16 @@ function removeApp(a) {
 </template>
 
 <style scoped>
+.phead { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-2); margin-bottom: var(--sp-4); }
+.phead h1 { font-size: var(--fs-2xl); }
+.padd { margin-left: auto; }
+.pform { display: flex; flex-direction: column; gap: var(--sp-3); }
+.pform .pair { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-2); }
+.pform .actions { display: flex; gap: var(--sp-2); }
+.stages { margin-top: var(--sp-3); }
+.stage { padding: 6px 0; }
+.stage-head { display: flex; justify-content: space-between; align-items: baseline; font-weight: 600; font-size: var(--fs-md); text-transform: capitalize; padding: 6px 0 2px; }
+.srow { display: flex; flex-direction: column; gap: 2px; width: 100%; text-align: left; background: none; border: 0; border-top: 1px solid var(--line); padding: 10px 0; color: inherit; font-size: var(--fs-base); }
 .check { display: flex; align-items: center; gap: 6px; font-size: var(--fs-md); }
 .hint { padding: var(--sp-2) 0; }
 .deadlines .title { flex: 1; min-width: 0; }
