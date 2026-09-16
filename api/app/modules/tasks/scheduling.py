@@ -44,7 +44,11 @@ def candidate_slots(task: Task, *, duration_min: int | None = None, from_dt: dat
         events = []
     window = dict(get_setting("working_window") or {})
     window.setdefault("timezone", str(app_tz()))
-    slots = find_free_slots(events, _scheduled_task_intervals(task.id), window, duration, start, days=days)
+    buffer_min = int(get_setting("plan_buffer_minutes") or 0)
+    pad = timedelta(minutes=max(0, buffer_min))
+    events = [(s - pad, e + pad) for s, e in events]
+    scheduled = [(s - pad, e + pad) for s, e in _scheduled_task_intervals(task.id)]
+    slots = find_free_slots(events, scheduled, window, duration, start, days=days)
     return slots, duration
 
 

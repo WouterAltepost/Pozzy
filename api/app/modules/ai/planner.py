@@ -71,11 +71,41 @@ def _candidates(start_day: date, days: int) -> list[dict]:
     return items[:MAX_ITEMS]
 
 
+def _scheduled_rows() -> list[tuple[Task, tuple[datetime, datetime]]]:
+    stmt = select(Task).where(Task.scheduled_start.is_not(None), Task.scheduled_end.is_not(None), Task.status.notin_(("done", "dropped")))
+    return [(t, (as_utc(t.scheduled_start), as_utc(t.scheduled_end))) for t in db.session.scalars(stmt).all()]
+
+
 def _busy_now() -> list[tuple[datetime, datetime]]:
     stmt = select(Task.scheduled_start, Task.scheduled_end).where(
         Task.scheduled_start.is_not(None), Task.scheduled_end.is_not(None), Task.status.notin_(("done", "dropped"))
     )
     return [(as_utc(s), as_utc(e)) for s, e in db.session.execute(stmt).all()]
+
+
+def _pad(intervals: list[tuple[datetime, datetime]], minutes: int) -> list[tuple[datetime, datetime]]:
+    """Widen busy intervals by the planning buffer on both sides."""
+    if minutes <= 0:
+        return list(intervals)
+    d = timedelta(minutes=minutes)
+    return [(s - d, e + d) for s, e in intervals]
+
+
+def _neighbours(rows: list[dict], start: datetime, end: datetime, tz) -> dict:
+    """The appointment before and after a slot on the same day, with the gap in minutes."""
+    start_u, end_u = as_utc(start), as_utc(end)
+    day = start.astimezone(tz).date()
+    same_day = [r for r in rows if r["start"].astimezone(tz).date() == day or r["end"].astimezone(tz).date() == day]
+    before = [r for r in same_day if r["end"] <= start_u]
+    after = [r for r in same_day if r["start"] >= end_u]
+    out = {}
+    if before:
+        r = max(before, key=lambda x: x["end"])
+        out["before"] = {"title": r["title"], "location": r["location"], "ends": r["end"].astimezone(tz).strftime("%H:%M"), "gap_minutes": int((start_u - r["end"]).total_seconds() // 60)}
+    if after:
+        r = min(after, key=lambda x: x["start"])
+        out["after"] = {"title": r["title"], "location": r["location"], "starts": r["start"].astimezone(tz).strftime("%H:%M"), "gap_minutes": int((r["start"] - end_u).total_seconds() // 60)}
+    return out
 
 
 def build_plan(start_day: date | None = None, days: int = 7) -> dict:
@@ -87,12 +117,17 @@ def build_plan(start_day: date | None = None, days: int = 7) -> dict:
     end_dt = datetime.combine(start_day + timedelta(days=days), datetime.min.time(), tzinfo=tz)
     try:
         events = calendar_read.get_events_between(from_dt, end_dt)
+        rows = calendar_read.get_event_rows_between(from_dt, end_dt)
     except Exception:
         log.exception("calendar_read failed, planning without events")
-        events = []
+        events, rows = [], []
     window = dict(get_setting("working_window") or {})
     window.setdefault("timezone", str(tz))
-    busy = list(events) + _busy_now()
+    buffer_min = int(get_setting("plan_buffer_minutes") or 0)
+    scheduled = _busy_now()
+    rows = rows + [{"title": t.title, "location": "", "start": s, "end": e, "task": True} for t, (s, e) in _scheduled_rows()]
+    events = _pad(events, buffer_min)
+    busy = list(events) + _pad(scheduled, buffer_min)
     per_day: dict[date, int] = {}
     items = []
     for cand in _candidates(start_day, days):
@@ -107,7 +142,7 @@ def build_plan(start_day: date | None = None, days: int = 7) -> dict:
         if not ranked:
             continue
         chosen = ranked[0]
-        options = [slot_to_dict(s) for s in ranked]
+        options = [{**slot_to_dict(s), **_neighbours(rows, s["start"], s["end"], tz)} for s in ranked]
         busy.append((as_utc(chosen["start"]), as_utc(chosen["end"])))
         per_day[chosen["start"].date()] = per_day.get(chosen["start"].date(), 0) + 1
         items.append({
@@ -152,7 +187,7 @@ def _apply_claude(items: list[dict], start_day: date) -> None:
     payload = {
         "week_of": start_day.isoformat(),
         "items": [
-            {"id": it["id"], "kind": it["kind"], "title": it["title"], "minutes": it["minutes"], "why": it["reason"], "options": [{"index": i, "start": o["start"], "end": o["end"], "day_label": o["day_label"], "hints": o["reason_hints"]} for i, o in enumerate(it["options"])]}
+            {"id": it["id"], "kind": it["kind"], "title": it["title"], "minutes": it["minutes"], "why": it["reason"], "options": [{"index": i, "start": o["start"], "end": o["end"], "day_label": o["day_label"], "hints": o["reason_hints"], "before": o.get("before"), "after": o.get("after")} for i, o in enumerate(it["options"])]}
             for it in items
         ],
     }

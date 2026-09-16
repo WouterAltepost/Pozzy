@@ -29,6 +29,8 @@ DEFAULTS: dict = {
     "slot_lookahead_days": 7,
     "deadline_urgent_days": 3,
     "three_dos_count": 3,
+    # Minutes kept free on both sides of every calendar event when Pozzy plans or suggests slots (commute, cool down).
+    "plan_buffer_minutes": 0,
     # Stream B (calendar)
     "calendar_sync_days_back": 7,
     "calendar_sync_days_forward": 30,

@@ -76,3 +76,34 @@ def test_rules_reach_every_system_prompt_and_planner_can_skip(client, headers, f
     fake_claude.reply = json.dumps({"items": [{"id": item_id, "option": -1, "reason": "Every option is before 09:00."}]})
     data = client.post("/api/ai/plan", json={"start": monday.isoformat()}, headers=headers).get_json()["data"]
     assert data["items"] == []
+
+
+def test_options_carry_neighbours_and_buffer_keeps_distance(client, headers, fake_claude, app):
+    from datetime import datetime, timezone
+    from app.extensions import db
+    from app.models import CalendarAccount, CalendarEvent
+
+    monday = _next_monday()
+    client.put("/api/settings", json={"ai_enabled": {"scheduling": False}, "plan_buffer_minutes": 45}, headers=headers)
+    # A class on campus from 09:30 to 12:00 on the Monday.
+    acct = CalendarAccount(name="iCloud", caldav_url="https://caldav.example", username="x", secret_ref="env:x", enabled=True)
+    db.session.add(acct); db.session.flush()
+    start = datetime(monday.year, monday.month, monday.day, 7, 30, tzinfo=timezone.utc)  # 09:30 Amsterdam
+    db.session.add(CalendarEvent(account_id=acct.id, calendar_url="c", uid="u1", title="Sprint 3 NGS", location="AM00.02.270", start=start, end=start.replace(hour=10, minute=0), all_day=False))
+    db.session.commit()
+    client.post("/api/tasks", json={"title": "Buy new book", "estimated_minutes": 15, "due_date": monday.isoformat()}, headers=headers)
+    data = client.post("/api/ai/plan", json={"start": monday.isoformat(), "days": 1}, headers=headers).get_json()["data"]
+    assert data["items"], "the task still gets a slot"
+    it = data["items"][0]
+    # With a 45 minute buffer the slot cannot sit inside 08:45 to 12:45 Amsterdam.
+    hhmm = it["start"][11:16]
+    assert not ("08:45" <= hhmm < "12:45"), it
+    # With AI on, Claude sees the neighbours of every option.
+    client.put("/api/settings", json={"ai_enabled": {"scheduling": True}, "plan_buffer_minutes": 0}, headers=headers)
+    fake_claude.reply = json.dumps({"items": []})
+    client.post("/api/ai/plan", json={"start": monday.isoformat(), "days": 1}, headers=headers)
+    sent = json.loads(fake_claude.last_user_text().split("\n\nReply exactly")[0])
+    opts = sent["items"][0]["options"]
+    assert any((o.get("after") or {}).get("title") == "Sprint 3 NGS" or (o.get("before") or {}).get("title") == "Sprint 3 NGS" for o in opts), opts
+    near = next(o for o in opts if o.get("after") and o["after"]["title"] == "Sprint 3 NGS")
+    assert near["after"]["location"] == "AM00.02.270" and near["after"]["starts"] == "09:30" and isinstance(near["after"]["gap_minutes"], int)

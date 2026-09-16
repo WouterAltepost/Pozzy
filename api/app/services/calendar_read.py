@@ -34,3 +34,20 @@ def get_events_between(start: datetime, end: datetime) -> list[tuple[datetime, d
         .order_by(CalendarEvent.start)
     )
     return [(as_utc(s), as_utc(e)) for s, e in db.session.execute(stmt).all()]
+
+
+def get_event_rows_between(start: datetime, end: datetime) -> list[dict]:
+    """Timed events overlapping [start, end] with title and location, for planner context
+    (what sits before and after a candidate slot). Task-linked events are included here on
+    purpose: for neighbour context they are real appointments."""
+    start = as_utc(start)
+    end = as_utc(end)
+    stmt = (
+        select(CalendarEvent.title, CalendarEvent.location, CalendarEvent.start, CalendarEvent.end, CalendarEvent.task_id)
+        .where(CalendarEvent.start < end, CalendarEvent.end > start, CalendarEvent.all_day.is_(False))
+        .order_by(CalendarEvent.start)
+    )
+    return [
+        {"title": title, "location": location or "", "start": as_utc(s), "end": as_utc(e), "task": task_id is not None}
+        for title, location, s, e, task_id in db.session.execute(stmt).all()
+    ]

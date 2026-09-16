@@ -16,7 +16,7 @@ import MailAccounts from '../components/settings/MailAccounts.vue'
 const store = useSettingsStore()
 const areas = useAreasStore()
 const toast = useToast()
-const form = reactive({ working_days: [], start: '08:00', end: '18:00', timezone: 'Europe/Amsterdam', briefing_time: '07:00', hour_targets: {}, ai_enabled: {}, deadline_urgent_days: 3, default_task_minutes: 60, slot_lookahead_days: 7, three_dos_count: 3, ai_rules: '', ai_context: '' })
+const form = reactive({ working_days: [], start: '08:00', end: '18:00', timezone: 'Europe/Amsterdam', briefing_time: '07:00', hour_targets: {}, ai_enabled: {}, deadline_urgent_days: 3, default_task_minutes: 60, slot_lookahead_days: 7, three_dos_count: 3, plan_buffer_minutes: 0, ai_rules: '', ai_context: '' })
 
 const DAYS = [
   [1, 'Mon'], [2, 'Tue'], [3, 'Wed'], [4, 'Thu'], [5, 'Fri'], [6, 'Sat'], [7, 'Sun'],
@@ -47,6 +47,7 @@ onMounted(async () => {
   form.default_task_minutes = v.default_task_minutes ?? 60
   form.slot_lookahead_days = v.slot_lookahead_days ?? 7
   form.three_dos_count = v.three_dos_count ?? 3
+  form.plan_buffer_minutes = v.plan_buffer_minutes ?? 0
   form.ai_enabled = { ...(store.defaults?.ai_enabled || {}), ...(v.ai_enabled || {}) }
   form.ai_rules = (v.ai_rules || []).join('\n')
   form.ai_context = v.ai_context || ''
@@ -70,6 +71,7 @@ async function save() {
       default_task_minutes: Number(form.default_task_minutes),
       slot_lookahead_days: Number(form.slot_lookahead_days),
       three_dos_count: Number(form.three_dos_count),
+      plan_buffer_minutes: Number(form.plan_buffer_minutes) || 0,
     })
     toast.success('Settings saved.')
   } catch {
@@ -113,6 +115,7 @@ async function save() {
           <UiField label="Urgent when due within (days)"><input v-model.number="form.deadline_urgent_days" type="number" min="0" max="30" /></UiField>
           <UiField label="Default task length (min)"><input v-model.number="form.default_task_minutes" type="number" min="5" max="480" step="5" /></UiField>
           <UiField label="Slot lookahead (days)"><input v-model.number="form.slot_lookahead_days" type="number" min="1" max="30" /></UiField>
+          <UiField label="Buffer around events (min)" hint="Kept free before and after every calendar event when Pozzy plans or suggests a slot"><input v-model.number="form.plan_buffer_minutes" type="number" min="0" max="240" step="5" /></UiField>
           <UiField label="Do's per day"><input v-model.number="form.three_dos_count" type="number" min="1" max="10" /></UiField>
         </div>
       </section>

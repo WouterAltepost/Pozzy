@@ -1,5 +1,12 @@
 # Pozzy progress
 
+## Planner: rules can now be applied, 2026-09-16 (deployed)
+
+Wouter's test: with the rules saved, the planner still put a task at 09:00 before a 09:30 class on campus. Cause: Claude only received the candidate slots, never what sat around them, so a commute rule had nothing to bite on. Changes:
+- Every option sent to Claude now carries `before` and `after`: the appointment ending before it and the one starting after it on that day, with title, location, time and the gap in minutes (`calendar_read.get_event_rows_between`, planner `_neighbours`). The prompt tells Claude to check those gaps against the standing rules and skip (option -1) when none fits.
+- New Settings key `plan_buffer_minutes` ("Buffer around events (min)" in Tasks and planning): the deterministic engine pads every calendar event and scheduled task by that many minutes on both sides, for the week planner and for single-task slot suggestions. This is the hard guarantee; the free-text rules cover the rest.
+- Tests in `api/tests/d/test_plan.py`: a 45 minute buffer keeps a slot out of 08:45 to 12:45 around a 09:30 class, and the payload shows the class as `after` with its location and gap.
+
 ## Rules for Pozzy, 2026-09-16 (deployed)
 
 Settings keys `ai_rules` (list of sentences) and `ai_context` (text), edited in a new "Rules for Pozzy" card in Settings. `claude_client._call` appends both to every system prompt as "Standing rules from the user" and "About the user", so planning, the briefing and its reply, do suggestions, capture parsing, mail classification and the weekly review all see them; the block says the rules outrank the feature instructions and that an impossible item is left out with a reason. The planner accepts option -1 from Claude to skip an item the rules exclude (for example a slot before 09:00, or too close to a class given the commute). Deterministic fallbacks do not read free text; the working window start is the hard limit for planning. Contract in docs/AI_CONTRACTS.md, test in `api/tests/d/test_plan.py` (rules present in the briefing system prompt, planner skip).
