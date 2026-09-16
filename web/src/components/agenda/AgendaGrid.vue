@@ -94,7 +94,7 @@ const suggested = computed(() => {
   for (const sg of props.suggestions) {
     for (const day of props.days) {
       const pos = place(sg, day)
-      if (pos) out[day].push({ ...pos, item: sg })
+      if (pos) out[day].push({ ...pos, height: Math.max(pos.height, 30), item: sg })
     }
   }
   return out

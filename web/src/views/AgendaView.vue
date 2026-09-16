@@ -201,7 +201,7 @@ function pickDay(evt) {
               <span class="kind">{{ s.kind === 'task' ? 'task' : 'event' }}</span>
               <span class="t truncate">{{ s.title }}</span>
               <span class="when num">{{ formatDateTime(s.start) }}, {{ s.minutes }} min</span>
-              <span class="why muted small truncate">{{ s.reason }}</span>
+              <span class="why muted small truncate" :title="s.reason">{{ s.reason }}</span>
               <span class="row-actions">
                 <button type="button" class="icon-btn ok" :aria-label="'Accept: ' + s.title" :disabled="deciding[s.id]" @click="accept(s)"><PhCheck weight="bold" /></button>
                 <button type="button" class="icon-btn" :aria-label="'Deny: ' + s.title" @click="deny(s)"><PhX weight="bold" /></button>
