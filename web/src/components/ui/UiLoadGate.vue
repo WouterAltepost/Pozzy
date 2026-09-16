@@ -4,8 +4,10 @@
 // flow, so the figure never moves while widgets arrive underneath. The figure only appears after
 // a short delay, so fast loads never flash it.
 import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { useTheme } from '../../composables/useTheme'
 
 const props = defineProps({ ready: { type: Boolean, default: false }, label: { type: String, default: 'Loading' } })
+const theme = useTheme()
 const showFigure = ref(false)
 let timer = null
 
@@ -22,7 +24,7 @@ onBeforeUnmount(() => clearTimeout(timer))
   <div class="gate" :class="{ ready }">
     <Transition name="figure">
       <div v-if="showFigure && !ready" class="figure" role="status" aria-live="polite">
-        <img src="/favicon.svg" alt="" class="mark" width="34" height="34" />
+        <img :src="theme.isDark.value ? '/mark-dark.svg' : '/favicon.svg'" alt="" class="mark" width="34" height="34" />
         <span class="muted small">{{ label }}</span>
       </div>
     </Transition>

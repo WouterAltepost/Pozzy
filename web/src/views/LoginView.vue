@@ -1,9 +1,12 @@
 <script setup>
+import { useTheme } from '../composables/useTheme'
 import { ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import UiButton from '../components/ui/UiButton.vue'
 import UiField from '../components/ui/UiField.vue'
 import { useAuthStore } from '../stores/auth'
+
+const theme = useTheme()
 
 const auth = useAuthStore()
 const route = useRoute()
@@ -31,7 +34,10 @@ async function submit() {
 <template>
   <div class="login-wrap">
     <div class="card login-card">
-      <img src="/logo.png" alt="Pozzy" class="logo" width="180" />
+      <div class="logo">
+        <img :src="theme.isDark.value ? '/mark-dark.svg' : '/favicon.svg'" alt="" class="logo-mark" width="88" height="84" />
+        <span class="logo-word">Pozzy</span>
+      </div>
       <h1>Log in</h1>
       <form class="login" @submit.prevent="submit">
         <UiField label="Email"><input v-model="email" type="email" autocomplete="username" required /></UiField>
@@ -45,7 +51,9 @@ async function submit() {
 <style scoped>
 .login-wrap { display: flex; justify-content: center; padding-top: var(--sp-10); }
 .login-card { width: 100%; max-width: 360px; display: flex; flex-direction: column; gap: var(--sp-4); }
-.logo { width: 180px; height: auto; margin: var(--sp-2) auto 0; }
+.logo { display: flex; flex-direction: column; align-items: center; gap: var(--sp-2); margin: var(--sp-2) auto 0; }
+.logo-mark { width: 88px; height: auto; }
+.logo-word { font-weight: 600; font-size: var(--fs-xl); letter-spacing: -0.01em; color: var(--ink); }
 h1 { font-size: var(--fs-xl); text-align: center; }
 .login { display: flex; flex-direction: column; gap: var(--sp-3); }
 </style>

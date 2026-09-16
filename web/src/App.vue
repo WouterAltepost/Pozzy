@@ -63,7 +63,7 @@ watch(() => route.fullPath, () => (menuOpen.value = false))
     <div class="ambient" aria-hidden="true"></div>
     <header class="topbar">
       <RouterLink to="/" class="brand" aria-label="Pozzy home">
-        <img src="/favicon.svg" alt="" class="mark" width="26" height="26" />
+        <img :src="theme.isDark.value ? '/mark-dark.svg' : '/favicon.svg'" alt="" class="mark" width="26" height="26" />
         <span class="wordmark">Pozzy</span>
       </RouterLink>
       <CaptureBar v-if="auth.isAuthenticated" class="topbar-capture" />

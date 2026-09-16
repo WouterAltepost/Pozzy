@@ -1,5 +1,14 @@
 # Pozzy progress
 
+## New logo everywhere, 2026-09-16 (deployed)
+
+Wouter delivered a new mark in Branding (pozzy-new.svg and pozzy-new2.png; navy, gold, teal and white on transparent; the old files are in Branding/Archive). Applied:
+- `web/public/favicon.svg` is the new SVG verbatim: browser tab icon, top bar mark, loading figure and the login page (88px with a text "Pozzy" wordmark beneath, since the new mark has no wordmark).
+- PWA icons `pwa-192`, `pwa-512`, `pwa-512-maskable` (mark at 56% for the safe zone) and `apple-touch-icon` rendered from the PNG on the bone field; `logo.png` is the mark alone at 512px.
+- `mark-dark.svg`: the same SVG with navy swapped for #8AA6D9 so the mark keeps contrast on dark surfaces; the top bar, loading figure and login switch source with the theme.
+- Brand tokens follow the mark's navy: `--brand` #082247 light, #8AA6D9 dark, with matching soft tints. Today marker, now line, timer lamp, focus ring and the capture bolt use it.
+- Docs: DESIGN.md tokens and logo assets row, PRODUCT.md, the impeccable surface brief.
+
 ## Plan the week on the Agenda, 2026-09-16 (deployed)
 
 - `POST /api/ai/plan {start, days}` (`modules/ai/planner.py`) proposes placements for open unscheduled tasks, prep blocks for upcoming study deadlines and work blocks for this week's unmet goals. Free slots come from the existing deterministic engine and the working window; items are placed greedily, at most three a day, never overlapping. With `ai_enabled.scheduling` on, Claude (`plan_week`, prompt in api/app/prompts) picks one of up to three offered options per item and phrases the reason; anything outside the options is dropped. Nothing is written by the planner.

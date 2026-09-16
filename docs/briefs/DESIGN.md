@@ -23,7 +23,7 @@ Pozzy is a desk instrument, not a SaaS dashboard. A matte stone housing carries 
 | Loading | `UiLoadGate` holds a page behind one figure (the mark spinning plus a label); the hidden content is taken out of the flow so the figure never moves while widgets arrive until its first loads settle, then reveals everything at once with a rise and fade. Homepage widgets report into the gate; every other view passes `ready` from `useReady`. The figure appears only after 140ms so fast loads never flash it (requested 2026-09-15) | Widgets arriving one by one read as broken; one reveal reads as done |
 | Tracking chart | A live multi-series chart at the top of Tracking: percent of target per week for every habit, one colour per habit from an eight-colour palette, legend chips toggle series (persisted per device), range 4w / 12w / 26w / All, hover tooltip with the real values. Habits without a target are scaled to their best week and marked "scaled" in the legend (requested 2026-09-15) | One comparable axis across habits with different units |
 | Fonts | Self-hosted Geist (variable, 300 to 800), latin subset, `font-display: swap`; no runtime font requests | One workhorse sans for an Operate surface; tabular figures and a real medium weight; the wordmark serif lives only inside the logo image |
-| Logo assets | `favicon-svg.svg` as the mark, `pozzy.png` as mark plus wordmark (login and top bar wordmark), `Group.png` as PWA icons source | `pozzy-svg.svg` is green while every other asset is red; treated as an export error and left unused until confirmed |
+| Logo assets | New mark delivered 2026-09-16: `Branding/pozzy-new.svg` (1681 by 1611, navy #082247 with gold #C49A4E, teal and white, transparent) is copied verbatim to `web/public/favicon.svg` and used for the browser icon, the top bar mark (26px), the loading figure (34px) and the login page (88px, with a text wordmark beneath, since the mark carries no wordmark). PWA icons and the Apple touch icon are the PNG (`pozzy-new2.png`) composited on the bone field at 78% of the tile, the maskable one at 56% so it stays inside the safe zone. `logo.png` is the mark alone at 512px. `web/public/mark-dark.svg` is the same SVG with its navy fills swapped for the dark brand blue #8AA6D9 (gold, teal and white untouched), used wherever the mark sits on a dark surface (top bar, loading figure, login) via the theme composable. The previous assets live in `Branding/Archive` | One source file for every vector use, rasters only where the platform needs them |
 
 ## 3. Tokens (CSS custom properties in `web/src/style.css`)
 
@@ -39,7 +39,7 @@ Pozzy is a desk instrument, not a SaaS dashboard. A matte stone housing carries 
 --ink-3: #7B7E86         muted text, placeholders (4.6:1 on --surface)
 --line: #DAD9D3          hairline
 --line-2: #C3C2BB        stronger rule, input border
---brand: #2A4B7C         logo galaxy blue, now marker, focus ring (was red #AF1616 until 2026-09-15)
+--brand: #082247         logo navy, now marker, focus ring (red #AF1616 until 2026-09-15, galaxy blue #2A4B7C for a day, the new mark's navy since 2026-09-16)
 --brand-soft: #F6E1E1    now marker fill, today column
 --on-ink: #F7F6F2        text on --ink
 --ok: #1F7A4D  --ok-soft: #E2F1E8
@@ -54,7 +54,7 @@ Pozzy is a desk instrument, not a SaaS dashboard. A matte stone housing carries 
 --bg: #141518  --surface: #1C1E22  --surface-2: #24262B  --surface-3: #2D3036
 --ink: #ECEBE6  --ink-2: #B6B5B0  --ink-3: #8A8B91
 --line: #2C2E34  --line-2: #3D4048
---brand: #7C9CD9  --brand-soft: #1E2B47  --on-ink: #16171A
+--brand: #8AA6D9  --brand-soft: #1B2740  --on-ink: #16171A
 --ok: #5CC48F  --ok-soft: #1B3328  --warn: #E1A64E  --warn-soft: #3A2C16
 --danger: #E86B62  --danger-soft: #3D2220  --info: #7FA3E6  --info-soft: #1F2A40
 ```

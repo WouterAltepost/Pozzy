@@ -9,7 +9,7 @@ export default defineConfig({
     vue(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['favicon.svg', 'apple-touch-icon.png', 'logo.png', 'fonts/geist-latin.woff2'],
+      includeAssets: ['favicon.svg', 'mark-dark.svg', 'apple-touch-icon.png', 'logo.png', 'fonts/geist-latin.woff2'],
       manifest: {
         name: 'Pozzy',
         short_name: 'Pozzy',

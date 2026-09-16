@@ -41,7 +41,7 @@ Everything Wouter needs to run a week in one screen, with AI as an assistant tha
 
 - Name: Pozzy. Logo: a hand-inked red hub with eight spokes ending in rings, three of them filled. Wordmark: classical Roman capitals "POZZY".
 - Assets in Branding/ are final and must be embedded exactly as they are, never redrawn, restyled or recoloured: pozzy.png and pozzy-svg.svg (mark plus wordmark), favicon-svg.svg (mark), Group.png (mark, raster).
-- Asset discrepancy found on 2026-09-15: favicon-svg.svg, pozzy.png and Group.png are red (#AF1616 in the SVG, #A81010 sampled from the PNGs) while pozzy-svg.svg carries fill #2E7338 (green). Treated as an export error at the time. On 2026-09-15 Wouter asked for the mark to become galaxy blue (#2A4B7C); the SVG was recoloured at source and the PNGs by hue mapping, so every asset in web/public is blue now while the Branding folder keeps the originals. [confirmed]
+- Asset discrepancy found on 2026-09-15: favicon-svg.svg, pozzy.png and Group.png are red (#AF1616 in the SVG, #A81010 sampled from the PNGs) while pozzy-svg.svg carries fill #2E7338 (green). Treated as an export error at the time. On 2026-09-15 Wouter asked for the mark to become galaxy blue (#2A4B7C); the SVG was recoloured at source and the PNGs by hue mapping, so every asset in web/public was blue for a day. On 2026-09-16 Wouter delivered a new mark (Branding/pozzy-new.svg and pozzy-new2.png, navy, gold, teal and white); it replaces every icon and the login logo, the brand token follows its navy #082247, and the earlier files moved to Branding/Archive. [confirmed]
 - Inspo/ screenshots (three SaaS dashboards) are references for mood and density only.
 
 ## Evidence on Hand
