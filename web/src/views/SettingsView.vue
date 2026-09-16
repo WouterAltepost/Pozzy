@@ -16,7 +16,7 @@ import MailAccounts from '../components/settings/MailAccounts.vue'
 const store = useSettingsStore()
 const areas = useAreasStore()
 const toast = useToast()
-const form = reactive({ working_days: [], start: '08:00', end: '18:00', timezone: 'Europe/Amsterdam', briefing_time: '07:00', hour_targets: {}, ai_enabled: {}, deadline_urgent_days: 3, default_task_minutes: 60, slot_lookahead_days: 7, three_dos_count: 3 })
+const form = reactive({ working_days: [], start: '08:00', end: '18:00', timezone: 'Europe/Amsterdam', briefing_time: '07:00', hour_targets: {}, ai_enabled: {}, deadline_urgent_days: 3, default_task_minutes: 60, slot_lookahead_days: 7, three_dos_count: 3, ai_rules: '', ai_context: '' })
 
 const DAYS = [
   [1, 'Mon'], [2, 'Tue'], [3, 'Wed'], [4, 'Thu'], [5, 'Fri'], [6, 'Sat'], [7, 'Sun'],
@@ -48,6 +48,8 @@ onMounted(async () => {
   form.slot_lookahead_days = v.slot_lookahead_days ?? 7
   form.three_dos_count = v.three_dos_count ?? 3
   form.ai_enabled = { ...(store.defaults?.ai_enabled || {}), ...(v.ai_enabled || {}) }
+  form.ai_rules = (v.ai_rules || []).join('\n')
+  form.ai_context = v.ai_context || ''
   form.hour_targets = {}
   for (const a of areas.items) form.hour_targets[a.name] = v.hour_targets?.[a.name] ? Math.round((v.hour_targets[a.name] / 60) * 10) / 10 : null
 })
@@ -62,6 +64,8 @@ async function save() {
       briefing_time: form.briefing_time,
       hour_targets,
       ai_enabled: form.ai_enabled,
+      ai_rules: form.ai_rules.split('\n').map((r) => r.trim()).filter(Boolean),
+      ai_context: form.ai_context.trim(),
       deadline_urgent_days: Number(form.deadline_urgent_days),
       default_task_minutes: Number(form.default_task_minutes),
       slot_lookahead_days: Number(form.slot_lookahead_days),
@@ -111,6 +115,16 @@ async function save() {
           <UiField label="Slot lookahead (days)"><input v-model.number="form.slot_lookahead_days" type="number" min="1" max="30" /></UiField>
           <UiField label="Do's per day"><input v-model.number="form.three_dos_count" type="number" min="1" max="10" /></UiField>
         </div>
+      </section>
+
+      <section class="card">
+        <div class="card-head"><h2>Rules for Pozzy</h2><span class="meta">Read by every AI feature: planning, briefing, do suggestions, capture, the review</span></div>
+        <UiField label="Rules, one per line" hint="Plain sentences. They outrank the feature instructions; when a rule makes a suggestion impossible, Pozzy leaves it out and says why.">
+          <textarea v-model="form.ai_rules" rows="6" placeholder="Never plan anything before 09:00; I add early things myself.&#10;My commute to school takes 45 minutes, so nothing right before a class on campus.&#10;Keep Sunday free of work."></textarea>
+        </UiField>
+        <UiField label="About you" hint="Standing context Pozzy should know: where you are, how you work, what matters this period.">
+          <textarea v-model="form.ai_context" rows="3" placeholder="Student in Amsterdam, building Pozzy on the side. Classes are on campus, training on Tuesday and Thursday evenings."></textarea>
+        </UiField>
       </section>
 
       <section class="card">

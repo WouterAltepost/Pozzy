@@ -1,5 +1,9 @@
 # Pozzy progress
 
+## Rules for Pozzy, 2026-09-16 (deployed)
+
+Settings keys `ai_rules` (list of sentences) and `ai_context` (text), edited in a new "Rules for Pozzy" card in Settings. `claude_client._call` appends both to every system prompt as "Standing rules from the user" and "About the user", so planning, the briefing and its reply, do suggestions, capture parsing, mail classification and the weekly review all see them; the block says the rules outrank the feature instructions and that an impossible item is left out with a reason. The planner accepts option -1 from Claude to skip an item the rules exclude (for example a slot before 09:00, or too close to a class given the commute). Deterministic fallbacks do not read free text; the working window start is the hard limit for planning. Contract in docs/AI_CONTRACTS.md, test in `api/tests/d/test_plan.py` (rules present in the briefing system prompt, planner skip).
+
 ## Phone PWA layout from the Claude Design handoff, 2026-09-16 (deployed)
 
 Implemented `pozzy-mobile-app-design/project/Pozzy Mobile.dc.html` (with `Pozzy Phone.dc.html`, `ios-frame.jsx`, `support.js` and the design system tokens read in full). The design carried two shell variants; the drawer one (Turn 2, the design's default) is implemented. Everything under 700px:

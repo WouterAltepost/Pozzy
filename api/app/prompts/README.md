@@ -5,3 +5,7 @@ One file per AI feature. `claude_client.load_prompt(name)` reads `<name>.md` and
 Templates: `{{json}}` in the user section is replaced with the pretty-printed payload; `{{key}}` with a top-level scalar from the payload.
 
 These files live under `api/app/prompts/` because only `api/` is deployed to Railway. `docs/prompts/` holds symlinks to them so the templates stay browsable next to the plan.
+
+## Standing rules
+
+Every system prompt gets `claude_client.standing_rules_block()` appended: the `ai_rules` list and `ai_context` text from Settings. Prompts do not need to mention them; the block itself says the rules outrank the instructions above it.

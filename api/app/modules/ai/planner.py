@@ -163,10 +163,14 @@ def _apply_claude(items: list[dict], start_day: date) -> None:
         return
     if not answer:
         return
-    by_id = {it["id"]: it for it in items}
     taken: list[tuple[datetime, datetime]] = []
+    kept = []
     for it in items:
         pick = answer.get(it["id"])
+        if pick is not None and pick["option"] < 0:
+            log.info("plan_week: %s skipped by Claude: %s", it["title"], pick.get("reason", "")[:120])
+            continue
+        kept.append(it)
         option = it["options"][0]
         reason = it["reason"]
         if pick is not None and 0 <= pick["option"] < len(it["options"]):
@@ -179,3 +183,4 @@ def _apply_claude(items: list[dict], start_day: date) -> None:
         taken.append((s, e))
         it["start"], it["end"], it["reason"] = option["start"], option["end"], reason[:300]
         it["ranked_by"] = "claude" if pick is not None else "deterministic"
+    items[:] = kept

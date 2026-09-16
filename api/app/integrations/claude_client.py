@@ -203,6 +203,27 @@ def _usage_dict(response) -> dict:
     }
 
 
+def standing_rules_block() -> str:
+    """Wouter's rules and context from Settings, rendered for every system prompt.
+    Rules outrank the feature instructions; the block is empty when he wrote none."""
+    try:
+        from ..settings_defaults import get_setting
+
+        rules = [str(r).strip() for r in (get_setting("ai_rules") or []) if str(r).strip()]
+        context = str(get_setting("ai_context") or "").strip()
+    except Exception:
+        log.exception("claude_client: could not read ai_rules")
+        return ""
+    if not rules and not context:
+        return ""
+    parts = []
+    if rules:
+        parts.append("## Standing rules from the user\nThese always apply, also when the instructions above would allow otherwise. When a rule makes an item impossible, leave it out and say why.\n" + "\n".join(f"- {r}" for r in rules[:40]))
+    if context:
+        parts.append("## About the user\n" + context[:2000])
+    return "\n\n" + "\n\n".join(parts)
+
+
 def _call(
     *,
     feature: str,
@@ -234,7 +255,7 @@ def _call(
         if client is None:
             raise ClaudeCallError("ANTHROPIC_API_KEY is not set")
         sections = load_prompt(prompt)
-        system_block: dict = {"type": "text", "text": sections["system"]}
+        system_block: dict = {"type": "text", "text": sections["system"] + standing_rules_block()}
         if cache_system:
             system_block["cache_control"] = {"type": "ephemeral"}
         response = client.messages.create(

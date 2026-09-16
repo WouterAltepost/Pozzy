@@ -153,7 +153,7 @@ Content max width 1180px inside the rail layout; page padding `--sp-6` desktop, 
 - **Study**: deadlines list, courses table, kanban of five columns at 900px and up, two columns below, editor as a sheet on mobile.
 - **Notes**: list rail 280px plus editor card; preview typeset at 68ch.
 - **Review**: week nav; stat tiles as a four-up grid of insets (two-up mobile); reflection text; notes textarea; focus rows.
-- **Settings**: cards in a single 720px column; job runs table with ok/failed badges; integrations components inherit the tokens.
+- **Settings**: cards in a single 720px column; job runs table with ok/failed badges; integrations components inherit the tokens. A "Rules for Pozzy" card (added 2026-09-16) holds two textareas: rules one per line and standing context; it sits above the AI kill switches.
 - **Login**: centred 360px card on the housing with `pozzy.png` at 180px wide above the form.
 
 Mobile (390px, from the Claude Design handoff `pozzy-mobile-app-design/project/Pozzy Mobile.dc.html` and `Pozzy Phone.dc.html`, implemented 2026-09-16): the shell is the drawer variant of the design (Turn 2 used it for every screen). Top bar: menu icon at the left, a full-width capture pill ("Capture anything", opens the capture dialog), the theme toggle at the right; the mark and log out live in the drawer. The drawer is 272px from the left with all twelve routes at 42px, the theme row, log out and the email at the bottom; it slides in 8px with a fade on ease-out over 240ms. The top bar and the drawer respect the iOS safe areas. Dialogs stay centred popups on the phone (the design's editor is a popup, not a sheet); only the briefing reply keeps the sheet.

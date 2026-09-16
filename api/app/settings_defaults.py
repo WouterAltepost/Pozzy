@@ -40,6 +40,9 @@ DEFAULTS: dict = {
     # Stream D (AI)
     "ai_monthly_budget_usd": 10,
     "ai_spend_daily": {},
+    # Standing rules and context Wouter writes for Pozzy; appended to every Claude system prompt.
+    "ai_rules": [],
+    "ai_context": "",
 }
 
 
