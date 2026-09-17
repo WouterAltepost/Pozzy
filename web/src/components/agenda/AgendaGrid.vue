@@ -77,7 +77,11 @@ const columns = computed(() =>
       const pos = place(e, day)
       if (pos) timed.push({ ...pos, kind: 'event', item: e, key: `e-${e.id}` })
     }
+    // A scheduled task shows as a dashed block only until its linked calendar event exists;
+    // after that the event (solid, "linked") is the one thing on the grid.
+    const linked = new Set(props.events.filter((e) => e.task_id).map((e) => String(e.task_id)))
     for (const t of props.tasks) {
+      if (linked.has(String(t.id))) continue
       if (t.scheduled_start && t.scheduled_end) {
         const pos = place({ start: t.scheduled_start, end: t.scheduled_end }, day)
         if (pos) timed.push({ ...pos, kind: 'task', item: t, key: `t-${t.id}` })

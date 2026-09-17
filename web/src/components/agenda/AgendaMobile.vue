@@ -49,8 +49,9 @@ function itemsFor(day) {
     if (to <= from) return
     out.push({ item, kind, from, to, top: ((from - H0 * 60) / 60) * HOUR_PX, height: Math.max(((to - from) / 60) * HOUR_PX - 2, 16), ...extra })
   }
+  const linked = new Set(store.events.filter((e) => e.task_id).map((e) => String(e.task_id)))
   for (const e of store.events) if (!e.all_day) push(e, kindOf(e))
-  for (const t of store.tasks) if (t.scheduled_start && t.scheduled_end) push({ ...t, start: t.scheduled_start, end: t.scheduled_end, kind: 'task' }, 'task')
+  for (const t of store.tasks) if (t.scheduled_start && t.scheduled_end && !linked.has(String(t.id))) push({ ...t, start: t.scheduled_start, end: t.scheduled_end, kind: 'task' }, 'task')
   for (const sg of props.suggestions) push(sg, 'suggest', { suggestion: sg })
   return out.sort((a, b) => a.from - b.from)
 }
