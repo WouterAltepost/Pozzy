@@ -29,6 +29,7 @@ const formError = ref('')
 const narrow = useMediaQuery('(max-width: 899px)')
 const phone = useMediaQuery('(max-width: 699px)')
 const suggestions = ref([]) // planner items still waiting for a decision
+const constraints = ref(null) // what the rules turned into for this range
 const planning = ref(false)
 const planned = ref(false)
 const deciding = ref({}) // id -> true while an accept is in flight
@@ -63,6 +64,25 @@ function onSlot(defaults) {
   panel.value = null
   quick.value = defaults
 }
+const rulesSummary = computed(() => {
+  const c = constraints.value
+  if (!c) return ''
+  const bits = []
+  if (c.earliest) bits.push(`nothing before ${c.earliest}`)
+  if (c.latest) bits.push(`nothing after ${c.latest}`)
+  if (c.blocked_days?.length) bits.push(`${c.blocked_days.length} ${c.blocked_days.length === 1 ? 'day' : 'days'} kept free`)
+  const groups = new Map()
+  for (const b of c.buffers || []) {
+    const key = `${b.before}/${b.after}`
+    if (!groups.has(key)) groups.set(key, { before: b.before, after: b.after, n: 0 })
+    groups.get(key).n += 1
+  }
+  for (const g of groups.values()) {
+    const span = g.before && g.after ? `${g.before} min either side of` : g.after ? `${g.after} min after` : `${g.before} min before`
+    bits.push(`${span} ${g.n} ${g.n === 1 ? 'appointment' : 'appointments'}`)
+  }
+  return bits.join(', ')
+})
 const draft = computed(() => (quick.value ? { day: quick.value.day, from: quick.value.hour * 60 + quick.value.minute, to: quick.value.endHour * 60 + quick.value.endMinute } : null))
 
 // Plan: Pozzy proposes placements for the shown range. Nothing is written until accepted.
@@ -71,6 +91,7 @@ async function plan() {
   try {
     const data = await planWeek(store.days[0], store.days.length)
     suggestions.value = data.items
+    constraints.value = data.constraints || null
     planned.value = true
     trayOpen.value = true
     if (!data.items.length) toast.success('Nothing to place: no open tasks, deadlines or goals fit the free slots.')
@@ -192,7 +213,7 @@ function pickDay(evt) {
           <div class="tray-head">
             <PhSparkle weight="fill" class="spark" aria-hidden="true" />
             <strong>Pozzy suggests {{ suggestions.length }} {{ suggestions.length === 1 ? 'placement' : 'placements' }}</strong>
-            <span class="muted small">Dashed blocks on the grid. Accept or deny each one, or all at once.</span>
+            <span class="muted small">Dashed blocks on the grid. Accept or deny each one, or all at once.<template v-if="rulesSummary"> Rules applied: {{ rulesSummary }}.</template></span>
             <span class="tray-actions">
               <button type="button" class="link-btn" @click="trayOpen = !trayOpen">{{ trayOpen ? 'Hide list' : 'Show list' }}</button>
               <UiButton size="sm" variant="primary" @click="acceptAll">Accept all</UiButton>
