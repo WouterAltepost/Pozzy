@@ -124,14 +124,34 @@ def build_plan(start_day: date | None = None, days: int = 7) -> dict:
     window = dict(get_setting("working_window") or {})
     window.setdefault("timezone", str(tz))
     buffer_min = int(get_setting("plan_buffer_minutes") or 0)
-    scheduled = _busy_now()
     rows = rows + [{"title": t.title, "location": "", "start": s, "end": e, "task": True} for t, (s, e) in _scheduled_rows()]
-    events = _pad(events, buffer_min)
-    busy = list(events) + _pad(scheduled, buffer_min)
+    # Rules first: Claude turns them into minutes per appointment, a daily bound and blocked days;
+    # the code pads the calendar with those numbers so every free slot found below already complies.
+    constraints = _constraints(rows, window, from_dt, end_dt, tz) if (get_setting("ai_enabled") or {}).get("scheduling", True) else None
+    padded = []
+    for i, r in enumerate(rows):
+        before, after = buffer_min, buffer_min
+        if constraints and i in constraints["buffers"]:
+            b, a, _ = constraints["buffers"][i]
+            before, after = max(before, b), max(after, a)
+        padded.append((r["start"] - timedelta(minutes=before), r["end"] + timedelta(minutes=after)))
+    if constraints:
+        if constraints.get("earliest") and constraints["earliest"] > str(window.get("start") or "00:00"):
+            window["start"] = constraints["earliest"]
+        if constraints.get("latest") and constraints["latest"] < str(window.get("end") or "23:59"):
+            window["end"] = constraints["latest"]
+        for day in constraints.get("blocked_days") or []:
+            try:
+                d = date.fromisoformat(day)
+            except ValueError:
+                continue
+            padded.append((datetime.combine(d, datetime.min.time(), tzinfo=tz), datetime.combine(d + timedelta(days=1), datetime.min.time(), tzinfo=tz)))
+    events = padded
+    busy = list(events)
     per_day: dict[date, int] = {}
     items = []
     for cand in _candidates(start_day, days):
-        slots = find_free_slots(events, [b for b in busy if b not in events], window, cand["minutes"], from_dt, days=days)
+        slots = find_free_slots(events, busy[len(events):], window, cand["minutes"], from_dt, days=days)
         slots = [s for s in slots if s["end"] <= end_dt and per_day.get(s["start"].date(), 0) < MAX_PER_DAY]
         if cand["before"] is not None:
             before = [s for s in slots if as_utc(s["end"]) <= cand["before"]]
@@ -165,7 +185,46 @@ def build_plan(start_day: date | None = None, days: int = 7) -> dict:
         _apply_claude(items, start_day)
     for it in items:
         it.pop("options", None)
-    return {"from": from_dt.isoformat(), "to": end_dt.isoformat(), "days": days, "items": items, "considered": len(items)}
+    applied = None
+    if constraints:
+        applied = {
+            "earliest": constraints.get("earliest"),
+            "latest": constraints.get("latest"),
+            "blocked_days": constraints.get("blocked_days") or [],
+            "buffers": [{"title": rows[i]["title"], "before": b, "after": a, "why": why} for i, (b, a, why) in constraints["buffers"].items() if 0 <= i < len(rows)],
+        }
+    return {"from": from_dt.isoformat(), "to": end_dt.isoformat(), "days": days, "items": items, "considered": len(items), "constraints": applied}
+
+
+def _constraints(rows: list[dict], window: dict, from_dt: datetime, end_dt: datetime, tz) -> dict | None:
+    """Ask Claude to translate the standing rules into numbers for these appointments. None when
+    there are no rules, the switch is off, or the call failed (the buffer setting still applies)."""
+    rules = claude_client.standing_rules_list()
+    if not rules or not rows:
+        return None
+    payload = {
+        "rules": rules,
+        "working_window": {"start": window.get("start"), "end": window.get("end"), "days": window.get("days")},
+        "range": {"from": from_dt.isoformat(), "to": end_dt.isoformat()},
+        "appointments": [
+            {"index": i, "title": r["title"], "location": r["location"], "weekday": r["start"].astimezone(tz).strftime("%a"), "date": r["start"].astimezone(tz).date().isoformat(), "start": r["start"].astimezone(tz).strftime("%H:%M"), "end": r["end"].astimezone(tz).strftime("%H:%M")}
+            for i, r in enumerate(rows)
+        ],
+    }
+    try:
+        out = claude_client.plan_constraints(payload)
+    except Exception:
+        log.exception("plan_constraints raised")
+        return None
+    if not out:
+        return None
+    # Only indexes that exist, only HH:MM bounds.
+    out["buffers"] = {i: v for i, v in out["buffers"].items() if isinstance(i, int) and 0 <= i < len(rows)}
+    for key in ("earliest", "latest"):
+        v = out.get(key)
+        if not (isinstance(v, str) and len(v) == 5 and v[2] == ":" and v[:2].isdigit() and v[3:].isdigit()):
+            out[key] = None
+    return out
 
 
 def _reason(cand: dict, slot: dict) -> str:
@@ -206,33 +265,11 @@ def _apply_claude(items: list[dict], start_day: date) -> None:
         if pick is not None and (pick["option"] < 0 or pick.get("place") is False):
             log.info("plan_week: %s skipped by Claude: %s", it["title"], pick.get("reason", "")[:120])
             continue
-        # Python enforces the minutes Claude says the rules require next to each option (rule 7 in spirit:
-        # the model states numbers, the code compares them with the real gaps).
-        checks = (pick or {}).get("checks") or {}
-        def passes(idx: int) -> bool:
-            need_before, need_after = checks.get(idx, (0, 0))
-            o = it["options"][idx]
-            if o.get("before") and o["before"]["gap_minutes"] < need_before:
-                return False
-            if o.get("after") and o["after"]["gap_minutes"] < need_after:
-                return False
-            return True
-        option = None
+        option = it["options"][0]
         reason = it["reason"]
-        if pick is not None and 0 <= pick["option"] < len(it["options"]) and passes(pick["option"]):
+        if pick is not None and 0 <= pick["option"] < len(it["options"]):
             option = it["options"][pick["option"]]
             reason = pick["reason"] or reason
-        elif pick is not None:
-            for idx in range(len(it["options"])):
-                if passes(idx):
-                    option = it["options"][idx]
-                    reason = f"{it['reason']} (Claude's first choice broke a rule, this option keeps the required gaps)"
-                    break
-            if option is None:
-                log.info("plan_week: %s dropped, no option keeps the gaps Claude derived from the rules", it["title"])
-                continue
-        else:
-            option = it["options"][0]
         kept.append(it)
         s, e = datetime.fromisoformat(option["start"]), datetime.fromisoformat(option["end"])
         if any(s < te and e > ts for ts, te in taken):

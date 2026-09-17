@@ -421,17 +421,37 @@ def reply_briefing(payload: dict) -> dict | None:
     return {"reply": answer.reply.strip(), "text": answer.text.strip(), "actions": [a.model_dump() for a in answer.actions[:6]]}
 
 
-class _PlanCheck(BaseModel):
-    option: int
-    needs_before: int = 0
-    needs_after: int = 0
+class _PlanBuffer(BaseModel):
+    index: int
+    before: int = 0
+    after: int = 0
+    why: str = ""
+
+
+class PlanConstraints(BaseModel):
+    earliest: str | None = None
+    latest: str | None = None
+    blocked_days: list[str] = []
+    buffers: list[_PlanBuffer] = []
+
+
+def plan_constraints(payload: dict) -> dict | None:
+    """Translate the standing rules into numbers for the given appointments. See docs/AI_CONTRACTS.md."""
+    answer = _call(feature="plan_constraints", switch="scheduling", tier="smart", prompt="plan_constraints", payload=payload, schema=PlanConstraints, max_tokens=1500)
+    if answer is None:
+        return None
+    return {
+        "earliest": answer.earliest,
+        "latest": answer.latest,
+        "blocked_days": [d for d in answer.blocked_days if isinstance(d, str)],
+        "buffers": {b.index: (max(0, b.before), max(0, b.after), b.why) for b in answer.buffers},
+    }
 
 
 class _PlanPick(BaseModel):
     id: str
     place: bool = True
     option: int = 0
-    checks: list[_PlanCheck] = []
     rule_check: str = ""
     reason: str = ""
 
@@ -446,15 +466,7 @@ def plan_week(payload: dict) -> dict | None:
     answer = _call(feature="plan_week", switch="scheduling", tier="smart", prompt="plan_week", payload=payload, schema=PlanAnswer, max_tokens=1200)
     if answer is None:
         return None
-    return {
-        p.id: {
-            "option": p.option if p.place else -1,
-            "place": p.place,
-            "reason": p.reason.strip(),
-            "checks": {c.option: (max(0, c.needs_before), max(0, c.needs_after)) for c in p.checks},
-        }
-        for p in answer.items
-    }
+    return {p.id: {"option": p.option if p.place else -1, "place": p.place, "reason": p.reason.strip()} for p in answer.items}
 
 
 class _FocusItem(BaseModel):
