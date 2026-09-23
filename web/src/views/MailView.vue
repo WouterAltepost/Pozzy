@@ -130,7 +130,7 @@ function sync() {
 <style scoped>
 .notice { margin-top: var(--sp-3); }
 .phead { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-2); margin-bottom: var(--sp-3); }
-.phead h1 { font-size: var(--fs-2xl); }
+.phead h1 { font-size: var(--fs-title); }
 .pfilters { display: flex; gap: var(--sp-2); }
 .psearch { flex: 1; min-width: 0; }
 .fbtn { display: inline-flex; align-items: center; gap: 6px; height: var(--control-h); padding: 0 12px; border: 1px solid var(--line-2); border-radius: var(--r-md); background: var(--surface); color: var(--ink-2); font-size: var(--fs-md); font-weight: 500; }

@@ -1,5 +1,14 @@
 # Pozzy progress
 
+## Apple HIG visual pass, 2026-09-23 (deployed)
+
+Wouter: "fully update the UI to make it feel and look like a legit Apple product" after the motion pass changed nothing visible. Read the Human Interface Guidelines (colour, typography, layout, materials, tab bars, toolbars, sidebars, lists, buttons, toggles, sheets, fields, icons, dark mode) and rewrote the design system on them; spec in docs/briefs/DESIGN.md section 0.
+- `style.css`: San Francisco via the system stack, Apple's semantic label and fill colours, grouped backgrounds, one tint (system blue), system state colours, iOS text styles on the phone and the macOS scale on the desktop, 44px touch geometry, Reminders-style circular checkboxes, fill-style fields, gray bare buttons, capsule tags, section-header table heads, no glass on content cards (chrome only), no ambient layer.
+- Shell (`App.vue`): macOS toolbar and sidebar source list with tinted symbols on the desktop; on the phone a floating tab bar (`components/TabBar.vue`: Home, Agenda, Tasks, Mail, More) and a More sheet (`components/MoreSheet.vue`) with the other routes, appearance and sign out. `NavDrawer.vue` removed.
+- Components: UiButton (filled, gray, plain, tinted red, link), UiModal (solid surface, 28px sheet corners, 14px desktop dialog), UiSegmented (iOS track and thumb), UiBadge capsules, UiToast capsule on material, UiField footnote labels, PageHeader and the phone `.phead` titles as large titles, Home date line split on the phone. Manifest and theme colours updated; Geist preload dropped.
+
+Verification: Playwright screenshots of every view at 1440 and 390, light and dark (54 captures), zero console errors, zero failed API calls, no horizontal overflow. Fixed from the review: segmented thumb selector, wrapping card heads and titles.
+
 ## Apple design pass: springs and gestures, 2026-09-23 (deployed)
 
 Applied the apple-design skill (Designing Fluid Interfaces) to desktop and the phone PWA. The rule: anything a finger can hold runs on a spring that starts from the current value and velocity, so it can be grabbed and reversed mid-flight; feedback happens on the press; things leave the way they came.

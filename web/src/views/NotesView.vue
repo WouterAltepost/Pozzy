@@ -185,7 +185,7 @@ function renderMarkdown(text) {
 .search { width: 160px; }
 .layout { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--sp-4); align-items: start; }
 .phead { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-2); margin-bottom: var(--sp-3); }
-.phead h1 { font-size: var(--fs-2xl); }
+.phead h1 { font-size: var(--fs-title); }
 .pfilters { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: var(--sp-2); margin-bottom: var(--sp-4); }
 .psearch { min-width: 0; }
 .pform { display: flex; flex-direction: column; gap: var(--sp-3); }

@@ -2,7 +2,7 @@ import { computed, ref } from 'vue'
 
 // Theme preference: 'system' (default), 'light' or 'dark'. Presentation only, stored per device.
 const KEY = 'pozzy.theme'
-const LIGHT = '#FBFAF8'
+const LIGHT = '#F2F2F7'
 const DARK = '#1C1E22'
 const preference = ref('system')
 

@@ -300,7 +300,7 @@ function pct(row) {
 
 <style scoped>
 .phead { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-2); margin-bottom: var(--sp-4); }
-.phead h1 { font-size: var(--fs-2xl); }
+.phead h1 { font-size: var(--fs-title); }
 .arow { display: grid; grid-template-columns: 84px minmax(0, 1fr) auto; gap: 12px; align-items: center; font-size: var(--fs-md); padding: 6px 0; }
 .aname { display: flex; align-items: center; gap: 8px; color: var(--ink-2); }
 .strip { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; margin-bottom: var(--sp-3); }

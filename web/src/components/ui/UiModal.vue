@@ -126,19 +126,16 @@ const sheetStyle = computed(() => (phone.value ? { transform: `translate3d(0, ${
   max-height: min(88vh, 88dvh);
   display: flex;
   flex-direction: column;
-  background: color-mix(in srgb, var(--surface) 86%, transparent);
-  -webkit-backdrop-filter: blur(24px) saturate(160%);
-  backdrop-filter: blur(24px) saturate(160%);
-  border: 1px solid color-mix(in srgb, var(--line) 80%, transparent);
-  border-radius: var(--r-xl);
-  box-shadow: var(--shadow-3), inset 0 1px 0 rgb(255 255 255 / 0.5);
+  background: var(--surface);
+  border: 0;
+  border-radius: 14px;
+  box-shadow: var(--shadow-3);
 }
 .size-sm { max-width: 440px; }
 .size-md { max-width: 600px; }
 .size-lg { max-width: 780px; }
-@media (prefers-reduced-transparency: reduce) { .dialog { background: var(--surface); -webkit-backdrop-filter: none; backdrop-filter: none; } }
 .dialog-head { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-3); padding: var(--sp-4) var(--sp-5) 0; }
-.dialog-head h2 { font-size: var(--fs-lg); }
+.dialog-head h2 { font-size: var(--fs-xl); font-weight: 700; }
 .dialog-body { overflow-y: auto; padding: var(--sp-4) var(--sp-5) var(--sp-5); overscroll-behavior: contain; }
 .dialog-body :deep(.card-head h2) { font-size: var(--fs-lg); }
 .grab { display: none; }
@@ -158,7 +155,7 @@ const sheetStyle = computed(() => (phone.value ? { transform: `translate3d(0, ${
 .phone .dialog {
   max-width: none;
   max-height: calc(100dvh - env(safe-area-inset-top) - 24px);
-  border-radius: var(--r-xl) var(--r-xl) 0 0;
+  border-radius: 28px 28px 0 0;
   border-bottom: 0;
   padding-bottom: env(safe-area-inset-bottom);
   will-change: transform;
@@ -166,7 +163,7 @@ const sheetStyle = computed(() => (phone.value ? { transform: `translate3d(0, ${
 }
 .phone .grab { display: flex; justify-content: center; padding: 10px 0 2px; touch-action: none; cursor: grab; user-select: none; -webkit-user-select: none; }
 .phone .dialog-head { user-select: none; -webkit-user-select: none; }
-.phone .grabber { width: 36px; height: 5px; border-radius: 3px; background: var(--line-2); }
+.phone .grabber { width: 36px; height: 5px; border-radius: 3px; background: var(--ink-4); }
 .phone .dialog-head { padding: var(--sp-2) var(--sp-4) 0; touch-action: none; }
 .phone .dialog-body { padding: var(--sp-3) var(--sp-4) var(--sp-5); touch-action: pan-y; }
 .reduced.phone .dialog { transform: none !important; transition: opacity 200ms ease; }

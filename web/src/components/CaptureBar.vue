@@ -113,20 +113,20 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKey))
   display: inline-flex; align-items: center; gap: 8px;
   height: 34px; padding: 0 12px 0 12px;
   border: 1px solid transparent; border-radius: var(--r-pill);
-  background: var(--surface-2); color: var(--ink-2); font: inherit; font-size: var(--fs-md); font-weight: 500;
+  background: var(--surface-2); color: var(--ink); font: inherit; font-size: var(--fs-md); font-weight: 500;
   cursor: pointer;
   transition: background-color var(--dur-hover) ease, border-color var(--dur-hover) ease, color var(--dur-hover) ease, transform var(--dur-press) var(--ease-out);
 }
 .capture-btn:active { transform: scale(0.97); }
-@media (hover: hover) and (pointer: fine) { .capture-btn:hover { border-color: var(--line-2); color: var(--ink); } }
+@media (hover: hover) and (pointer: fine) { .capture-btn:hover { background: var(--surface-3); } }
 .bolt { width: 15px; height: 15px; color: var(--brand); }
-.kbd { font: inherit; font-size: var(--fs-xs); color: var(--ink-3); border: 1px solid var(--line-2); border-radius: 4px; padding: 0 5px; line-height: 16px; }
+.kbd { font: inherit; font-size: var(--fs-xs); color: var(--ink-4); border: 0; background: var(--surface-2); border-radius: 4px; padding: 0 5px; line-height: 16px; }
 .label-long { display: none; }
 @media (max-width: 720px) {
   .capture-bar { width: 100%; max-width: none; }
   .label, .kbd { display: none; }
   .label-long { display: inline; color: var(--ink-3); font-weight: 400; }
-  .capture-btn { width: 100%; justify-content: flex-start; padding-left: 12px; }
+  .capture-btn { width: 100%; height: 36px; justify-content: flex-start; padding-left: 12px; font-size: var(--fs-base); }
 }
 .entry { display: flex; flex-direction: column; gap: var(--sp-3); }
 .entry textarea { width: 100%; font-size: var(--fs-base); }

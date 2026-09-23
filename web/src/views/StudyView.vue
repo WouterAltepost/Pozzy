@@ -290,7 +290,7 @@ function removeApp(a) {
 
 <style scoped>
 .phead { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-2); margin-bottom: var(--sp-4); }
-.phead h1 { font-size: var(--fs-2xl); }
+.phead h1 { font-size: var(--fs-title); }
 .padd { margin-left: auto; }
 .pform { display: flex; flex-direction: column; gap: var(--sp-3); }
 .pform .pair { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-2); }

@@ -1,4 +1,8 @@
 <script setup>
+// App shell. Desktop: a macOS window, translucent sidebar (source list) at the leading edge,
+// a toolbar across the top with the capture command and account controls. Phone: a floating
+// tab bar at the bottom with four destinations and More, the toolbar holds capture and the
+// appearance toggle. Chrome is the only translucent layer; content scrolls underneath it.
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import {
@@ -11,7 +15,6 @@ import {
   PhGraduationCap,
   PhHouse,
   PhLightning,
-  PhList,
   PhMoon,
   PhNote,
   PhSignOut,
@@ -20,7 +23,8 @@ import {
   PhTimer,
 } from '@phosphor-icons/vue'
 import CaptureBar from './components/CaptureBar.vue'
-import NavDrawer from './components/NavDrawer.vue'
+import MoreSheet from './components/MoreSheet.vue'
+import TabBar from './components/TabBar.vue'
 import UiToast from './components/ui/UiToast.vue'
 import { useTheme } from './composables/useTheme'
 import { NAV } from './router'
@@ -29,7 +33,7 @@ import { useAuthStore } from './stores/auth'
 const auth = useAuthStore()
 const router = useRouter()
 const route = useRoute()
-const menuOpen = ref(false)
+const moreOpen = ref(false)
 const theme = useTheme()
 
 // Icons by route name; labels and order stay in router/index.js.
@@ -48,14 +52,16 @@ const ICONS = {
   settings: PhGearSix,
 }
 const items = computed(() => NAV.filter((n) => !n.hidden).map((n) => ({ ...n, icon: ICONS[n.name] })))
+const TAB_NAMES = new Set(['home', 'agenda', 'tasks', 'mail'])
+const moreItems = computed(() => items.value.filter((n) => !TAB_NAMES.has(n.name)))
 
 async function logout() {
-  menuOpen.value = false
+  moreOpen.value = false
   await auth.logout()
   router.push({ name: 'login' })
 }
 
-watch(() => route.fullPath, () => (menuOpen.value = false))
+watch(() => route.fullPath, () => (moreOpen.value = false))
 
 // Scroll edge: the bar is a floating material; its hairline shows only when content is under it.
 const scrolled = ref(false)
@@ -71,11 +77,9 @@ onBeforeUnmount(() => window.removeEventListener('scroll', onScroll))
 
 <template>
   <div class="shell">
-    <div class="ambient" aria-hidden="true"></div>
     <header class="topbar" :class="{ scrolled }">
-      <button v-if="auth.isAuthenticated" type="button" class="icon-btn menu-toggle" aria-label="Menu" :aria-expanded="menuOpen" @click="menuOpen = true"><PhList /></button>
       <RouterLink to="/" class="brand" aria-label="Pozzy home">
-        <img :src="theme.isDark.value ? '/mark-dark.svg' : '/favicon.svg'" alt="" class="mark" width="26" height="26" />
+        <img :src="theme.isDark.value ? '/mark-dark.svg' : '/favicon.svg'" alt="" class="mark" width="24" height="24" />
         <span class="wordmark">Pozzy</span>
       </RouterLink>
       <CaptureBar v-if="auth.isAuthenticated" class="topbar-capture" />
@@ -105,7 +109,8 @@ onBeforeUnmount(() => window.removeEventListener('scroll', onScroll))
       </main>
     </div>
 
-    <NavDrawer :open="menuOpen" :items="items" :current="String(route.name || '')" :email="auth.user?.email || ''" @close="menuOpen = false" @logout="logout" />
+    <TabBar v-if="auth.isAuthenticated" class="tabs" :current="String(route.name || '')" :more-active="moreOpen" @more="moreOpen = true" />
+    <MoreSheet :open="moreOpen" :items="moreItems" :current="String(route.name || '')" :email="auth.user?.email || ''" @close="moreOpen = false" @logout="logout" />
     <UiToast />
   </div>
 </template>
@@ -114,36 +119,38 @@ onBeforeUnmount(() => window.removeEventListener('scroll', onScroll))
 .shell { min-height: 100dvh; display: flex; flex-direction: column; }
 .route-enter-active { transition: opacity var(--dur-route) var(--ease-out), transform var(--dur-route) var(--ease-spring); }
 .route-leave-active { transition: opacity 90ms ease; }
-.route-enter-from { opacity: 0; transform: translateY(8px); }
+.route-enter-from { opacity: 0; transform: translateY(6px); }
 .route-leave-to { opacity: 0; }
 @media (prefers-reduced-motion: reduce) { .route-enter-from { transform: none; } }
+
+/* Toolbar: chrome material with a scroll edge instead of a permanent rule. */
 .topbar {
   position: sticky;
   top: 0;
   z-index: var(--z-bar);
   height: calc(var(--bar-h) + env(safe-area-inset-top));
-  padding-top: env(safe-area-inset-top);
+  padding: env(safe-area-inset-top) var(--sp-5) 0;
   display: flex;
   align-items: center;
   gap: var(--sp-4);
-  padding: 0 var(--sp-5);
-  background: color-mix(in srgb, var(--surface) 88%, transparent);
-  backdrop-filter: blur(14px) saturate(160%);
-  -webkit-backdrop-filter: blur(14px) saturate(160%);
-  border-bottom: 1px solid transparent;
+  background: var(--material);
+  -webkit-backdrop-filter: var(--material-blur);
+  backdrop-filter: var(--material-blur);
+  border-bottom: 0.5px solid transparent;
   transition: border-color var(--dur-ui) ease;
 }
 .topbar.scrolled { border-bottom-color: var(--line); }
 @media (prefers-reduced-transparency: reduce) { .topbar { background: var(--surface); backdrop-filter: none; -webkit-backdrop-filter: none; } }
-.brand { display: inline-flex; align-items: center; gap: 10px; text-decoration: none; color: var(--ink); flex: none; }
-.mark { width: 26px; height: 26px; }
-.wordmark { font-weight: 600; letter-spacing: -0.01em; font-size: var(--fs-lg); }
+.brand { display: inline-flex; align-items: center; gap: 8px; text-decoration: none; color: var(--ink); flex: none; width: calc(var(--rail-w) - var(--sp-5)); }
+.brand:hover { text-decoration: none; }
+.mark { width: 24px; height: 24px; }
+.wordmark { font-weight: 600; font-size: var(--fs-lg); }
 .topbar-capture { flex: 1; display: flex; justify-content: center; min-width: 0; }
 .topbar-user { display: flex; align-items: center; gap: var(--sp-1); flex: none; margin-left: auto; }
 .topbar-email { font-size: var(--fs-sm); margin-right: var(--sp-2); }
-.menu-toggle { display: none; }
 
 .body { display: flex; flex: 1; align-items: stretch; }
+/* Sidebar: a source list on the sidebar material, 28 px rows, tinted symbols, grey selection. */
 .rail {
   position: sticky;
   top: var(--bar-h);
@@ -151,44 +158,47 @@ onBeforeUnmount(() => window.removeEventListener('scroll', onScroll))
   height: calc(100dvh - var(--bar-h));
   width: var(--rail-w);
   flex: none;
-  padding: var(--sp-4) var(--sp-3);
+  padding: var(--sp-3) var(--sp-3);
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 1px;
   overflow-y: auto;
-  border-right: 1px solid var(--line);
+  background: color-mix(in srgb, var(--bg) 60%, var(--surface-2));
+  border-right: 0.5px solid var(--line);
 }
 .page { flex: 1; min-width: 0; width: 100%; padding-bottom: env(safe-area-inset-bottom); }
 
 .nav-item {
   display: flex;
   align-items: center;
-  gap: 10px;
-  height: 36px;
-  padding: 0 var(--sp-3);
-  border-radius: var(--r-pill);
-  color: var(--ink-2);
+  gap: 9px;
+  height: 30px;
+  padding: 0 10px;
+  border-radius: var(--r-sm);
+  color: var(--ink);
   text-decoration: none;
-  font-size: var(--fs-base);
+  font-size: var(--fs-md);
   font-weight: 500;
-  transition: background-color var(--dur-hover) ease, color var(--dur-hover) ease;
+  transition: background-color var(--dur-hover) ease;
 }
-.nav-item.active { background: var(--surface-3); color: var(--ink); }
-.nav-icon { width: 18px; height: 18px; flex: none; }
-@media (hover: hover) and (pointer: fine) { .nav-item:not(.active):hover { background: var(--surface-2); color: var(--ink); } }
-
+.nav-item:hover { text-decoration: none; }
+.nav-item.active { background: var(--surface-3); }
+.nav-icon { width: 17px; height: 17px; flex: none; color: var(--brand); }
+@media (hover: hover) and (pointer: fine) { .nav-item:not(.active):hover { background: var(--surface-2); } }
+.tabs { display: none; }
 
 @media (max-width: 1023px) {
   .rail { display: none; }
-  .menu-toggle { display: inline-flex; }
+  .brand { width: auto; }
   .logout { display: none; }
 }
-/* Phone (design: Pozzy Phone): menu, full-width capture, theme. The mark lives in the drawer. */
+/* Phone: tab bar navigation, toolbar holds capture and appearance, the mark lives in the tab bar's More sheet. */
 @media (max-width: 720px) {
   .topbar { padding-left: var(--sp-3); padding-right: var(--sp-3); gap: 10px; }
   .topbar-email { display: none; }
   .brand { display: none; }
   .topbar-capture { justify-content: stretch; }
   .topbar-user { margin-left: 0; }
+  .tabs { display: flex; }
 }
 </style>

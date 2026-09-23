@@ -291,7 +291,7 @@ function remove(t) {
 
 <style scoped>
 .phead { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-2); margin-bottom: var(--sp-4); }
-.phead h1 { font-size: var(--fs-2xl); }
+.phead h1 { font-size: var(--fs-title); }
 .ptitle { margin-bottom: 10px; }
 .chips { display: flex; flex-wrap: wrap; gap: var(--sp-2); }
 .chip { display: inline-flex; align-items: center; gap: 8px; height: 32px; padding: 0 12px; border-radius: var(--r-pill); border: 1px solid var(--line-2); background: var(--surface); color: var(--ink); font-size: var(--fs-md); font-weight: 500; transition: background-color var(--dur-hover) ease, border-color var(--dur-hover) ease, color var(--dur-hover) ease, transform var(--dur-press) var(--ease-out); }

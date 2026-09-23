@@ -41,7 +41,7 @@ const date = now.toLocaleDateString('en-GB', { day: 'numeric', month: 'long' })
 </template>
 
 <style scoped>
-.display { font-size: var(--fs-3xl); letter-spacing: -0.02em; line-height: 1.15; margin: 0 0 var(--sp-5); font-weight: 600; }
+.display { font-size: var(--fs-title); letter-spacing: 0; line-height: 1.2; margin: 0 0 var(--sp-5); font-weight: 700; }
 .display .date { color: var(--ink-3); font-weight: 500; }
 .widgets { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--sp-4); align-items: start; }
 @media (min-width: 900px) {
@@ -54,6 +54,7 @@ const date = now.toLocaleDateString('en-GB', { day: 'numeric', month: 'long' })
   .widgets > .w-dos { order: 1; } .widgets > .w-today { order: 2; } .widgets > .w-briefing { order: 3; } .widgets > .w-due { order: 4; }
   .widgets > .w-trackers { order: 5; } .widgets > .w-hours { order: 6; } .widgets > .w-mail { order: 7; } .widgets > .w-goals { order: 8; }
   .widgets > .w-deadlines { order: 9; } .widgets > .w-spend { order: 10; }
-  .display { margin-bottom: var(--sp-4); }
+  .display { margin-bottom: var(--sp-4); display: flex; flex-direction: column; gap: 2px; }
+  .display .date { font-size: var(--fs-2xl); font-weight: 600; }
 }
 </style>
