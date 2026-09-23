@@ -1,8 +1,8 @@
 <script setup>
 // App shell. Desktop: one sidebar carries everything (brand, the capture command, grouped
 // navigation with eyebrows, the account row); the content area is a quiet canvas with room to
-// breathe and no bar glued to the top. Phone: a slim toolbar with the capture command and a
-// menu button that opens the navigation drawer from the left edge.
+// breathe and no bar glued to the top. Phone: a slim toolbar with the mark and the capture
+// command, and a floating glass tab bar at the bottom (Home, Tasks, Tracking, More).
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import {
@@ -15,7 +15,6 @@ import {
   PhGraduationCap,
   PhHouse,
   PhLightning,
-  PhList,
   PhMoon,
   PhNote,
   PhSignOut,
@@ -24,7 +23,8 @@ import {
   PhTimer,
 } from '@phosphor-icons/vue'
 import CaptureBar from './components/CaptureBar.vue'
-import NavDrawer from './components/NavDrawer.vue'
+import MoreSheet from './components/MoreSheet.vue'
+import TabBar from './components/TabBar.vue'
 import UiToast from './components/ui/UiToast.vue'
 import { useTheme } from './composables/useTheme'
 import { NAV } from './router'
@@ -33,7 +33,7 @@ import { useAuthStore } from './stores/auth'
 const auth = useAuthStore()
 const router = useRouter()
 const route = useRoute()
-const menuOpen = ref(false)
+const moreOpen = ref(false)
 const theme = useTheme()
 
 const ICONS = {
@@ -59,15 +59,18 @@ const GROUPS = [
 ]
 const groups = computed(() => GROUPS.map((g) => ({ ...g, items: g.names.map((n) => items.value.find((i) => i.name === n)).filter(Boolean) })))
 const settingsItem = computed(() => items.value.find((i) => i.name === 'settings'))
+// Phone: what the tab bar does not carry goes under More (Settings has its own row there).
+const TAB_NAMES = new Set(['home', 'tasks', 'trackers', 'settings'])
+const moreItems = computed(() => items.value.filter((n) => !TAB_NAMES.has(n.name)))
 const initial = computed(() => (auth.user?.email || '?')[0].toUpperCase())
 
 async function logout() {
-  menuOpen.value = false
+  moreOpen.value = false
   await auth.logout()
   router.push({ name: 'login' })
 }
 
-watch(() => route.fullPath, () => (menuOpen.value = false))
+watch(() => route.fullPath, () => (moreOpen.value = false))
 
 const scrolled = ref(false)
 function onScroll() {
@@ -83,12 +86,10 @@ onBeforeUnmount(() => window.removeEventListener('scroll', onScroll))
 <template>
   <div class="shell" :class="{ authed: auth.isAuthenticated }">
     <header v-if="auth.isAuthenticated" class="topbar" :class="{ scrolled }">
-      <button type="button" class="icon-btn menu-toggle" aria-label="Menu" :aria-expanded="menuOpen" @click="menuOpen = true"><PhList weight="regular" /></button>
+      <RouterLink to="/" class="topbar-brand" aria-label="Pozzy home">
+        <img :src="theme.isDark.value ? '/mark-dark.svg' : '/favicon.svg'" alt="" class="mark" width="26" height="26" />
+      </RouterLink>
       <CaptureBar class="topbar-capture" />
-      <button type="button" class="icon-btn" :aria-label="theme.isDark.value ? 'Switch to light mode' : 'Switch to dark mode'" @click="theme.toggle()">
-        <PhSun v-if="theme.isDark.value" />
-        <PhMoon v-else />
-      </button>
     </header>
 
     <div class="body">
@@ -129,7 +130,8 @@ onBeforeUnmount(() => window.removeEventListener('scroll', onScroll))
       </main>
     </div>
 
-    <NavDrawer :open="menuOpen" :items="items" :current="String(route.name || '')" :email="auth.user?.email || ''" @close="menuOpen = false" @logout="logout" />
+    <TabBar v-if="auth.isAuthenticated" :current="String(route.name || '')" :more-active="moreOpen" @more="moreOpen = true" />
+    <MoreSheet :open="moreOpen" :items="moreItems" :current="String(route.name || '')" :email="auth.user?.email || ''" @close="moreOpen = false" @logout="logout" />
     <UiToast />
   </div>
 </template>
@@ -190,7 +192,7 @@ onBeforeUnmount(() => window.removeEventListener('scroll', onScroll))
 .avatar { width: 28px; height: 28px; border-radius: 50%; display: inline-grid; place-items: center; background: linear-gradient(180deg, var(--brand-2), var(--brand)); color: #fff; font-size: var(--fs-sm); font-weight: 600; box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.3); flex: none; }
 .email { flex: 1; min-width: 0; font-size: var(--fs-sm); color: var(--ink-3); }
 .page { flex: 1; min-width: 0; width: 100%; }
-.menu-toggle { flex: none; margin-left: -6px; }
+.topbar-brand { flex: none; display: inline-flex; padding: 4px; margin-left: -4px; border-radius: var(--r-pill); }
 
 @media (max-width: 1023px) {
   .rail { display: none; }
@@ -202,7 +204,7 @@ onBeforeUnmount(() => window.removeEventListener('scroll', onScroll))
     padding: env(safe-area-inset-top) var(--sp-4) 0;
     display: flex;
     align-items: center;
-    gap: var(--sp-2);
+    gap: var(--sp-3);
     background: var(--material);
     -webkit-backdrop-filter: var(--material-blur);
     backdrop-filter: var(--material-blur);

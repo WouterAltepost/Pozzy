@@ -109,6 +109,14 @@
   --row-h: 40px;
 }
 
+/* Phone shell: the top toolbar and the floating tab bar (62px pill plus its 14px lift). */
+@media (max-width: 1023px) {
+  :root {
+    --bar-h: 48px;
+    --tab-h: 76px;
+  }
+}
+
 @media (max-width: 720px) {
   :root {
     --fs-sm: 0.8125rem;
@@ -119,7 +127,6 @@
     --fs-2xl: 1.375rem;
     --fs-3xl: 1.875rem;
     --fs-title: 1.875rem; /* 30 */
-    --bar-h: 48px;
     --control-h: 42px;
     --control-h-sm: 32px;
     --row-h: 44px;
@@ -349,8 +356,8 @@ button:not([class]):disabled { opacity: 0.45; }
 
 /* Layout primitives used by App.vue. Doubled whitespace. */
 .page { max-width: var(--content-w); margin: 0 auto; padding: var(--sp-10) var(--sp-10) var(--sp-12); }
-@media (max-width: 1023px) { .page { padding: var(--sp-6) var(--sp-6) var(--sp-10); } }
-@media (max-width: 720px) { .page { padding: var(--sp-3) var(--sp-4) calc(env(safe-area-inset-bottom) + var(--sp-8)); } }
+@media (max-width: 1023px) { .page { padding: var(--sp-6) var(--sp-6) calc(env(safe-area-inset-bottom) + var(--tab-h) + var(--sp-8)); } }
+@media (max-width: 720px) { .page { padding: var(--sp-3) var(--sp-4) calc(env(safe-area-inset-bottom) + var(--tab-h) + var(--sp-6)); } }
 
 /* Card: a plate lit from above. Hairline, a bright top edge, a soft shadow that falls downward. */
 .card {

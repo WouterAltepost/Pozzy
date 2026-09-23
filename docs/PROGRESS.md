@@ -1,5 +1,13 @@
 # Pozzy progress
 
+## Phone tab bar, 2026-09-23 (later)
+
+Wouter: replace the hamburger drawer on the phone PWA with a bottom nav bar in the iOS 26 glass style (from `~/Desktop/inspo-nav-bar.png`), icons only, Home, Tasks, Tracking and More.
+- `web/src/components/TabBar.vue`: floating glass pill above the home indicator, four icon slots, one tinted disc slides to the current one, More is lit on every route not on the bar, the bar hides while a text field has focus. Hidden from 1024px up (the sidebar carries navigation there).
+- `web/src/components/MoreSheet.vue`: `UiSheet` with the remaining routes (Agenda, Goals, Mail, Hours, Capture, Study, Review), Settings, a Dark mode switch and Log out.
+- `App.vue`: phone toolbar is now the mark plus the capture pill; `NavDrawer.vue` deleted. `style.css`: `--bar-h` and `--tab-h` set under 1024px (the toolbar had 0 height between 721 and 1023px before), page bottom padding clears the bar.
+- Checked with Playwright at 390px (Vite only, fake session): light and dark, the disc on Home and Tracking, the More sheet. Not yet deployed.
+
 ## Premium pass, review round, 2026-09-23 (deployed)
 
 Wouter: overall good; the big blue button is too much, bring the hamburger drawer back on the phone, and fix the mobile responsiveness issues.
