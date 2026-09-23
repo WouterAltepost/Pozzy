@@ -12,7 +12,7 @@ Seven points from a week of use, all in this pass:
 - Supabase security advisor: RLS was off on all 22 public tables and `anon` and `authenticated` held full grants (PostgREST is not used, Vue only talks to Flask). Migration `i1000000rls` enables RLS on every public table, revokes all privileges from those roles and alters the default privileges so later tables get none. The API connects as the `postgres` owner role, which bypasses RLS. CLAUDE.md rule 11: new tables enable RLS in their migration.
 - Also: the tracker series test and the calendar sync route test had hard-coded dates that drifted out of their windows; pinned.
 
-Deployed: migrations applied to Supabase from the laptop; code pushed by Wouter after review.
+Deployed: migrations applied to Supabase from the laptop (Alembic head `i1000000rls`, RLS on 23 of 23 tables, advisor clean), commit 91f712d pushed, Railway api and web deploys SUCCESS 2026-09-23 13:00 CEST, health db true.
 Next: Railway region move for `api` (dashboard), then re-time the home page. Study and Notes stores still reload everything after a write (small lists, left as is).
 
 ## Planner: rules can now be applied, 2026-09-16 (deployed)
