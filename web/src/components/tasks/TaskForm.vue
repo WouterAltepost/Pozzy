@@ -82,6 +82,7 @@ function submit() {
 <style scoped>
 .task-form { display: flex; flex-direction: column; gap: var(--sp-3); }
 .grid3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--sp-3); align-items: end; }
+@media (max-width: 720px) { .grid3 { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 .check { display: flex; align-items: center; gap: 8px; height: var(--control-h); font-size: var(--fs-base); }
 .actions { display: flex; gap: var(--sp-2); align-items: center; }
 .push { margin-left: auto; }

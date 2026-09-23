@@ -120,7 +120,6 @@
     --fs-3xl: 1.875rem;
     --fs-title: 1.875rem; /* 30 */
     --bar-h: 48px;
-    --tab-h: 76px;
     --control-h: 42px;
     --control-h-sm: 32px;
     --row-h: 44px;
@@ -351,7 +350,7 @@ button:not([class]):disabled { opacity: 0.45; }
 /* Layout primitives used by App.vue. Doubled whitespace. */
 .page { max-width: var(--content-w); margin: 0 auto; padding: var(--sp-10) var(--sp-10) var(--sp-12); }
 @media (max-width: 1023px) { .page { padding: var(--sp-6) var(--sp-6) var(--sp-10); } }
-@media (max-width: 720px) { .page { padding: var(--sp-3) var(--sp-4) calc(var(--tab-h) + env(safe-area-inset-bottom) + var(--sp-6)); } }
+@media (max-width: 720px) { .page { padding: var(--sp-3) var(--sp-4) calc(env(safe-area-inset-bottom) + var(--sp-8)); } }
 
 /* Card: a plate lit from above. Hairline, a bright top edge, a soft shadow that falls downward. */
 .card {
@@ -400,6 +399,15 @@ table.ui td.num, table.ui th.num { text-align: right; font-variant-numeric: tabu
 .list-row { display: flex; align-items: center; gap: var(--sp-3); min-height: var(--row-h); padding: var(--sp-2) 0; border-top: 1px solid var(--line); font-size: var(--fs-base); min-width: 0; }
 .list-row:first-child { border-top: 0; }
 .list-row.done > .title, .list-row.done > * > .title { text-decoration: line-through; color: var(--ink-4); }
+
+/* Touch: every control gets a finger-sized hit area on coarse pointers; the desktop keeps its density. */
+@media (pointer: coarse) {
+  .link-btn { display: inline-flex; align-items: center; min-height: 36px; }
+  .icon-btn { width: 40px; height: 40px; }
+  input[type='checkbox'], input[type='radio'] { width: 22px; height: 22px; }
+  input[type='checkbox']:checked::after { width: 12px; height: 12px; }
+  label:has(> input[type='checkbox']), label:has(> input[type='radio']) { min-height: 36px; }
+}
 
 /* Theme change: colours cross-fade for a moment (class set by useTheme) instead of snapping. */
 html.theme-switching, html.theme-switching *, html.theme-switching *::before, html.theme-switching *::after {

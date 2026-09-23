@@ -1,5 +1,12 @@
 # Pozzy progress
 
+## Premium pass, review round, 2026-09-23 (deployed)
+
+Wouter: overall good; the big blue button is too much, bring the hamburger drawer back on the phone, and fix the mobile responsiveness issues.
+- Primary button is a flat ink pill (no gradient, no glow). The accent stays on links, selection, checkboxes and progress.
+- Phone navigation: `NavDrawer.vue` restored from the motion pass (spring in, drag to close) and restyled; `TabBar.vue` and `MoreSheet.vue` removed; the menu button is back in the phone toolbar.
+- Responsive audit (`scratchpad/mobile_audit.py`, Playwright at 360, 390 and 430, every view plus every dialog): no page overflow at any width. Fixed: agenda status row wrapping its count (shorter count, "iCloud" hidden under 400px, arrows fixed width), phone tracker rows (name above seven 34px cells instead of 22px cells squeezing the name), task form grid two columns on the phone, event dialog showed its title twice (form head removed), and touch targets on coarse pointers (text links 36px, icon buttons 40px, checkboxes 22px). Remaining findings are 18px checkboxes and 20px text links measured on a fine pointer, which grow on a real touch device.
+
 ## Premium visual pass, 2026-09-23 evening (deployed)
 
 Wouter rejected the HIG look on both desktop and phone and asked for "something new, modern, slick and premium", pointing at Erik Kennedy's 7 rules and the 58 rules article. Direction and tokens in docs/briefs/DESIGN.md section 0.

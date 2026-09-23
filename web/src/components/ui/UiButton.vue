@@ -43,9 +43,7 @@ defineProps({
 .btn :deep(svg) { width: 15px; height: 15px; flex: none; }
 
 /* filled: the one prominent action, brighter at the top, shadow beneath */
-.btn-primary { background: linear-gradient(180deg, var(--brand-2), var(--brand)); color: var(--on-tint); font-weight: 600; box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.28), 0 1px 2px rgb(14 17 32 / 0.12), 0 6px 16px -6px color-mix(in srgb, var(--brand) 60%, transparent); }
-:root[data-theme="dark"] .btn-primary { color: #fff; }
-@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .btn-primary { color: #fff; } }
+.btn-primary { background: var(--ink); color: var(--on-ink); font-weight: 600; box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.12), 0 1px 2px rgb(14 17 32 / 0.1); }
 /* raised: a plate lit from above */
 .btn-secondary { background: linear-gradient(180deg, var(--surface), color-mix(in srgb, var(--surface) 95%, var(--ink))); color: var(--ink); border-color: var(--line-2); box-shadow: inset 0 1px 0 var(--edge), 0 1px 2px rgb(14 17 32 / 0.06); }
 /* quiet: text only until hovered */
@@ -56,7 +54,7 @@ defineProps({
 .btn-link:active:not(:disabled) { transform: none; }
 
 @media (hover: hover) and (pointer: fine) {
-  .btn-primary:hover:not(:disabled) { box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.28), 0 2px 4px rgb(14 17 32 / 0.12), 0 10px 22px -8px color-mix(in srgb, var(--brand) 70%, transparent); transform: translateY(-1px); }
+  .btn-primary:hover:not(:disabled) { background: color-mix(in srgb, var(--ink) 88%, var(--surface)); }
   .btn-secondary:hover:not(:disabled) { border-color: var(--ink-4); }
   .btn-ghost:hover:not(:disabled) { background: var(--surface-2); color: var(--ink); }
   .btn-danger:hover:not(:disabled) { background: color-mix(in srgb, var(--danger) 22%, var(--danger-soft)); }

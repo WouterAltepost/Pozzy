@@ -67,7 +67,7 @@ const nowTop = computed(() => ((nowMinutes.value - H0 * 60) / 60) * HOUR_PX)
 const nowVisible = computed(() => nowMinutes.value >= H0 * 60 && nowMinutes.value <= H1 * 60)
 const nowIndex = computed(() => (store.anchor === today() ? dayItems.value.findIndex((i) => i.from > nowMinutes.value) : -1))
 const count = computed(() => {
-  if (store.view === 'week') return `${store.events.length} ${store.events.length === 1 ? 'event' : 'events'} this week`
+  if (store.view === 'week') return `${store.events.length} ${store.events.length === 1 ? 'event' : 'events'}`
   const n = dayItems.value.filter((i) => i.kind !== 'suggest').length
   return `${n} ${n === 1 ? 'event' : 'events'}`
 })
@@ -160,7 +160,7 @@ function wd(day) {
       <button type="button" class="sync" :disabled="!store.account || store.syncing" @click="store.sync()">
         <UiBadge :tone="store.account?.last_sync_error ? 'danger' : store.account ? 'ok' : 'neutral'" dot>{{ store.syncing ? 'syncing' : synced }}</UiBadge>
       </button>
-      <span class="muted small">iCloud</span>
+      <span class="muted small src">iCloud</span>
       <span class="spacer"></span>
       <span class="muted small num">{{ count }}</span>
       <button type="button" class="icon-btn" title="Plan the week" aria-label="Plan the week" :disabled="planning" :aria-busy="planning || undefined" @click="emit('plan')"><span v-if="planning" class="spin" aria-hidden="true"></span><PhSparkle v-else weight="fill" /></button>
@@ -234,8 +234,13 @@ function wd(day) {
 .magenda { display: flex; flex-direction: column; gap: var(--sp-4); }
 .head { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-2); }
 .head h1 { font-size: var(--fs-2xl); }
-.status { display: flex; align-items: center; gap: 8px; font-size: var(--fs-sm); color: var(--ink-3); }
-.sync { border: 0; background: none; padding: 0; }
+.status { display: flex; align-items: center; gap: 6px; font-size: var(--fs-sm); color: var(--ink-3); }
+.status .icon-btn { width: 34px; height: 36px; flex: none; }
+.status .num { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.sync { border: 0; background: none; padding: 0; min-height: 36px; display: inline-flex; align-items: center; }
+.status .num { white-space: nowrap; }
+.status .src { display: none; }
+@media (min-width: 400px) { .status .src { display: inline; } }
 .spacer { flex: 1; }
 .mini { display: grid; grid-template-columns: 30px repeat(7, minmax(0, 1fr)); background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-lg); overflow: hidden; font-size: var(--fs-xs); }
 .corner { border-bottom: 1px solid var(--line); }

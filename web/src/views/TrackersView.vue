@@ -300,16 +300,19 @@ function remove(t) {
 .chip.some { background: var(--warn-soft); border-color: transparent; color: var(--warn); }
 .chip .count { color: var(--ink-3); font-size: var(--fs-sm); }
 .chip.met .count { color: inherit; }
-.wrow { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 10px; align-items: center; padding: 10px 0; border-top: 1px solid var(--line); }
-.wrow .tname { display: inline-flex; align-items: center; gap: 8px; font-size: var(--fs-base); font-weight: 500; min-width: 0; max-width: 100%; }
+.wrow { display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: 'name edit' 'cells cells'; gap: 6px 8px; align-items: center; padding: 10px 0; border-top: 1px solid var(--line); }
+.wrow > .tname { grid-area: name; }
+.wrow > .cells { grid-area: cells; }
+.wrow > .edit { grid-area: edit; }
+.wrow .tname { display: inline-flex; align-items: center; gap: 8px; font-size: var(--fs-base); font-weight: 500; min-width: 0; max-width: 100%; min-height: 36px; }
 .wrow .tname > span:last-child, .wrow .tname { white-space: nowrap; }
 .wrow .tname { overflow: hidden; text-overflow: ellipsis; display: block; }
 .wrow .tname .dot { display: inline-block; margin-right: 8px; vertical-align: middle; }
-.cells { display: flex; gap: 4px; }
-.dcell { width: 22px; height: 22px; border-radius: var(--r-sm); border: 0; padding: 0; background: var(--surface-2); color: var(--ink-3); font-size: var(--fs-xs); font-weight: 500; display: inline-flex; align-items: center; justify-content: center; }
+.cells { display: flex; gap: 4px; width: 100%; }
+.dcell { flex: 1; max-width: 40px; height: 34px; border-radius: var(--r-sm); border: 0; padding: 0; background: var(--surface-2); color: var(--ink-3); font-size: var(--fs-xs); font-weight: 500; display: inline-flex; align-items: center; justify-content: center; }
 .dcell.hit { background: var(--ok-soft); color: var(--ok); }
 .dcell.part { background: var(--warn-soft); color: var(--warn); }
-.dcell.future { background: transparent; }
+.dcell.future { opacity: 0.35; }
 .dcell.today { box-shadow: 0 0 0 1px var(--brand) inset; }
 .wrow .edit { font-size: var(--fs-xs); }
 .pchart { padding: 4px 0 10px; }

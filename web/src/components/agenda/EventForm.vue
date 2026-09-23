@@ -93,10 +93,6 @@ function submit() {
 
 <template>
   <form class="event-form" @submit.prevent="submit">
-    <div class="card-head">
-      <h2>{{ isEdit ? 'Event' : 'New event' }}</h2>
-      <span class="meta"><button type="button" class="link-btn" @click="emit('close')">Close</button></span>
-    </div>
     <p v-if="readOnly" class="muted small">This is one occurrence of a recurring event. Edit or delete it on your phone; the change syncs back.</p>
     <p v-if="event?.task_id" class="muted small">Linked to a scheduled task. Moving it here moves the task too.</p>
     <fieldset :disabled="readOnly || saving" class="fields">
