@@ -10,6 +10,7 @@ import { useMediaQuery } from '../../composables/useMediaQuery'
 import { useToast } from '../../composables/useToast'
 import { formatDateTime } from '../../lib/dates'
 import UiButton from '../ui/UiButton.vue'
+import UiSkeleton from '../ui/UiSkeleton.vue'
 import UiSheet from '../ui/UiSheet.vue'
 
 const settle = useLoadTask()
@@ -120,7 +121,8 @@ onMounted(() => load().finally(settle))
         </span>
       </div>
       <p v-if="error" class="error">{{ error }}</p>
-      <div v-if="data" class="prose">
+      <UiSkeleton v-if="busy" :lines="4" />
+      <div v-else-if="data" class="prose">
         <p v-for="(p, i) in paragraphs" :key="i">{{ p }}</p>
       </div>
       <p v-else class="muted">No briefing for today yet. It is generated at the time set in Settings, or on demand.</p>

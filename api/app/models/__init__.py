@@ -9,7 +9,7 @@ from .daily_briefing import DailyBriefing
 from .daily_do import DailyDo
 from .deadline import Deadline
 from .email import Email
-from .hours_log import HoursLog
+from .hours_log import HoursDismissal, HoursLog
 from .job_run import JobRun
 from .mail_account import MailAccount
 from .note import Note
@@ -32,6 +32,7 @@ __all__ = [
     "DailyDo",
     "Deadline",
     "Email",
+    "HoursDismissal",
     "HoursLog",
     "JobRun",
     "MailAccount",

@@ -9,7 +9,7 @@ Each widget under `web/src/components/home/` fetches its own data on mount and r
 | 3 | `TopEmailsWidget.vue` | `GET /api/mail/top` (Settings `mail_top_count`, default 5), unhandled emails by effective priority then date, account colour dot, priority badge, subject links to Gmail, inline mark handled. Renders nothing when the call fails; shows "Inbox handled." when empty. | C |
 | 4 | `TasksDueWidget.vue` | `GET /api/tasks?due=today_or_overdue`, inline complete | A |
 | 5 | `TrackerRowWidget.vue` | `GET /api/trackers/week`, one chip per daily_bool and weekly_count tracker, tap to tick today. Renders nothing when there are no such trackers. | A |
-| 6 | `HoursWeekWidget.vue` | `GET /api/hours/week`, bar per area against Settings targets | A |
+| 6 | `HoursWeekWidget.vue` | `GET /api/hours/week`, bar per area against Settings targets; `GET /api/hours/suggestions` for a line with the number of agenda entries waiting to be confirmed (renders without it) | A |
 | 7 | `WeeklyGoalsWidget.vue` | `GET /api/goals`, tick and +1 inline | A |
 | 8 | `DeadlinesWidget.vue` | `GET /api/study/upcoming?days=14`, deadlines and application next steps. Renders nothing when empty. | A |
 | 9 | `BriefingWidget.vue` | `GET /api/ai/briefing` (today), paragraphs of text with source and time, Generate/Regenerate button calling `POST /api/ai/briefing`. Shows a hint when no briefing exists yet. Reply column (sheet on mobile): `POST /api/ai/briefing/notes` stores a note, Claude rewrites the text and proposes actions; ticked ones go to `POST /api/ai/briefing/notes/<i>/apply`. | D, E |

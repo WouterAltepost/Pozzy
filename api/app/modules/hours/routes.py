@@ -61,6 +61,50 @@ def week():
     return ok(service.week_summary(start))
 
 
+@bp.get("/suggestions")
+@require_auth
+def suggestions():
+    """Past agenda events and completed tasks with no hours logged yet, to confirm or skip."""
+    return ok(service.suggestions())
+
+
+@bp.post("/suggestions/accept")
+@require_auth
+def accept_suggestions():
+    body = require_object(request.get_json(silent=True))
+    items = body.get("items")
+    if not isinstance(items, list) or not items:
+        raise ValidationError("'items' must be a non-empty list")
+    picks = []
+    for raw in items:
+        item = require_object(raw)
+        ref = parse_str(item, "ref", required=True, max_len=400)
+        if not (ref.startswith("event:") or ref.startswith("task:")):
+            raise ValidationError("'ref' must start with 'event:' or 'task:'")
+        picks.append(
+            {
+                "ref": ref,
+                "date": parse_date(item, "date") or today_local(),
+                "minutes": parse_int(item, "minutes", required=True, min_value=1, max_value=24 * 60),
+                "area_id": parse_uuid(item, "area_id"),
+                "tags": parse_tags(item, default=[]),
+                "note": parse_str(item, "note"),
+            }
+        )
+    created = service.accept_suggestions(picks)
+    return ok({"created": [log.to_dict() for log in created]}, 201)
+
+
+@bp.post("/suggestions/dismiss")
+@require_auth
+def dismiss_suggestions():
+    body = require_object(request.get_json(silent=True))
+    refs = body.get("refs")
+    if not isinstance(refs, list) or not refs or not all(isinstance(r, str) and r.strip() for r in refs):
+        raise ValidationError("'refs' must be a non-empty list of strings")
+    return ok({"dismissed": service.dismiss_suggestions([r.strip() for r in refs])})
+
+
 @bp.post("")
 @require_auth
 def create_log():

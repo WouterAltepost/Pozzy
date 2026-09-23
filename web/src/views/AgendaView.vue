@@ -119,8 +119,14 @@ async function accept(item) {
 function deny(item) {
   suggestions.value = suggestions.value.filter((s) => s.id !== item.id)
 }
+const acceptingAll = ref(false)
 async function acceptAll() {
-  for (const item of [...suggestions.value]) await accept(item)
+  acceptingAll.value = true
+  try {
+    for (const item of [...suggestions.value]) await accept(item)
+  } finally {
+    acceptingAll.value = false
+  }
 }
 function denyAll() {
   suggestions.value = []
@@ -216,7 +222,7 @@ function pickDay(evt) {
             <span class="muted small">Dashed blocks on the grid. Accept or deny each one, or all at once.<template v-if="rulesSummary"> Rules applied: {{ rulesSummary }}.</template></span>
             <span class="tray-actions">
               <button type="button" class="link-btn" @click="trayOpen = !trayOpen">{{ trayOpen ? 'Hide list' : 'Show list' }}</button>
-              <UiButton size="sm" variant="primary" @click="acceptAll">Accept all</UiButton>
+              <UiButton size="sm" variant="primary" :loading="acceptingAll" @click="acceptAll">Accept all</UiButton>
               <UiButton size="sm" variant="ghost" @click="denyAll">Deny all</UiButton>
             </span>
           </div>
@@ -234,10 +240,10 @@ function pickDay(evt) {
           </ul>
         </section>
       </Transition>
-      <AgendaMobile v-if="phone" :suggestions="suggestions" :planning="planning" @select-event="openEvent" @create="openNew" @plan="plan" @accept="accept" @deny="deny" />
+      <AgendaMobile v-if="phone" :suggestions="suggestions" :planning="planning" :deciding="deciding" @select-event="openEvent" @create="openNew" @plan="plan" @accept="accept" @deny="deny" />
       <div v-else class="gridwrap">
         <div class="gridpos">
-          <AgendaGrid :days="store.days" :events="store.events" :tasks="store.tasks" :draft="draft" :suggestions="suggestions" @select-event="openEvent" @create="onSlot" @move="onMove" @accept="accept" @deny="deny" />
+          <AgendaGrid :days="store.days" :events="store.events" :tasks="store.tasks" :draft="draft" :suggestions="suggestions" :deciding="deciding" @select-event="openEvent" @create="onSlot" @move="onMove" @accept="accept" @deny="deny" />
           <Transition name="pop">
             <EventPopover
               v-if="quick"

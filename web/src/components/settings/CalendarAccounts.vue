@@ -2,13 +2,17 @@
 import { computed, onMounted, ref } from 'vue'
 import { formatDateTime } from '../../lib/dates'
 import { useCalendarStore } from '../../stores/calendar'
+import { useSettingsStore } from '../../stores/settings'
+import AreaSelect from '../shared/AreaSelect.vue'
 import UiButton from '../ui/UiButton.vue'
 import UiField from '../ui/UiField.vue'
 
 // Mounted inside SettingsView's Integrations card. Self-contained:
 // loads the account, lets Wouter pick which calendars sync and where Pozzy writes.
 const store = useCalendarStore()
+const settings = useSettingsStore()
 const selected = ref([])
+const calendarAreas = ref({}) // calendar url -> area id, for the hours suggestions
 const writeUrl = ref('')
 const enabled = ref(true)
 const busy = ref(false)
@@ -16,6 +20,7 @@ const message = ref('')
 
 const account = computed(() => store.account)
 const calendars = computed(() => account.value?.known_calendars || [])
+const selectedCalendars = computed(() => calendars.value.filter((c) => selected.value.includes(c.url)))
 
 function fill() {
   if (!account.value) return
@@ -25,8 +30,9 @@ function fill() {
 }
 
 onMounted(async () => {
-  await store.loadAccount()
+  await Promise.all([store.loadAccount(), settings.values ? Promise.resolve() : settings.load()])
   fill()
+  calendarAreas.value = { ...(settings.values?.calendar_areas || {}) }
 })
 
 async function discover() {
@@ -49,6 +55,9 @@ async function save() {
   try {
     if (writeUrl.value && !selected.value.includes(writeUrl.value)) selected.value.push(writeUrl.value)
     await store.saveAccount({ calendar_urls: selected.value, write_calendar_url: writeUrl.value || null, enabled: enabled.value })
+    const calendar_areas = {}
+    for (const [url, areaId] of Object.entries(calendarAreas.value)) if (areaId && selected.value.includes(url)) calendar_areas[url] = areaId
+    await settings.save({ calendar_areas })
     fill()
     message.value = 'Saved. The next sync applies the selection.'
   } catch {
@@ -86,6 +95,13 @@ async function syncNow() {
           <input v-model="selected" type="checkbox" :value="c.url" /> {{ c.name }}
         </label>
       </div>
+      <div v-if="selectedCalendars.length" class="areas">
+        <span class="muted small">Hours from a calendar's events count for this area (used by the suggestions on the Hours page):</span>
+        <div v-for="c in selectedCalendars" :key="c.url" class="arow">
+          <span class="cname truncate">{{ c.name }}</span>
+          <AreaSelect v-model="calendarAreas[c.url]" :aria-label="'Area for ' + c.name" />
+        </div>
+      </div>
       <UiField v-if="calendars.length" label="Pozzy writes new events to" class="write">
         <select v-model="writeUrl">
           <option v-for="c in calendars" :key="c.url" :value="c.url">{{ c.name }}</option>
@@ -107,5 +123,8 @@ h3 { font-size: var(--fs-base); }
 .check { display: flex; align-items: center; gap: 6px; font-size: var(--fs-md); }
 .list { display: flex; flex-wrap: wrap; gap: var(--sp-2) var(--sp-4); }
 .write { max-width: 320px; }
+.areas { display: flex; flex-direction: column; gap: 6px; margin-top: var(--sp-1); }
+.arow { display: grid; grid-template-columns: minmax(0, 160px) 180px; gap: var(--sp-2); align-items: center; }
+.cname { font-size: var(--fs-md); }
 .actions { display: flex; align-items: center; gap: var(--sp-2); flex-wrap: wrap; margin-top: var(--sp-1); }
 </style>

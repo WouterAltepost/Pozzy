@@ -9,7 +9,7 @@ import UiButton from '../ui/UiButton.vue'
 import UiField from '../ui/UiField.vue'
 import PriorityBadge from './PriorityBadge.vue'
 
-const props = defineProps({ email: { type: Object, required: true }, busy: { type: Boolean, default: false } })
+const props = defineProps({ email: { type: Object, required: true }, busy: { type: Boolean, default: false }, pending: { type: String, default: '' } })
 const emit = defineEmits(['close', 'update', 'task', 'reclassify'])
 
 const overrides = reactive({ priority: '', category: '', area_id: '' })
@@ -77,8 +77,8 @@ function createTask() {
 
     <div class="actions">
       <a v-if="email.gmail_url" :href="email.gmail_url" target="_blank" rel="noopener" class="ext">Open in Gmail</a>
-      <UiButton :disabled="busy" @click="emit('update', { handled: !email.handled })">{{ email.handled ? 'Mark unhandled' : 'Mark handled' }}</UiButton>
-      <UiButton variant="ghost" :disabled="busy" @click="emit('reclassify')">Reclassify</UiButton>
+      <UiButton :disabled="busy" :loading="pending === 'update'" @click="emit('update', { handled: !email.handled })">{{ email.handled ? 'Mark unhandled' : 'Mark handled' }}</UiButton>
+      <UiButton variant="ghost" :disabled="busy" :loading="pending === 'reclassify'" @click="emit('reclassify')">Reclassify</UiButton>
     </div>
 
     <div class="block">
@@ -86,7 +86,7 @@ function createTask() {
       <p v-if="email.task_id" class="muted small">A task exists for this email. <RouterLink :to="{ name: 'tasks' }">Open tasks</RouterLink></p>
       <div v-else class="row">
         <UiField label="Due"><input v-model="taskDue" type="date" /></UiField>
-        <UiButton :disabled="busy" @click="createTask">Create task from email</UiButton>
+        <UiButton :disabled="busy" :loading="pending === 'task'" @click="createTask">Create task from email</UiButton>
       </div>
     </div>
 

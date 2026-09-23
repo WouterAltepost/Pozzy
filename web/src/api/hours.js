@@ -11,3 +11,8 @@ export const hoursWeek = (weekStart) => api(`/api/hours/week${weekStart ? '?week
 export const createHours = (body) => api('/api/hours', { method: 'POST', body })
 export const updateHours = (id, body) => api(`/api/hours/${id}`, { method: 'PATCH', body })
 export const deleteHours = (id) => api(`/api/hours/${id}`, { method: 'DELETE' })
+
+// Suggested entries from past agenda events and completed tasks (nothing logged until accepted).
+export const hoursSuggestions = () => api('/api/hours/suggestions')
+export const acceptHoursSuggestions = (items) => api('/api/hours/suggestions/accept', { method: 'POST', body: { items } })
+export const dismissHoursSuggestions = (refs) => api('/api/hours/suggestions/dismiss', { method: 'POST', body: { refs } })

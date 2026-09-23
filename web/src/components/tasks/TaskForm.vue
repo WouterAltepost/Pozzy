@@ -55,7 +55,7 @@ function submit() {
     <div class="grid3">
       <UiField label="Area"><AreaSelect v-model="form.area_id" /></UiField>
       <UiField label="Due"><input v-model="form.due_date" type="date" /></UiField>
-      <UiField label="Minutes"><input v-model.number="form.estimated_minutes" type="number" min="1" max="1440" step="5" /></UiField>
+      <UiField label="Minutes"><input v-model.number="form.estimated_minutes" type="number" min="5" max="1440" step="5" /></UiField>
     </div>
     <div class="grid3">
       <label class="check"><input v-model="form.urgent" type="checkbox" /> Urgent</label>

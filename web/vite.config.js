@@ -48,7 +48,7 @@ export default defineConfig({
     port: 5173,
     proxy: {
       '/api': {
-        target: 'http://127.0.0.1:5000',
+        target: process.env.API_PROXY_TARGET || 'http://127.0.0.1:5000', // macOS AirPlay holds 5000: API_PROXY_TARGET=http://127.0.0.1:5001 npm run dev
         changeOrigin: true,
       },
     },

@@ -6,6 +6,7 @@ import PageHeader from '../components/ui/PageHeader.vue'
 import UiLoadGate from '../components/ui/UiLoadGate.vue'
 import { useReady } from '../composables/useReady'
 import UiButton from '../components/ui/UiButton.vue'
+import UiSkeleton from '../components/ui/UiSkeleton.vue'
 import UiField from '../components/ui/UiField.vue'
 import { formatDateTime } from '../lib/dates'
 import { useAreasStore } from '../stores/areas'
@@ -33,6 +34,8 @@ watch(review, (r) => {
 
 const ready = useReady(() => Promise.all([areas.load(), store.load()]))
 
+// `pending` names the action in flight so only its own control spins.
+const pending = ref('')
 async function run(fn) {
   error.value = ''
   busy.value = true
@@ -42,6 +45,14 @@ async function run(fn) {
     error.value = err.message
   } finally {
     busy.value = false
+  }
+}
+async function runAs(name, fn) {
+  pending.value = name
+  try {
+    await run(fn)
+  } finally {
+    pending.value = ''
   }
 }
 
@@ -92,7 +103,7 @@ function finalize() {
           <h2>Numbers</h2>
           <span class="meta">
             <template v-if="review.finalized">finalized {{ formatDateTime(review.finalized_at) }}</template>
-            <button v-else type="button" class="link-btn" :disabled="busy" @click="run(() => store.refreshStats())">Refresh</button>
+            <button v-else type="button" class="link-btn" :disabled="busy" @click="runAs('stats', () => store.refreshStats())">{{ pending === 'stats' ? 'Refreshing' : 'Refresh' }}</button>
           </span>
         </div>
         <div v-if="stats" class="tiles">
@@ -125,10 +136,11 @@ function finalize() {
           <h2>Reflection</h2>
           <span class="meta">
             {{ review.reflection_source === 'claude' ? 'Claude' : review.reflection_source === 'edited' ? 'edited' : 'rules' }}
-            <button v-if="!locked" type="button" class="link-btn" :disabled="busy" @click="run(() => store.generate())">Regenerate</button>
+            <UiButton v-if="!locked" size="sm" variant="ghost" :loading="pending === 'reflection'" :disabled="busy" @click="runAs('reflection', () => store.generate())">Regenerate</UiButton>
           </span>
         </div>
-        <div class="prose">
+        <UiSkeleton v-if="pending === 'reflection'" :lines="5" />
+        <div v-else class="prose">
           <p v-for="(p, i) in paragraphs" :key="i">{{ p }}</p>
           <p v-if="!paragraphs.length" class="muted">No reflection yet.</p>
         </div>

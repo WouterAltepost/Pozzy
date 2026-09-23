@@ -47,7 +47,7 @@ const ICONS = {
   review: PhClipboardText,
   settings: PhGearSix,
 }
-const items = computed(() => NAV.map((n) => ({ ...n, icon: ICONS[n.name] })))
+const items = computed(() => NAV.filter((n) => !n.hidden).map((n) => ({ ...n, icon: ICONS[n.name] })))
 
 async function logout() {
   menuOpen.value = false

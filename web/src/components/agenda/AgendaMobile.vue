@@ -10,7 +10,7 @@ import UiBadge from '../ui/UiBadge.vue'
 import UiEmpty from '../ui/UiEmpty.vue'
 import UiSegmented from '../ui/UiSegmented.vue'
 
-const props = defineProps({ suggestions: { type: Array, default: () => [] }, planning: { type: Boolean, default: false } })
+const props = defineProps({ suggestions: { type: Array, default: () => [] }, planning: { type: Boolean, default: false }, deciding: { type: Object, default: () => ({}) } })
 const emit = defineEmits(['select-event', 'create', 'plan', 'accept', 'deny'])
 const store = useCalendarStore()
 
@@ -123,7 +123,7 @@ function wd(day) {
       <span class="muted small">iCloud</span>
       <span class="spacer"></span>
       <span class="muted small num">{{ count }}</span>
-      <button type="button" class="icon-btn" title="Plan the week" aria-label="Plan the week" :disabled="planning" @click="emit('plan')"><PhSparkle weight="fill" /></button>
+      <button type="button" class="icon-btn" title="Plan the week" aria-label="Plan the week" :disabled="planning" :aria-busy="planning || undefined" @click="emit('plan')"><span v-if="planning" class="spin" aria-hidden="true"></span><PhSparkle v-else weight="fill" /></button>
       <button type="button" class="icon-btn" aria-label="New event" @click="emit('create', { day: store.anchor })"><PhPlus weight="bold" /></button>
     </div>
 
@@ -175,8 +175,8 @@ function wd(day) {
                 </span>
               </span>
               <span v-if="it.kind === 'suggest'" class="sactions">
-                <button type="button" class="s-btn ok" :aria-label="'Accept: ' + it.item.title" @click.stop="emit('accept', it.suggestion)"><PhCheck weight="bold" /></button>
-                <button type="button" class="s-btn no" :aria-label="'Deny: ' + it.item.title" @click.stop="emit('deny', it.suggestion)"><PhX weight="bold" /></button>
+                <button type="button" class="s-btn ok" :aria-label="'Accept: ' + it.item.title" :disabled="deciding[it.suggestion.id]" :aria-busy="deciding[it.suggestion.id] || undefined" @click.stop="emit('accept', it.suggestion)"><span v-if="deciding[it.suggestion.id]" class="spin" aria-hidden="true"></span><PhCheck v-else weight="bold" /></button>
+                <button type="button" class="s-btn no" :aria-label="'Deny: ' + it.item.title" :disabled="deciding[it.suggestion.id]" @click.stop="emit('deny', it.suggestion)"><PhX weight="bold" /></button>
               </span>
             </div>
           </li>
@@ -247,4 +247,7 @@ function wd(day) {
 .s-btn { width: 28px; height: 28px; border-radius: 50%; border: 0; display: inline-flex; align-items: center; justify-content: center; padding: 0; }
 .s-btn.ok { background: var(--ok); color: #fff; }
 .s-btn.no { background: var(--surface-3); color: var(--ink-2); }
+.spin { display: inline-block; width: 14px; height: 14px; border-radius: 50%; border: 2px solid currentColor; border-right-color: transparent; animation: spin 700ms linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .spin { animation: none; border-right-color: currentColor; opacity: 0.5; } }
 </style>

@@ -10,6 +10,7 @@ import { useReady } from '../composables/useReady'
 import UiBadge from '../components/ui/UiBadge.vue'
 import UiButton from '../components/ui/UiButton.vue'
 import UiEmpty from '../components/ui/UiEmpty.vue'
+import UiSkeleton from '../components/ui/UiSkeleton.vue'
 import { formatDay, today, tomorrow } from '../lib/dates'
 import { useGoalsStore } from '../stores/goals'
 
@@ -57,8 +58,23 @@ function renameDo(item, event) {
   if (title && title !== item.title) run(() => store.updateDo(item.id, { title }))
 }
 
-function suggest() {
-  run(() => store.suggest(suggestFor.value))
+const suggesting = ref(false)
+const rolling = ref(false)
+async function suggest() {
+  suggesting.value = true
+  try {
+    await run(() => store.suggest(suggestFor.value))
+  } finally {
+    suggesting.value = false
+  }
+}
+async function rollover() {
+  rolling.value = true
+  try {
+    await run(() => store.rolloverNow())
+  } finally {
+    rolling.value = false
+  }
 }
 
 function acceptSuggestion(s) {
@@ -101,16 +117,17 @@ function acceptSuggestion(s) {
     <section class="card suggest">
       <div class="card-head">
         <h2>Suggest three do's</h2>
-        <span class="meta"><button type="button" class="link-btn" @click="run(() => store.rolloverNow())">Run rollover now</button></span>
+        <span class="meta"><button type="button" class="link-btn" :disabled="rolling" @click="rollover">{{ rolling ? 'Running rollover' : 'Run rollover now' }}</button></span>
       </div>
       <div class="toolbar">
         <select v-model="suggestFor" aria-label="Suggest for">
           <option :value="today()">for today</option>
           <option :value="tomorrow()">for tomorrow</option>
         </select>
-        <UiButton variant="primary" @click="suggest">Suggest</UiButton>
+        <UiButton variant="primary" :loading="suggesting" @click="suggest">Suggest</UiButton>
       </div>
-      <ul v-if="store.suggestions" class="suggestions">
+      <UiSkeleton v-if="suggesting" :lines="3" />
+      <ul v-else-if="store.suggestions" class="suggestions">
         <li v-if="!store.suggestions.suggestions.length" class="muted small hint">Nothing to suggest, no open tasks or deadlines.</li>
         <li v-for="s in store.suggestions.suggestions" :key="s.title" class="list-row">
           <span class="title"><span>{{ s.title }}</span> <span class="muted small">{{ s.reason }}</span></span>

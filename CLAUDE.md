@@ -31,6 +31,7 @@ Life areas: Study, Work, Personal, Health. Timezone Europe/Amsterdam. Week start
 8. Mail is read-only. The IMAP client never issues STORE, COPY, MOVE, EXPUNGE or any flag change.
 9. Schema changes go through Alembic migrations. Never edit the DB by hand.
 10. Follow the build order in plan section 9. Finish and deploy a milestone before starting the next one.
+11. Every migration that creates a table ends with `op.execute("ALTER TABLE <name> ENABLE ROW LEVEL SECURITY")`. The `anon` and `authenticated` roles hold no grants in `public` (migration `i1000000rls`); Vue never reads the database through Supabase.
 
 ## Conventions
 

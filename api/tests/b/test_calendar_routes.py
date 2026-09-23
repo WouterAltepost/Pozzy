@@ -3,7 +3,7 @@ from sqlalchemy import select
 from app.extensions import db
 from app.models import CalendarEvent, JobRun
 
-from .conftest import CAL_A, CAL_B
+from .conftest import CAL_A, CAL_B, NOW
 from .test_sync import run_job
 
 RANGE = "start=2026-09-14T00:00:00%2B02:00&end=2026-09-21T00:00:00%2B02:00"
@@ -34,7 +34,10 @@ def test_list_events_in_range_are_local_iso(client, headers, app, fake_client):
     assert data["events"][0]["recurrence_id"] and data["events"][1]["recurrence_id"] is None
 
 
-def test_sync_endpoint_runs_and_reports(client, headers, app, fake_client):
+def test_sync_endpoint_runs_and_reports(client, headers, app, fake_client, monkeypatch):
+    from app.modules.calendar import service
+
+    monkeypatch.setattr(service, "now_utc", lambda: NOW)  # the fixture ICS files sit in the week of NOW
     fake_client.put(CAL_A, "single.ics")
     res = client.post("/api/calendar/sync", headers=headers)
     assert res.status_code == 200, res.get_json()

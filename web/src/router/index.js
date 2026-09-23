@@ -12,7 +12,8 @@ export const NAV = [
   { path: '/hours', name: 'hours', label: 'Hours', view: () => import('../views/HoursView.vue') },
   { path: '/capture', name: 'capture', label: 'Capture', view: () => import('../views/CaptureView.vue') },
   { path: '/study', name: 'study', label: 'Study', view: () => import('../views/StudyView.vue') },
-  { path: '/notes', name: 'notes', label: 'Notes', view: () => import('../views/NotesView.vue') },
+  // Archived 2026-09-23: reachable at /notes for capture proposals and old links, hidden from the nav.
+  { path: '/notes', name: 'notes', label: 'Notes', view: () => import('../views/NotesView.vue'), hidden: true },
   { path: '/review', name: 'review', label: 'Review', view: () => import('../views/WeeklyReviewView.vue') },
   { path: '/settings', name: 'settings', label: 'Settings', view: () => import('../views/SettingsView.vue') },
 ]

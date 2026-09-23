@@ -98,7 +98,7 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKey))
       </form>
       <div v-else class="proposal">
         <p class="raw">"{{ current.raw_text }}"</p>
-        <ProposalEditor :proposal="current.proposal" @confirm="confirm" @discard="discard" />
+        <ProposalEditor :proposal="current.proposal" :busy="busy" @confirm="confirm" @discard="discard" />
       </div>
       <p v-if="message" class="msg small" role="status">
         {{ message }} <RouterLink :to="{ name: 'capture' }" @click="close">Open inbox</RouterLink>

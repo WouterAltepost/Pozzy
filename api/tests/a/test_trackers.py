@@ -97,9 +97,10 @@ def test_week_grid_completion_and_streaks(client, headers, monkeypatch):
 def test_series_covers_every_tracker_on_one_range(client, headers):
     b = client.post("/api/trackers", json={"name": "Sauna", "type": "daily_bool"}, headers=headers).get_json()["data"]
     w = client.post("/api/trackers", json={"name": "Weight", "type": "numeric", "unit": "kg", "target_value": 80, "target_period": "day"}, headers=headers).get_json()["data"]
-    client.post(f"/api/trackers/{b['id']}/tick", json={"date": "2026-09-14"}, headers=headers)
-    client.put(f"/api/trackers/{w['id']}/entries", json={"date": "2026-09-14", "value": 81.5}, headers=headers)
-    client.put(f"/api/trackers/{w['id']}/entries", json={"date": "2026-07-01", "value": 84}, headers=headers)
+    monday = (date.today() - timedelta(days=date.today().weekday())).isoformat()  # this week, whatever today is
+    client.post(f"/api/trackers/{b['id']}/tick", json={"date": monday}, headers=headers)
+    client.put(f"/api/trackers/{w['id']}/entries", json={"date": monday, "value": 81.5}, headers=headers)
+    client.put(f"/api/trackers/{w['id']}/entries", json={"date": (date.today() - timedelta(days=80)).isoformat(), "value": 84}, headers=headers)
     data = client.get("/api/trackers/series?weeks=2", headers=headers).get_json()["data"]
     assert data["weeks"] == 2 and {s["tracker"]["name"] for s in data["series"]} == {"Sauna", "Weight"}
     sauna = next(s for s in data["series"] if s["tracker"]["name"] == "Sauna")
@@ -107,6 +108,40 @@ def test_series_covers_every_tracker_on_one_range(client, headers):
     weight = next(s for s in data["series"] if s["tracker"]["name"] == "Weight")
     assert [p["value"] for p in weight["points"]] == [81.5] and weight["weekly"][-1]["met_days"] is None
     data = client.get("/api/trackers/series?weeks=all", headers=headers).get_json()["data"]
-    assert data["from"] <= "2026-06-29" and data["weeks"] >= 11
+    assert data["from"] <= (date.today() - timedelta(days=80)).isoformat() and data["weeks"] >= 11
     weight = next(s for s in data["series"] if s["tracker"]["name"] == "Weight")
     assert [p["value"] for p in weight["points"]] == [84, 81.5]
+
+
+def test_untick_reverses_one_tap_and_entry_endpoints_return_the_row(client, headers):
+    """A mis-tap on a count cell can be taken back: untick subtracts one, removes the entry at
+    zero, toggles a bool back. Every entry endpoint answers with the tracker's grid row."""
+    count = _tracker(client, headers, name="Vitamins", type="weekly_count", target_value=3)
+    day = date.today().isoformat()
+    first = client.post(f"/api/trackers/{count['id']}/tick", json={"date": day}, headers=headers).get_json()["data"]
+    assert first["value"] == 1 and first["row"]["week_total"] == 1
+    assert [d["value"] for d in first["row"]["days"] if d["date"] == day] == [1]
+    client.post(f"/api/trackers/{count['id']}/tick", json={"date": day}, headers=headers)
+
+    back = client.post(f"/api/trackers/{count['id']}/untick", json={"date": day}, headers=headers).get_json()["data"]
+    assert back["value"] == 1 and back["row"]["week_total"] == 1
+    gone = client.post(f"/api/trackers/{count['id']}/untick", json={"date": day}, headers=headers).get_json()["data"]
+    assert gone["value"] is None and gone["row"]["week_total"] == 0
+    assert [d["value"] for d in gone["row"]["days"] if d["date"] == day] == [None]
+    # Nothing left to take back: still a clean answer, no 404.
+    again = client.post(f"/api/trackers/{count['id']}/untick", json={"date": day}, headers=headers)
+    assert again.status_code == 200 and again.get_json()["data"]["value"] is None
+
+    habit = _tracker(client, headers, name="Creatine", type="daily_bool")
+    on = client.post(f"/api/trackers/{habit['id']}/tick", json={"date": day}, headers=headers).get_json()["data"]
+    assert on["value"] == 1 and on["row"]["days"][date.today().weekday()]["met"] is True
+    off = client.post(f"/api/trackers/{habit['id']}/untick", json={"date": day}, headers=headers).get_json()["data"]
+    assert off["value"] == 0 and off["row"]["days"][date.today().weekday()]["met"] is False
+
+    weight = _tracker(client, headers, name="Sauna", type="duration", target_value=20, target_period="day", unit="min")
+    put = client.put(f"/api/trackers/{weight['id']}/entries", json={"date": day, "value": 45}, headers=headers).get_json()["data"]
+    assert put["value"] == 45 and put["row"]["week_total"] == 45
+    less = client.post(f"/api/trackers/{weight['id']}/untick", json={"date": day}, headers=headers).get_json()["data"]
+    assert less["value"] == 25
+    deleted = client.delete(f"/api/trackers/{weight['id']}/entries/{day}", headers=headers).get_json()["data"]
+    assert deleted["deleted"] == day and deleted["row"]["week_total"] == 0

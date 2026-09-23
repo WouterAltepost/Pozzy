@@ -4,7 +4,7 @@ import AreaSelect from '../shared/AreaSelect.vue'
 import UiButton from '../ui/UiButton.vue'
 import UiField from '../ui/UiField.vue'
 
-const props = defineProps({ tracker: { type: Object, default: null } })
+const props = defineProps({ tracker: { type: Object, default: null }, busy: { type: Boolean, default: false } })
 const emit = defineEmits(['save', 'cancel'])
 const form = reactive({ name: '', type: 'daily_bool', area_id: null, target_value: null, target_period: 'day', unit: '', active: true })
 
@@ -51,8 +51,8 @@ function submit() {
     </template>
     <label v-if="tracker" class="check"><input v-model="form.active" type="checkbox" /> Active</label>
     <div class="actions">
-      <UiButton type="submit" variant="primary">{{ tracker ? 'Save' : 'Add tracker' }}</UiButton>
-      <UiButton @click="emit('cancel')">Cancel</UiButton>
+      <UiButton type="submit" variant="primary" :loading="busy">{{ tracker ? 'Save' : 'Add tracker' }}</UiButton>
+      <UiButton :disabled="busy" @click="emit('cancel')">Cancel</UiButton>
     </div>
   </form>
 </template>

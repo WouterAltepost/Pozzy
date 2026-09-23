@@ -1,5 +1,5 @@
 <script setup>
-// Phone navigation: a 272px drawer from the left with all twelve routes, the theme row and
+// Phone navigation: a 272px drawer from the left with every route in the nav, the theme row and
 // log out. Slides in 8px with a fade on ease-out (design: pz-slide 240ms), scrim and Escape close.
 import { onBeforeUnmount, watch } from 'vue'
 import { PhMoon, PhSignOut, PhSun } from '@phosphor-icons/vue'

@@ -2,12 +2,13 @@
 import { useLoadTask } from '../../composables/useReady'
 import { useWidgetLink } from '../../composables/useWidgetLink'
 import { onMounted, ref } from 'vue'
-import { hoursWeek } from '../../api/hours'
+import { hoursSuggestions, hoursWeek } from '../../api/hours'
 import { minutesToHours } from '../../lib/dates'
 
 const settle = useLoadTask()
 
 const summary = ref(null)
+const suggestions = ref(null)
 const failed = ref(false)
 
 onMounted(async () => {
@@ -17,6 +18,12 @@ onMounted(async () => {
     failed.value = true
   } finally {
     settle()
+  }
+  // Optional extra: the widget renders without it.
+  try {
+    suggestions.value = await hoursSuggestions()
+  } catch {
+    suggestions.value = null
   }
 })
 
@@ -37,6 +44,9 @@ const link = useWidgetLink('hours')
       <div class="bar"><div class="fill" :class="{ full: pct(row) >= 100 }" :style="{ width: (pct(row) ?? (row.minutes ? 100 : 0)) + '%' }"></div></div>
       <span class="num small val">{{ minutesToHours(row.minutes) }}<span v-if="row.target_minutes" class="muted"> / {{ minutesToHours(row.target_minutes) }}</span></span>
     </div>
+    <RouterLink v-if="suggestions?.items.length" :to="{ name: 'hours' }" class="pending small" @click.stop>
+      {{ suggestions.items.length }} {{ suggestions.items.length === 1 ? 'entry' : 'entries' }} to confirm from your agenda, {{ minutesToHours(suggestions.total_minutes) }}
+    </RouterLink>
   </section>
 </template>
 
@@ -45,4 +55,5 @@ const link = useWidgetLink('hours')
 .label { display: flex; align-items: center; gap: 8px; color: var(--ink-2); }
 .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; flex: none; }
 .val { white-space: nowrap; color: var(--ink); }
+.pending { display: block; margin-top: var(--sp-2); padding: 6px 10px; border-radius: var(--r-sm); background: var(--brand-soft); color: var(--brand); font-weight: 500; text-decoration: none; }
 </style>

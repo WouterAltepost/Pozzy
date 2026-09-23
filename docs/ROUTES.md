@@ -13,7 +13,7 @@ Stream E wires these into `web/src/router/index.js` and the nav in `App.vue`. Ev
 | 7 | `/hours` | `hours` | `views/HoursView.vue` | Hours | A |
 | 8 | `/capture` | `capture` | `views/CaptureView.vue` | Capture | D |
 | 9 | `/study` | `study` | `views/StudyView.vue` | Study | A |
-| 10 | `/notes` | `notes` | `views/NotesView.vue` | Notes | A |
+| 10 | `/notes` | `notes` | `views/NotesView.vue` | Notes (archived 2026-09-23: `hidden: true`, not in the nav, route kept) | A |
 | 11 | `/review` | `review` | `views/WeeklyReviewView.vue` | Review | D |
 | 99 | `/settings` | `settings` | `views/SettingsView.vue` | Settings | A |
 

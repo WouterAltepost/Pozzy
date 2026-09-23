@@ -16,3 +16,5 @@ export const upsertEntry = (id, body) => api(`/api/trackers/${id}/entries`, { me
 export const deleteEntry = (id, date) => api(`/api/trackers/${id}/entries/${date}`, { method: 'DELETE' })
 export const tickTracker = (id, date) => api(`/api/trackers/${id}/tick`, { method: 'POST', body: date ? { date } : {} })
 export const trackerSeries = (weeks = 12, includeInactive = false) => api(`/api/trackers/series?weeks=${weeks}${includeInactive ? '&include_inactive=1' : ''}`)
+// Reverse of tick: toggles a bool back, subtracts one step from a count or value.
+export const untickTracker = (id, date) => api(`/api/trackers/${id}/untick`, { method: 'POST', body: date ? { date } : {} })

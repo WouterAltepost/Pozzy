@@ -28,15 +28,18 @@ const shown = ref(PAGE)
 const visibleItems = computed(() => (phone.value ? store.items.slice(0, shown.value) : store.items))
 const activeFilters = computed(() => ['account_id', 'category', 'area_id', 'priority', 'needs_reply'].filter((k) => store.filters[k]).length + (store.filters.handled !== '0' ? 1 : 0))
 
-async function run(fn) {
+const pending = ref('') // which detail action is in flight: update | task | reclassify
+async function run(fn, name = '') {
   error.value = ''
   busy.value = true
+  pending.value = name
   try {
     await fn()
   } catch (err) {
     error.value = err.message
   } finally {
     busy.value = false
+    pending.value = ''
   }
 }
 
@@ -50,7 +53,7 @@ function setHandled(email, handled) {
 
 function update(body) {
   if (!store.selected) return
-  run(() => store.update(store.selected.id, body))
+  run(() => store.update(store.selected.id, body), 'update')
 }
 
 function createTask(body) {
@@ -58,12 +61,12 @@ function createTask(body) {
   run(async () => {
     const result = await store.createTask(store.selected.id, body)
     notice.value = result.created ? `Task "${result.task.title}" created.` : 'A task already existed for this email.'
-  })
+  }, 'task')
 }
 
 function reclassify() {
   if (!store.selected) return
-  run(() => store.reclassify(store.selected.id))
+  run(() => store.reclassify(store.selected.id), 'reclassify')
 }
 
 function sync() {
@@ -119,7 +122,7 @@ function sync() {
     </UiLoadGate>
 
     <UiModal :open="Boolean(store.selected)" size="lg" @close="store.close()">
-      <EmailDetail v-if="store.selected" :email="store.selected" :busy="busy" @close="store.close()" @update="update" @task="createTask" @reclassify="reclassify" />
+      <EmailDetail v-if="store.selected" :email="store.selected" :busy="busy" :pending="pending" @close="store.close()" @update="update" @task="createTask" @reclassify="reclassify" />
     </UiModal>
   </div>
 </template>

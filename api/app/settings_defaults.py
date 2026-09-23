@@ -34,6 +34,8 @@ DEFAULTS: dict = {
     # Stream B (calendar)
     "calendar_sync_days_back": 7,
     "calendar_sync_days_forward": 30,
+    # Calendar url to area id: which life area the hours from a calendar's events belong to.
+    "calendar_areas": {},
     # Stream C (mail)
     "mail_backfill_days": 7,
     "mail_max_per_sync": 500,

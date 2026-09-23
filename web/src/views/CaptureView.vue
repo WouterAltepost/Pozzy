@@ -20,15 +20,18 @@ const lastCreated = ref(null)
 
 const ready = useReady(() => store.load())
 
-async function run(fn) {
+const busyId = ref(null) // the capture whose Propose or Confirm is in flight
+async function run(fn, id = null) {
   error.value = ''
   busy.value = true
+  busyId.value = id
   try {
     await fn()
   } catch (err) {
     error.value = err.message
   } finally {
     busy.value = false
+    busyId.value = null
   }
 }
 
@@ -45,7 +48,7 @@ function confirm(capture, body) {
   run(async () => {
     const out = await store.confirm(capture.id, body)
     lastCreated.value = { type: out.capture.parsed_type, title: out.created.title || out.created.tracker || '', ref: out.capture.result_ref }
-  })
+  }, capture.id)
 }
 
 function resultLink(ref) {
@@ -87,10 +90,10 @@ function resultLink(ref) {
         <span class="raw-text">{{ c.raw_text }}</span>
         <span class="muted xs num">{{ formatDateTime(c.created_at) }}</span>
       </div>
-      <ProposalEditor v-if="c.proposal" :proposal="c.proposal" @confirm="(body) => confirm(c, body)" @discard="run(() => store.discard(c.id))" />
+      <ProposalEditor v-if="c.proposal" :proposal="c.proposal" :busy="busyId === c.id" @confirm="(body) => confirm(c, body)" @discard="run(() => store.discard(c.id), c.id)" />
       <div v-else class="row">
-        <UiButton variant="primary" :loading="busy" @click="run(() => store.process(c.id))">Propose</UiButton>
-        <UiButton variant="danger" @click="run(() => store.discard(c.id))">Discard</UiButton>
+        <UiButton variant="primary" :loading="busyId === c.id" :disabled="busy" @click="run(() => store.process(c.id), c.id)">Propose</UiButton>
+        <UiButton variant="danger" :disabled="busy" @click="run(() => store.discard(c.id), c.id)">Discard</UiButton>
       </div>
     </section>
 

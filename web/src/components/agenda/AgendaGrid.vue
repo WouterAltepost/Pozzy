@@ -16,6 +16,7 @@ const props = defineProps({
   hourEnd: { type: Number, default: 23 },
   draft: { type: Object, default: null }, // { day, from, to } in minutes from midnight
   suggestions: { type: Array, default: () => [] }, // planner items: { id, kind, title, start, end, reason }
+  deciding: { type: Object, default: () => ({}) }, // id -> true while that item is being placed
 })
 const emit = defineEmits(['select-event', 'create', 'move', 'accept', 'deny'])
 
@@ -299,15 +300,15 @@ function timeLabel(h) {
         v-for="sg in suggested[c.day]"
         :key="sg.item.id"
         class="suggest"
-        :class="sg.item.kind"
+        :class="[sg.item.kind, { placing: deciding[sg.item.id] }]"
         :style="{ top: sg.top + 'px', height: sg.height + 'px' }"
         :title="sg.item.reason"
       >
         <span class="s-time num">{{ formatTime(sg.item.start) }}</span>
         <span class="s-title">{{ sg.item.title }}</span>
         <span class="s-actions">
-          <button type="button" class="s-btn ok" :aria-label="'Accept: ' + sg.item.title" @click.stop="emit('accept', sg.item)" @pointerdown.stop><svg viewBox="0 0 256 256" width="12" height="12" fill="none" stroke="currentColor" stroke-width="28" stroke-linecap="round" stroke-linejoin="round"><path d="M216 72 104 184l-56-56" /></svg></button>
-          <button type="button" class="s-btn no" :aria-label="'Deny: ' + sg.item.title" @click.stop="emit('deny', sg.item)" @pointerdown.stop><svg viewBox="0 0 256 256" width="12" height="12" fill="none" stroke="currentColor" stroke-width="28" stroke-linecap="round"><path d="M200 56 56 200M56 56l144 144" /></svg></button>
+          <button type="button" class="s-btn ok" :aria-label="'Accept: ' + sg.item.title" :disabled="deciding[sg.item.id]" :aria-busy="deciding[sg.item.id] || undefined" @click.stop="emit('accept', sg.item)" @pointerdown.stop><svg viewBox="0 0 256 256" width="12" height="12" fill="none" stroke="currentColor" stroke-width="28" stroke-linecap="round" stroke-linejoin="round"><path d="M216 72 104 184l-56-56" /></svg></button>
+          <button type="button" class="s-btn no" :aria-label="'Deny: ' + sg.item.title" :disabled="deciding[sg.item.id]" @click.stop="emit('deny', sg.item)" @pointerdown.stop><svg viewBox="0 0 256 256" width="12" height="12" fill="none" stroke="currentColor" stroke-width="28" stroke-linecap="round"><path d="M200 56 56 200M56 56l144 144" /></svg></button>
         </span>
       </div>
       <div v-if="moveGhost(c.day)" class="ghost moving" :style="{ top: moveGhost(c.day).top, height: moveGhost(c.day).height }"><span class="num">{{ moveGhost(c.day).label }}</span><span class="ghost-title">{{ moveGhost(c.day).title }}</span></div>
@@ -422,4 +423,8 @@ function timeLabel(h) {
   .block { font-size: var(--fs-xs); padding: 1px 3px 1px 6px; }
   .block .time { display: none; }
 }
+.suggest.placing { opacity: 0.55; animation: placing 900ms ease-in-out infinite alternate; }
+.suggest.placing .s-btn { pointer-events: none; }
+@keyframes placing { to { opacity: 0.85; } }
+@media (prefers-reduced-motion: reduce) { .suggest.placing { animation: none; } }
 </style>

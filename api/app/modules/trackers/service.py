@@ -79,16 +79,38 @@ def delete_entry(tracker: Tracker, day: date) -> bool:
     return True
 
 
+def _step(tracker: Tracker) -> float:
+    """How much one tap adds: 1 for counts, the daily target (or 1) for numeric and duration."""
+    if tracker.type == "weekly_count":
+        return 1
+    return tracker.target_value if tracker.target_period == "day" and tracker.target_value else 1
+
+
 def tick(tracker: Tracker, day: date) -> TrackerEntry:
     """Quick action: bool toggles 1/0, count increments by 1, numeric/duration add the target or 1."""
     entry = db.session.scalar(select(TrackerEntry).where(TrackerEntry.tracker_id == tracker.id, TrackerEntry.date == day))
     current = entry.value if entry else 0
     if tracker.type == "daily_bool":
         value = 0 if current else 1
-    elif tracker.type == "weekly_count":
-        value = current + 1
     else:
-        value = current + (tracker.target_value if tracker.target_period == "day" and tracker.target_value else 1)
+        value = current + _step(tracker)
+    return upsert_entry(tracker, day, value)
+
+
+def untick(tracker: Tracker, day: date) -> TrackerEntry | None:
+    """Reverse of tick: bool toggles back, the others subtract one step. Reaching zero removes
+    the entry so the cell reads as untouched instead of showing a 0. Returns None when the
+    entry is gone."""
+    entry = db.session.scalar(select(TrackerEntry).where(TrackerEntry.tracker_id == tracker.id, TrackerEntry.date == day))
+    if entry is None:
+        return None
+    if tracker.type == "daily_bool":
+        value = 0 if entry.value else 1
+    else:
+        value = max(0, entry.value - _step(tracker))
+    if tracker.type != "daily_bool" and value <= 0:
+        delete_entry(tracker, day)
+        return None
     return upsert_entry(tracker, day, value)
 
 
@@ -137,6 +159,42 @@ def _week_sum(entries_by_date: dict, week: date) -> float:
     return sum(e.value for d, e in entries_by_date.items() if week <= d < week + timedelta(days=7))
 
 
+def _week_row(t: Tracker, by_date: dict, areas: dict, start: date, end: date, today: date) -> dict:
+    """One tracker's row of the weekly grid: seven day cells, week total, completion and streak."""
+    days = []
+    for i in range(7):
+        d = start + timedelta(days=i)
+        e = by_date.get(d)
+        days.append({"date": d.isoformat(), "value": e.value if e else None, "note": e.note if e else None, "met": _met(t, e.value) if e else False})
+    week_total = sum(d["value"] or 0 for d in days)
+    if t.target_period == "week":
+        completion = min(1.0, week_total / t.target_value) if t.target_value else (1.0 if week_total > 0 else 0.0)
+    else:
+        elapsed = 7 if end < today else max(1, min(7, (today - start).days + 1))
+        completion = sum(1 for d in days[:elapsed] if d["met"]) / elapsed
+    area = areas.get(t.area_id)
+    return {
+        **t.to_dict(),
+        "area_name": area.name if area else None,
+        "area_color": area.color if area else None,
+        "days": days,
+        "week_total": week_total,
+        "completion": round(completion, 3),
+        "streak": streak(t, by_date, today),
+    }
+
+
+def week_row(tracker: Tracker, week_start: date | None = None) -> dict:
+    """The grid row for one tracker, returned by the entry endpoints so the client can patch
+    one row instead of reloading the whole week."""
+    today = today_local()
+    start = week_start or week_start_of(today)
+    end = start + timedelta(days=6)
+    by_date = entries_between([tracker.id], start - timedelta(days=366), max(end, today)).get(tracker.id, {})
+    areas = {a.id: a for a in db.session.scalars(select(Area)).all()}
+    return _week_row(tracker, by_date, areas, start, end, today)
+
+
 def week_grid(week_start: date | None = None, include_inactive: bool = False) -> dict:
     today = today_local()
     start = week_start or week_start_of(today)
@@ -145,32 +203,7 @@ def week_grid(week_start: date | None = None, include_inactive: bool = False) ->
     # 1 year of history for streaks, fetched once.
     history = entries_between([t.id for t in trackers], start - timedelta(days=366), max(end, today))
     areas = {a.id: a for a in db.session.scalars(select(Area)).all()}
-    rows = []
-    for t in trackers:
-        by_date = history.get(t.id, {})
-        days = []
-        for i in range(7):
-            d = start + timedelta(days=i)
-            e = by_date.get(d)
-            days.append({"date": d.isoformat(), "value": e.value if e else None, "note": e.note if e else None, "met": _met(t, e.value) if e else False})
-        week_total = sum(d["value"] or 0 for d in days)
-        if t.target_period == "week":
-            completion = min(1.0, week_total / t.target_value) if t.target_value else (1.0 if week_total > 0 else 0.0)
-        else:
-            elapsed = 7 if end < today else max(1, min(7, (today - start).days + 1))
-            completion = sum(1 for d in days[:elapsed] if d["met"]) / elapsed
-        area = areas.get(t.area_id)
-        rows.append(
-            {
-                **t.to_dict(),
-                "area_name": area.name if area else None,
-                "area_color": area.color if area else None,
-                "days": days,
-                "week_total": week_total,
-                "completion": round(completion, 3),
-                "streak": streak(t, by_date, today),
-            }
-        )
+    rows = [_week_row(t, history.get(t.id, {}), areas, start, end, today) for t in trackers]
     return {"week_start": start.isoformat(), "week_end": end.isoformat(), "today": today.isoformat(), "trackers": rows}
 
 

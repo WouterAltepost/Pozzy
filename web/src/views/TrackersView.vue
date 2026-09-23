@@ -1,12 +1,14 @@
 <script setup>
-import { computed, ref } from 'vue'
-import { PhCaretDown, PhChartLineUp, PhCheck } from '@phosphor-icons/vue'
+import { computed, ref, watch } from 'vue'
+import { PhCaretDown, PhChartLineUp, PhCheck, PhMinus } from '@phosphor-icons/vue'
 import LineChart from '../components/trackers/LineChart.vue'
 import TrackerForm from '../components/trackers/TrackerForm.vue'
 import TrackerSeriesChart from '../components/trackers/TrackerSeriesChart.vue'
 import UiLoadGate from '../components/ui/UiLoadGate.vue'
 import { useReady } from '../composables/useReady'
 import { useMediaQuery } from '../composables/useMediaQuery'
+import { useLongPress } from '../composables/useLongPress'
+import { useToast } from '../composables/useToast'
 import WeekNav from '../components/shared/WeekNav.vue'
 import PageHeader from '../components/ui/PageHeader.vue'
 import UiButton from '../components/ui/UiButton.vue'
@@ -15,8 +17,10 @@ import { shortDay, today } from '../lib/dates'
 import { useTrackersStore } from '../stores/trackers'
 
 const store = useTrackersStore()
+const toast = useToast()
 const error = ref('')
 const editing = ref(null) // null | 'new' | tracker
+const saving = ref(false)
 const charts = ref({})
 
 const ready = useReady(() => store.load())
@@ -24,10 +28,34 @@ const phone = useMediaQuery('(max-width: 699px)')
 
 const metToday = computed(() => store.trackers.filter((t) => isGrid(t) && t.days.find((d) => d.date === today())?.met).length)
 const gridTrackers = computed(() => store.trackers.filter(isGrid))
+// A tap on a bool or count cell counts one; the toast offers Undo for a mis-tap. Value cells
+// ask for the number. A long press or right-click on any cell asks for the exact value
+// (empty clears it), so a count can be corrected as well as taken back.
+const press = useLongPress((payload) => promptValue(payload.t, payload.d))
 function cellTap(t, d) {
-  if (d.date > today()) return
-  if (isGrid(t)) run(() => store.tick(t.id, d.date))
+  if (press.consumed()) return
+  if (!d || d.date > today()) return
+  if (isGrid(t)) change(t, d, () => store.tick(t.id, d.date))
   else promptValue(t, d)
+}
+function cellPress(t, d) {
+  return !d || d.date > today() ? {} : press.handlers({ t, d })
+}
+function cellMinus(t, d) {
+  change(t, d, () => store.untick(t.id, d.date))
+}
+function describe(t, d, value) {
+  const day = d.date === today() ? 'today' : shortDay(d.date)
+  if (t.type === 'daily_bool') return `${t.name} ${value ? 'ticked' : 'unticked'} ${day}`
+  if (value === null || value === undefined) return `${t.name} ${day} cleared`
+  return `${t.name} ${day}: ${value}${t.unit ? ' ' + t.unit : ''}`
+}
+// Runs a cell write and shows a toast with Undo that puts the previous value back.
+async function change(t, d, write) {
+  await run(async () => {
+    const { previous, value } = await write()
+    toast.undo(describe(t, d, value), () => run(() => store.revert(t.id, d.date, previous)))
+  })
 }
 function cellState(t, d) {
   if (d.date > today()) return 'future'
@@ -55,11 +83,16 @@ function isGrid(t) {
 }
 
 async function save(body) {
-  await run(async () => {
-    if (editing.value === 'new') await store.create(body)
-    else await store.update(editing.value.id, body)
-    editing.value = null
-  })
+  saving.value = true
+  try {
+    await run(async () => {
+      if (editing.value === 'new') await store.create(body)
+      else await store.update(editing.value.id, body)
+      editing.value = null
+    })
+  } finally {
+    saving.value = false
+  }
 }
 
 // Clicking a habit opens its chart for the whole run since it was created.
@@ -100,17 +133,24 @@ function chartSummary(t, h) {
 }
 
 function promptValue(t, day) {
+  if (day.date > today()) return
   const current = day.value ?? ''
-  const answer = window.prompt(`${t.name} on ${day.date}${t.unit ? ' (' + t.unit + ')' : ''}:`, current)
+  const what = t.type === 'daily_bool' ? '1 for done, 0 or empty for not done' : t.type === 'weekly_count' ? 'count, empty to clear' : (t.unit || 'value') + ', empty to clear'
+  const answer = window.prompt(`${t.name} on ${day.date} (${what}):`, current)
   if (answer === null) return
-  if (answer.trim() === '') return run(() => store.clearEntry(t.id, day.date))
+  if (answer.trim() === '') return change(t, day, () => store.clearEntry(t.id, day.date))
   const value = Number(answer)
-  if (Number.isNaN(value)) return
-  run(async () => {
-    await store.setEntry(t.id, day.date, value)
+  if (Number.isNaN(value) || value < 0) return
+  change(t, day, async () => {
+    const out = await store.setEntry(t.id, day.date, value)
     if (charts.value[t.id]) charts.value[t.id] = await store.history(t.id, 'all')
+    return out
   })
 }
+
+watch(() => store.version, async () => {
+  for (const id of Object.keys(charts.value)) charts.value[id] = await store.history(id, 'all')
+})
 
 function cellLabel(t, day) {
   if (day.value === null || day.value === undefined) return ''
@@ -143,7 +183,7 @@ function remove(t) {
     <TrackerSeriesChart v-if="store.trackers.length" :refresh-key="store.week" />
     <div v-if="editing" class="card">
       <div class="card-head"><h2>{{ editing === 'new' ? 'New tracker' : 'Edit tracker' }}</h2></div>
-      <TrackerForm :tracker="editing === 'new' ? null : editing" @save="save" @cancel="editing = null" />
+      <TrackerForm :tracker="editing === 'new' ? null : editing" :busy="saving" @save="save" @cancel="editing = null" />
     </div>
 
     <div v-if="!store.trackers.length" class="card">
@@ -157,7 +197,7 @@ function remove(t) {
       <section class="card">
         <h2 class="ptitle">Today</h2>
         <div class="chips">
-          <button v-for="t in store.trackers" :key="t.id" type="button" class="chip" :class="{ met: t.days.find((d) => d.date === today())?.met, some: t.days.find((d) => d.date === today())?.value && !t.days.find((d) => d.date === today())?.met }" @click="cellTap(t, t.days.find((d) => d.date === today()))">
+          <button v-for="t in store.trackers" :key="t.id" type="button" class="chip" :class="{ met: t.days.find((d) => d.date === today())?.met, some: t.days.find((d) => d.date === today())?.value && !t.days.find((d) => d.date === today())?.met }" v-bind="cellPress(t, t.days.find((d) => d.date === today()))" @click="cellTap(t, t.days.find((d) => d.date === today()))">
             <span class="dot" :style="{ background: t.area_color || 'var(--ink-3)' }"></span>{{ t.name }}
             <span v-if="t.type === 'weekly_count'" class="count num">{{ t.week_total }}<span v-if="t.target_value">/{{ t.target_value }}</span></span>
             <span v-else-if="!isGrid(t)" class="count num">{{ cellLabel(t, t.days.find((d) => d.date === today())) || (t.unit || '') }}</span>
@@ -171,7 +211,7 @@ function remove(t) {
           <div class="wrow">
             <button type="button" class="tname" :aria-expanded="Boolean(charts[t.id])" @click="toggleChart(t)"><span class="dot" :style="{ background: t.area_color || 'var(--ink-3)' }"></span>{{ t.name }}</button>
             <span class="cells">
-              <button v-for="d in t.days" :key="d.date" type="button" class="dcell" :class="[cellState(t, d), { today: d.date === today() }]" :aria-label="`${t.name} ${d.date}`" :disabled="d.date > today()" @click="cellTap(t, d)">{{ cellText(t, d) }}</button>
+              <button v-for="d in t.days" :key="d.date" type="button" class="dcell" :class="[cellState(t, d), { today: d.date === today() }]" :aria-label="`${t.name} ${d.date}`" :disabled="d.date > today()" v-bind="cellPress(t, d)" @click="cellTap(t, d)">{{ cellText(t, d) }}</button>
             </span>
             <button type="button" class="link-btn edit" @click="editing = t">edit</button>
           </div>
@@ -209,12 +249,13 @@ function remove(t) {
                     {{ t.type.replace('_', ' ') }}<span v-if="t.target_value && t.type !== 'daily_bool'">, target {{ t.target_value }}{{ t.unit ? ' ' + t.unit : '' }} per {{ t.target_period }}</span>
                   </div>
                 </td>
-                <td v-for="d in t.days" :key="d.date" class="cell" :class="{ met: d.met, has: d.value !== null, today: d.date === today(), future: d.date > today() }">
-                  <button v-if="isGrid(t)" type="button" class="tick" :class="{ bool: t.type === 'daily_bool' }" :title="d.note || d.date" :aria-label="`${t.name} ${d.date}`" :aria-pressed="t.type === 'daily_bool' ? Boolean(d.met) : undefined" @click="run(() => store.tick(t.id, d.date))">
+                <td v-for="d in t.days" :key="d.date" class="cell" :class="{ met: d.met, has: d.value !== null, today: d.date === today(), future: d.date > today(), count: t.type !== 'daily_bool' }">
+                  <button v-if="isGrid(t)" type="button" class="tick" :class="{ bool: t.type === 'daily_bool' }" :title="d.note || (t.type === 'daily_bool' ? 'Click to toggle' : 'Click for +1, right-click to set a value')" :aria-label="`${t.name} ${d.date}`" :aria-pressed="t.type === 'daily_bool' ? Boolean(d.met) : undefined" :disabled="d.date > today()" v-bind="cellPress(t, d)" @click="cellTap(t, d)">
                     <PhCheck v-if="t.type === 'daily_bool' && d.met" weight="bold" class="mark" />
                     <span v-else class="num">{{ cellLabel(t, d) }}</span>
                   </button>
-                  <button v-else type="button" class="tick value" :title="d.note || d.date" :aria-label="`${t.name} ${d.date}`" @click="promptValue(t, d)"><span class="num">{{ cellLabel(t, d) }}</span></button>
+                  <button v-else type="button" class="tick value" :title="d.note || 'Click to set a value'" :aria-label="`${t.name} ${d.date}`" :disabled="d.date > today()" @click="promptValue(t, d)"><span class="num">{{ cellLabel(t, d) }}</span></button>
+                  <button v-if="t.type !== 'daily_bool' && d.value" type="button" class="minus" :aria-label="`${t.name} ${d.date}: one less`" title="One less" @click.stop="cellMinus(t, d)"><PhMinus weight="bold" /></button>
                 </td>
                 <td class="num">
                   <span v-if="t.type === 'daily_bool'">{{ Math.round(t.completion * 100) }}%</span>
@@ -299,6 +340,11 @@ tr.inactive { opacity: 0.55; }
   transition: background-color var(--dur-hover) ease, border-color var(--dur-hover) ease, color var(--dur-hover) ease, transform var(--dur-press) var(--ease-out);
 }
 .tick.value { width: 48px; }
+.cell { position: relative; }
+.minus { position: absolute; top: 1px; right: 2px; width: 16px; height: 16px; padding: 0; border: 0; border-radius: 50%; background: var(--ink); color: var(--on-ink); display: none; align-items: center; justify-content: center; cursor: pointer; box-shadow: var(--shadow-1); }
+.minus :deep(svg) { width: 10px; height: 10px; }
+@media (hover: hover) and (pointer: fine) { .cell.count:hover .minus { display: inline-flex; } }
+.tick, .dcell, .chip { touch-action: manipulation; -webkit-touch-callout: none; user-select: none; -webkit-user-select: none; }
 .tick:active { transform: scale(0.94); }
 .mark { width: 14px; height: 14px; }
 .cell.has .tick { color: var(--ink); background: var(--surface-2); }

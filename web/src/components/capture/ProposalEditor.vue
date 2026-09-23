@@ -5,7 +5,7 @@ import UiBadge from '../ui/UiBadge.vue'
 import UiButton from '../ui/UiButton.vue'
 import UiField from '../ui/UiField.vue'
 
-const props = defineProps({ proposal: { type: Object, default: null } })
+const props = defineProps({ proposal: { type: Object, default: null }, busy: { type: Boolean, default: false } })
 const emit = defineEmits(['confirm', 'discard'])
 const areas = useAreasStore()
 onMounted(() => areas.load())
@@ -120,8 +120,8 @@ watch(() => props.proposal, reset, { immediate: true })
     </template>
 
     <div class="actions">
-      <UiButton type="submit" variant="primary">Confirm</UiButton>
-      <UiButton variant="danger" class="push" @click="emit('discard')">Discard</UiButton>
+      <UiButton type="submit" variant="primary" :loading="busy">Confirm</UiButton>
+      <UiButton variant="danger" class="push" :disabled="busy" @click="emit('discard')">Discard</UiButton>
     </div>
   </form>
 </template>

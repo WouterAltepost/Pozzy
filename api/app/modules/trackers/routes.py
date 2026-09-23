@@ -43,6 +43,14 @@ def _fields(body: dict, partial: bool) -> dict:
     return out
 
 
+def _entry_payload(tracker, entry, day) -> dict:
+    """Entry endpoints answer with the entry (None once deleted) and the tracker's refreshed
+    grid row for the week of `day`, so the client patches one row instead of reloading."""
+    payload = entry.to_dict() if entry is not None else {"tracker_id": str(tracker.id), "date": day.isoformat(), "value": None, "note": None}
+    payload["row"] = service.week_row(tracker, week_start_of(day))
+    return payload
+
+
 def _load(tracker_id):
     tracker = service.get_tracker(tracker_id)
     return tracker, (None if tracker else fail("not_found", "Tracker not found", 404))
@@ -128,7 +136,8 @@ def upsert_entry(tracker_id):
     note = parse_str(body, "note")
     if value < 0:
         return fail("validation_error", "'value' must not be negative", 400)
-    return ok(service.upsert_entry(tracker, day, value, note).to_dict())
+    entry = service.upsert_entry(tracker, day, value, note)
+    return ok(_entry_payload(tracker, entry, day))
 
 
 @bp.delete("/<tracker_id>/entries/<day>")
@@ -137,9 +146,10 @@ def delete_entry(tracker_id, day):
     tracker, err = _load(tracker_id)
     if err:
         return err
-    if not service.delete_entry(tracker, date_from_str(day)):
+    parsed = date_from_str(day)
+    if not service.delete_entry(tracker, parsed):
         return fail("not_found", "Entry not found", 404)
-    return ok({"deleted": day})
+    return ok({"deleted": day, "row": service.week_row(tracker, week_start_of(parsed))})
 
 
 @bp.post("/<tracker_id>/tick")
@@ -150,4 +160,16 @@ def tick(tracker_id):
         return err
     body = require_object(request.get_json(silent=True) or {})
     day = parse_date(body, "date") or today_local()
-    return ok(service.tick(tracker, day).to_dict())
+    return ok(_entry_payload(tracker, service.tick(tracker, day), day))
+
+
+@bp.post("/<tracker_id>/untick")
+@require_auth
+def untick(tracker_id):
+    """Reverse one tap: toggle a bool back, subtract one step from a count or value."""
+    tracker, err = _load(tracker_id)
+    if err:
+        return err
+    body = require_object(request.get_json(silent=True) or {})
+    day = parse_date(body, "date") or today_local()
+    return ok(_entry_payload(tracker, service.untick(tracker, day), day))
