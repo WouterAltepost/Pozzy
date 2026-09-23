@@ -1,6 +1,6 @@
 <script setup>
-// Phone navigation: a floating glass pill above the home indicator, icons only. Home, Tasks,
-// Tracking and More. One tinted disc sits behind the current icon and slides to the next one on
+// Phone navigation: a floating glass pill above the home indicator, spanning the screen width
+// with 16px margins, icons only in four equal slots: Home, Tasks, Tracking and More. One tinted disc sits behind the current icon and slides to the next one on
 // a spring. The bar drops out of the way while a text field has focus (the keyboard is up).
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { PhChartLineUp, PhCheckSquare, PhDotsThree, PhHouse } from '@phosphor-icons/vue'
@@ -65,6 +65,7 @@ onBeforeUnmount(() => {
   bottom: calc(env(safe-area-inset-bottom) + 14px);
   transform: translate3d(-50%, 0, 0);
   z-index: var(--z-bar);
+  width: min(calc(100% - 32px), 440px);
   display: flex;
   align-items: center;
   padding: 6px;
@@ -91,7 +92,7 @@ onBeforeUnmount(() => {
   position: absolute;
   top: 6px;
   left: 6px;
-  width: 62px;
+  width: calc((100% - 12px) / 4);
   height: 50px;
   border-radius: var(--r-pill);
   background: var(--brand-soft);
@@ -101,7 +102,8 @@ onBeforeUnmount(() => {
 }
 .tab {
   position: relative;
-  width: 62px;
+  flex: 1;
+  min-width: 0;
   height: 50px;
   display: grid;
   place-items: center;
