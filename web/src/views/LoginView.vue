@@ -49,8 +49,8 @@ async function submit() {
 </template>
 
 <style scoped>
-.login-wrap { display: flex; justify-content: center; padding-top: var(--sp-10); }
-.login-card { width: 100%; max-width: 360px; display: flex; flex-direction: column; gap: var(--sp-4); }
+.login-wrap { display: flex; justify-content: center; padding-top: var(--sp-12); }
+.login-card { width: 100%; max-width: 380px; display: flex; flex-direction: column; gap: var(--sp-5); }
 .logo { display: flex; flex-direction: column; align-items: center; gap: var(--sp-2); margin: var(--sp-2) auto 0; }
 .logo-mark { width: 88px; height: auto; }
 .logo-word { font-weight: 600; font-size: var(--fs-xl); letter-spacing: -0.01em; color: var(--ink); }

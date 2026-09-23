@@ -18,9 +18,9 @@ defineProps({
 </template>
 
 <style scoped>
-.field { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.field { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
 .field.inline { flex-direction: row; align-items: center; gap: var(--sp-2); }
-.field-label { font-size: var(--fs-sm); font-weight: 500; color: var(--ink-3); }
+.field-label { font-size: var(--fs-xs); font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-3); }
 .field-control { display: flex; min-width: 0; }
 .field-control :deep(input), .field-control :deep(select), .field-control :deep(textarea) { width: 100%; }
 .field-hint { font-size: var(--fs-sm); color: var(--ink-3); }

@@ -1,5 +1,14 @@
 # Pozzy progress
 
+## Premium visual pass, 2026-09-23 evening (deployed)
+
+Wouter rejected the HIG look on both desktop and phone and asked for "something new, modern, slick and premium", pointing at Erik Kennedy's 7 rules and the 58 rules article. Direction and tokens in docs/briefs/DESIGN.md section 0.
+- `style.css`: one cool hue for every neutral, indigo accent for actions only, light from above (top edge highlight, hairlines, downward diffuse shadows, inset wells), doubled whitespace, eyebrow and figure utilities, Geist kept, Phosphor light weight app-wide.
+- Shell: the desktop top bar is gone; one sidebar with the capture command, grouped navigation with eyebrows and the account row. Phone: material toolbar with capture, dark floating pill for navigation, More sheet with well-list tiles.
+- Components: pill buttons (accent gradient primary, raised secondary), inset fields with eyebrow labels, accent-filled checkboxes, pill segmented control with raised thumb, double-bezel dialog and sheet, dark pill toast, eyebrow table heads, PageHeader `eyebrow` prop, Home eyebrow with week number and staggered widget rise.
+
+Verification: Playwright, every view at 1440 and 390, light and dark (50 captures), zero console errors, zero failed API calls, no overflow. Reference captures in docs/design-screens/premium-*.png.
+
 ## Apple HIG visual pass, 2026-09-23 (deployed)
 
 Wouter: "fully update the UI to make it feel and look like a legit Apple product" after the motion pass changed nothing visible. Read the Human Interface Guidelines (colour, typography, layout, materials, tab bars, toolbars, sidebars, lists, buttons, toggles, sheets, fields, icons, dark mode) and rewrote the design system on them; spec in docs/briefs/DESIGN.md section 0.

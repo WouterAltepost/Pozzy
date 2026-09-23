@@ -108,19 +108,19 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKey))
 </template>
 
 <style scoped>
-.capture-bar { display: flex; justify-content: center; }
+.capture-bar { display: flex; justify-content: center; width: 100%; }
 .capture-btn {
-  display: inline-flex; align-items: center; gap: 8px;
-  height: 34px; padding: 0 12px 0 12px;
-  border: 1px solid transparent; border-radius: var(--r-pill);
-  background: var(--surface-2); color: var(--ink); font: inherit; font-size: var(--fs-md); font-weight: 500;
+  display: inline-flex; align-items: center; gap: 8px; width: 100%;
+  height: 36px; padding: 0 12px 0 12px;
+  border: 1px solid var(--line-2); border-radius: var(--r-pill);
+  background: var(--surface); box-shadow: var(--inset); color: var(--ink-3); font: inherit; font-size: var(--fs-md); font-weight: 500;
   cursor: pointer;
   transition: background-color var(--dur-hover) ease, border-color var(--dur-hover) ease, color var(--dur-hover) ease, transform var(--dur-press) var(--ease-out);
 }
 .capture-btn:active { transform: scale(0.97); }
-@media (hover: hover) and (pointer: fine) { .capture-btn:hover { background: var(--surface-3); } }
+@media (hover: hover) and (pointer: fine) { .capture-btn:hover { border-color: var(--ink-4); color: var(--ink); } }
 .bolt { width: 15px; height: 15px; color: var(--brand); }
-.kbd { font: inherit; font-size: var(--fs-xs); color: var(--ink-4); border: 0; background: var(--surface-2); border-radius: 4px; padding: 0 5px; line-height: 16px; }
+.kbd { margin-left: auto; font: inherit; font-size: var(--fs-xs); color: var(--ink-4); border: 1px solid var(--line); border-radius: 5px; padding: 0 5px; line-height: 16px; }
 .label-long { display: none; }
 @media (max-width: 720px) {
   .capture-bar { width: 100%; max-width: none; }

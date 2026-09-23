@@ -59,19 +59,17 @@ watch(() => [props.modelValue, props.options], () => nextTick(() => measure(true
 </template>
 
 <style scoped>
-.seg { position: relative; display: inline-flex; padding: 2px; gap: 0; background: var(--surface-2); border-radius: 9px; isolation: isolate; }
-.thumb { position: absolute; top: 2px; bottom: 2px; left: 0; border-radius: 7px; background: var(--surface); box-shadow: 0 3px 8px rgb(0 0 0 / 0.12), 0 3px 1px rgb(0 0 0 / 0.04); z-index: 0; will-change: transform, width; }
-:root[data-theme="dark"] .thumb { background: #636366; }
-@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .thumb { background: #636366; } }
+.seg { position: relative; display: inline-flex; padding: 3px; gap: 0; background: var(--surface-2); border-radius: var(--r-pill); box-shadow: var(--inset); isolation: isolate; }
+.thumb { position: absolute; top: 3px; bottom: 3px; left: 0; border-radius: var(--r-pill); background: var(--surface); box-shadow: inset 0 1px 0 var(--edge), 0 1px 2px rgb(14 17 32 / 0.08), 0 4px 10px -4px rgb(14 17 32 / 0.16); z-index: 0; will-change: transform, width; }
 .seg-item {
   position: relative;
   z-index: 1;
   height: 28px;
-  padding: 0 12px;
+  padding: 0 14px;
   border: 0;
-  border-radius: 7px;
+  border-radius: var(--r-pill);
   background: transparent;
-  color: var(--ink);
+  color: var(--ink-3);
   font-size: var(--fs-md);
   font-weight: 500;
   touch-action: manipulation;

@@ -105,12 +105,14 @@ const sheetStyle = computed(() => (phone.value ? { transform: `translate3d(0, ${
       <div v-if="mounted" class="modal-root" :class="{ phone, reduced: reducedMotion(), open }" role="dialog" aria-modal="true" :aria-label="title || 'Dialog'">
         <div class="scrim" :style="{ opacity: scrimOpacity }" @click="emit('close')"></div>
         <div ref="panel" class="dialog" :class="`size-${size}`" :style="sheetStyle">
-          <div v-if="phone" class="grab" aria-hidden="true" v-bind="drag.handlers" @dragstart.prevent><span class="grabber"></span></div>
-          <div v-if="title" class="dialog-head" v-bind="phone ? drag.handlers : {}" @dragstart.prevent>
-            <h2>{{ title }}</h2>
-            <button type="button" class="icon-btn" aria-label="Close" @click="emit('close')"><PhX :size="18" /></button>
+          <div class="plate">
+            <div v-if="phone" class="grab" aria-hidden="true" v-bind="drag.handlers" @dragstart.prevent><span class="grabber"></span></div>
+            <div v-if="title" class="dialog-head" v-bind="phone ? drag.handlers : {}" @dragstart.prevent>
+              <h2>{{ title }}</h2>
+              <button type="button" class="icon-btn" aria-label="Close" @click="emit('close')"><PhX :size="18" /></button>
+            </div>
+            <div class="dialog-body"><slot /></div>
           </div>
-          <div class="dialog-body"><slot /></div>
         </div>
       </div>
     </Transition>
@@ -119,24 +121,28 @@ const sheetStyle = computed(() => (phone.value ? { transform: `translate3d(0, ${
 
 <style scoped>
 .modal-root { position: fixed; inset: 0; z-index: var(--z-sheet); display: flex; align-items: center; justify-content: center; padding: var(--sp-6); }
-.scrim { position: absolute; inset: 0; background: var(--scrim); }
+.scrim { position: absolute; inset: 0; background: var(--scrim); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); }
+/* Double bezel: a tray with a hairline holding the plate, concentric corners. */
 .dialog {
+  --tray: 6px;
   position: relative;
   width: 100%;
   max-height: min(88vh, 88dvh);
   display: flex;
   flex-direction: column;
-  background: var(--surface);
-  border: 0;
-  border-radius: 14px;
+  padding: var(--tray);
+  background: color-mix(in srgb, var(--surface-2) 70%, var(--surface));
+  border: 1px solid var(--line-2);
+  border-radius: calc(var(--r-xl) + var(--tray));
   box-shadow: var(--shadow-3);
 }
-.size-sm { max-width: 440px; }
-.size-md { max-width: 600px; }
-.size-lg { max-width: 780px; }
-.dialog-head { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-3); padding: var(--sp-4) var(--sp-5) 0; }
-.dialog-head h2 { font-size: var(--fs-xl); font-weight: 700; }
-.dialog-body { overflow-y: auto; padding: var(--sp-4) var(--sp-5) var(--sp-5); overscroll-behavior: contain; }
+.plate { display: flex; flex-direction: column; min-height: 0; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-xl); box-shadow: inset 0 1px 0 var(--edge), 0 1px 2px rgb(14 17 32 / 0.04); overflow: hidden; }
+.size-sm { max-width: 452px; }
+.size-md { max-width: 612px; }
+.size-lg { max-width: 792px; }
+.dialog-head { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-3); padding: var(--sp-5) var(--sp-6) 0; }
+.dialog-head h2 { font-size: var(--fs-xl); font-weight: 650; letter-spacing: -0.02em; }
+.dialog-body { overflow-y: auto; padding: var(--sp-4) var(--sp-6) var(--sp-6); overscroll-behavior: contain; }
 .dialog-body :deep(.card-head h2) { font-size: var(--fs-lg); }
 .grab { display: none; }
 
@@ -146,25 +152,25 @@ const sheetStyle = computed(() => (phone.value ? { transform: `translate3d(0, ${
 .modal-enter-active:not(.phone) .dialog { transition: opacity var(--dur-ui) ease, transform var(--dur-modal) var(--ease-spring); }
 .modal-leave-active:not(.phone) .dialog { transition: opacity var(--dur-hover) ease, transform var(--dur-hover) ease; }
 .modal-enter-from .scrim, .modal-leave-to .scrim { opacity: 0 !important; }
-.modal-enter-from:not(.phone) .dialog { opacity: 0; transform: scale(0.96); }
-.modal-leave-to:not(.phone) .dialog { opacity: 0; transform: scale(0.98); }
+.modal-enter-from:not(.phone) .dialog { opacity: 0; transform: translateY(10px) scale(0.97); }
+.modal-leave-to:not(.phone) .dialog { opacity: 0; transform: scale(0.985); }
 @media (prefers-reduced-motion: reduce) { .modal-enter-from .dialog, .modal-leave-to .dialog { transform: none; } }
 
 /* Phone: a sheet from the bottom edge. The spring drives transform; CSS only draws the material. */
-.phone { align-items: flex-end; padding: 0; }
+.phone { align-items: flex-end; padding: 0 6px; }
 .phone .dialog {
   max-width: none;
   max-height: calc(100dvh - env(safe-area-inset-top) - 24px);
-  border-radius: 28px 28px 0 0;
+  border-radius: calc(var(--r-xl) + var(--tray)) calc(var(--r-xl) + var(--tray)) 0 0;
   border-bottom: 0;
-  padding-bottom: env(safe-area-inset-bottom);
+  padding-bottom: 0;
   will-change: transform;
   touch-action: none;
 }
+.phone .plate { border-radius: var(--r-xl) var(--r-xl) 0 0; border-bottom: 0; padding-bottom: env(safe-area-inset-bottom); }
 .phone .grab { display: flex; justify-content: center; padding: 10px 0 2px; touch-action: none; cursor: grab; user-select: none; -webkit-user-select: none; }
-.phone .dialog-head { user-select: none; -webkit-user-select: none; }
 .phone .grabber { width: 36px; height: 5px; border-radius: 3px; background: var(--ink-4); }
-.phone .dialog-head { padding: var(--sp-2) var(--sp-4) 0; touch-action: none; }
-.phone .dialog-body { padding: var(--sp-3) var(--sp-4) var(--sp-5); touch-action: pan-y; }
+.phone .dialog-head { padding: var(--sp-2) var(--sp-5) 0; touch-action: none; user-select: none; -webkit-user-select: none; }
+.phone .dialog-body { padding: var(--sp-4) var(--sp-5) var(--sp-6); touch-action: pan-y; }
 .reduced.phone .dialog { transform: none !important; transition: opacity 200ms ease; }
 </style>

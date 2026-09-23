@@ -23,8 +23,8 @@ defineProps({
   padding: 0 7px;
   border-radius: var(--r-pill);
   font-size: var(--fs-xs);
-  font-weight: 500;
-  letter-spacing: 0;
+  font-weight: 600;
+  letter-spacing: 0.02em;
   line-height: 1;
   white-space: nowrap;
   background: var(--surface-2);

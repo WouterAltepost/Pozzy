@@ -40,14 +40,14 @@ const theme = useTheme()
 </template>
 
 <style scoped>
-.group { background: var(--surface-2); border-radius: var(--r-md); overflow: hidden; margin-bottom: var(--sp-4); }
+.group { background: var(--surface-2); border-radius: var(--r-lg); overflow: hidden; margin-bottom: var(--sp-4); box-shadow: var(--inset); }
 .group:last-child { margin-bottom: 0; }
 .grow { display: flex; align-items: center; gap: var(--sp-3); width: 100%; min-height: 44px; padding: 0 var(--sp-3) 0 var(--sp-4); border: 0; background: none; color: var(--ink); text-decoration: none; font: inherit; font-size: var(--fs-base); text-align: left; }
 .grow:active { background: var(--surface-3); }
-li + li .grow { border-top: 0.5px solid var(--line); }
-.sym { display: inline-flex; width: 28px; height: 28px; align-items: center; justify-content: center; border-radius: 7px; background: var(--brand); color: #fff; flex: none; }
+li + li .grow { border-top: 1px solid var(--line); }
+.sym { display: inline-flex; width: 30px; height: 30px; align-items: center; justify-content: center; border-radius: 9px; background: var(--surface); color: var(--brand); flex: none; box-shadow: inset 0 1px 0 var(--edge), 0 1px 2px rgb(14 17 32 / 0.06); }
 .sym :deep(svg) { width: 17px; height: 17px; }
-.sym.danger { background: var(--danger); }
+.sym.danger { color: var(--danger); }
 .lbl { flex: 1; min-width: 0; }
 .lbl.danger { color: var(--danger); }
 .chev { width: 14px; height: 14px; color: var(--ink-4); flex: none; }

@@ -7,4 +7,6 @@ import { applyTheme } from './composables/useTheme'
 
 applyTheme()
 
-createApp(App).use(createPinia()).use(router).mount('#app')
+const app = createApp(App)
+app.provide('weight', 'light') // Phosphor: thin precise lines everywhere unless an icon says otherwise
+app.use(createPinia()).use(router).mount('#app')
