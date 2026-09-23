@@ -76,9 +76,22 @@ export const useCalendarStore = defineStore('calendar', {
       return created
     },
     async updateEvent(id, body) {
-      const updated = await calendarApi.updateEvent(id, body)
-      await this.load()
-      return updated
+      // Optimistic: the block lands where it was dropped at once; the server's row replaces it.
+      const i = this.events.findIndex((e) => e.id === id)
+      const before = i === -1 ? null : this.events[i]
+      if (before) this.events[i] = { ...before, ...body }
+      try {
+        const updated = await calendarApi.updateEvent(id, body)
+        const j = this.events.findIndex((e) => e.id === id)
+        if (j !== -1) this.events[j] = updated
+        return updated
+      } catch (err) {
+        if (before) {
+          const j = this.events.findIndex((e) => e.id === id)
+          if (j !== -1) this.events[j] = before
+        }
+        throw err
+      }
     },
     async removeEvent(id) {
       await calendarApi.deleteEvent(id)

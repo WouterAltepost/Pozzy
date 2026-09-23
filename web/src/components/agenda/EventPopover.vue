@@ -46,6 +46,13 @@ const style = computed(() => {
   return { left: `${left}px`, top: `${Math.min(Math.max(4, a.top - 8), maxTop)}px`, width: `${WIDTH}px` }
 })
 
+// The popover grows out of the slot: origin on the side that faces it.
+const origin = computed(() => {
+  const a = props.defaults.anchor
+  if (!a) return 'top left'
+  return a.right + 8 + WIDTH <= a.gridWidth ? 'top left' : 'top right'
+})
+
 function iso(day, time) {
   const [y, m, d] = day.split('-').map(Number)
   const [hh, mm] = time.split(':').map(Number)
@@ -83,7 +90,7 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <form ref="root" class="pop" :style="style" role="dialog" aria-label="New event" @submit.prevent="submit">
+  <form ref="root" class="pop" :style="[style, { transformOrigin: origin }]" role="dialog" aria-label="New event" @submit.prevent="submit">
     <div class="head">
       <strong>New event</strong>
       <button type="button" class="icon-btn" aria-label="Close" @click="emit('close')"><PhX :size="16" /></button>

@@ -105,6 +105,8 @@ Dark mode shadows keep the same shape with alpha 0.5, 0.6, 0.7.
 
 Only `transform`, `opacity`, `background-color`, `border-color`, `color` and `box-shadow` animate. Hover motion is gated by `@media (hover: hover) and (pointer: fine)`. Under `prefers-reduced-motion: reduce` every transform transition collapses to an opacity or colour change of 120ms; the sheet fades instead of sliding.
 
+Anything a finger can hold runs on a spring, not a curve (`web/src/lib/spring.js`, Apple's two parameters: damping ratio and response in seconds). Springs start from the current on-screen value and velocity, so they can be grabbed and reversed mid-flight. Defaults: damping 1.0 (no overshoot), response 0.3 to 0.4 s. Drags come from `composables/useDrag.js`: pointer capture, an 8px threshold that locks to one axis, a 100 ms velocity history handed to the spring on release; the landing point is projected from the flick (`project`, deceleration 0.998) and edges resist (`rubberband`).
+
 ### Layers
 
 `--z-raised: 1`, `--z-sticky: 10` (side panels, table heads), `--z-bar: 20` (top bar, rail), `--z-sheet: 30` (mobile nav, capture panel), `--z-toast: 40`.
@@ -187,19 +189,26 @@ Icons: `pwa-192.png`, `pwa-512.png`, `apple-touch-icon.png` rendered from `Group
 | Popover (capture proposal, slot list, agenda quick event) | opacity plus scale(0.97) to 1, 200ms ease-out, transform-origin at the trigger |
 | Agenda drag selection | ghost block follows the pointer 1:1, no transition; popover appears on release |
 | Side panel appear (desktop) | opacity and translateX(8px) to 0, 240ms ease-out; disappear 160ms |
-| Sheet (mobile nav, mobile editors) | translateY(100%) to 0 on ease-drawer 420ms; drag 1:1 with rubber-band above 0; release spring-like settle via WAAPI 300ms ease-out; flick dismiss |
+| Phone drawer (NavDrawer) | spring from the left edge, damping 1.0, response 0.36 s; the scrim's opacity is the drawer's progress; drag follows the finger 1:1, rubber-bands past open, a leftward flick (over 250 px/s) or a projected rest past half width closes it at the finger's speed; it leaves the way it came |
+| Phone sheet (UiModal under 720px) | a bottom sheet with a grabber: spring up from the bottom edge, damping 1.0, response 0.4 s; grabber and head drag 1:1, rubber-band above rest, downward flick or projected rest past half height dismisses with the finger's velocity; the body scrolls natively |
+| Agenda day swipe (phone) | the day list tracks the finger 1:1 and fades with distance; on release the flick is projected, past a third of the width (or over 250 px/s) the list leaves at that speed, the day changes and the next list arrives from the other side carrying the velocity; otherwise it springs home |
+| Segmented control | one thumb springs between segments (damping 1.0, response 0.3 s); segments press to scale(0.96) |
 | Drag and drop lift | shadow-2, rotate(1.5deg) scale(1.02), 160ms ease-out; drop target fill 160ms; settle 180ms |
 | Toast | translateY(8px) plus opacity, 200ms ease-out in, 160ms out |
 | Skeleton | 1.6s linear shimmer, static under reduced motion |
 | Route change | out-in: old view fades 90ms, new view fades and rises 8px over 220ms on the spring curve (relaxed on request 2026-09-15; still no per-element choreography) |
-| Dialog (UiModal) | scrim fades 200ms; panel opacity 200ms plus translateY(14px) scale(0.98) to rest over 340ms on the spring curve; leave 160ms |
+| Dialog (UiModal, desktop) | scrim fades 200ms; panel materialises in place, opacity 200ms plus scale(0.96) to 1 over 340ms on the spring curve; leaves along the same path in 160ms |
+| Agenda event drop (desktop) | the block lands where it was dropped at once (optimistic store update); the server's row replaces it, or it snaps back on error |
+| Top bar hairline | transparent at the top of the page, fades in over 200ms once content scrolls under the bar |
+| Theme toggle | colours cross-fade over 280ms (`html.theme-switching`) instead of snapping |
+| Tap feel | `touch-action: manipulation` and no tap highlight on every button and link; feedback on :active, so on the press, never on release |
 | Load gate reveal | content opacity 280ms ease-out plus translateY(6px) to 0 over 320ms on the spring curve; figure mark spins one turn per 1.6s on an ease-in-out, static under reduced motion |
 | Agenda suggestions | ghost blocks enter with opacity and translateY(6px) scale(0.98) over 320ms on the spring curve; the tray card slides down 6px; none under reduced motion |
 | Agenda event drag | press and hold an event (mouse or pen), a 4px threshold turns it into a drag; the block dims to 45% and a ghost in the info tint follows the pointer in 15 minute steps across days; the bottom 7px is a resize grip; release writes the new times and a toast confirms |
 | Tracker tick | background-color 160ms, mark scale(0.9) to 1 in 120ms |
 | Widget card hover and press | box-shadow and border-color 160ms ease-out on fine pointers; press scale(0.995); none under reduced motion |
 
-No keyframes on rapidly triggered elements except the skeleton shimmer.
+No keyframes on rapidly triggered elements except the skeleton shimmer. Type tracking follows size: h1 -0.02em, h2 -0.012em, h3 -0.008em, body 0, `.small` +0.006em, `.xs` +0.02em.
 
 ## 10. Do not change
 

@@ -1,5 +1,18 @@
 # Pozzy progress
 
+## Apple design pass: springs and gestures, 2026-09-23 (deployed)
+
+Applied the apple-design skill (Designing Fluid Interfaces) to desktop and the phone PWA. The rule: anything a finger can hold runs on a spring that starts from the current value and velocity, so it can be grabbed and reversed mid-flight; feedback happens on the press; things leave the way they came.
+- New `web/src/lib/spring.js` (damping ratio and response, retargetable, velocity handoff, `project` and `rubberband` helpers, honours reduced motion) and `composables/useDrag.js` (pointer capture, 8px axis lock, velocity history, stale velocity after a held finger is zero). `lib/haptics.js` for a later use.
+- NavDrawer: springs in from the left, drag to close 1:1 with rubber-band past open, flick or projected rest closes at the finger's speed, scrim opacity is the drawer's progress. Native link drag disabled so a mouse drag works too.
+- UiModal on the phone is a bottom sheet with a grabber: springs up, grabber and head drag 1:1, flick dismisses; desktop panel materialises in place with scale, same path out.
+- AgendaMobile day swipe: the list tracks the finger, fades with distance, a flick throws it out and the next day arrives from the other side with the same velocity; a small drag springs home. A tap after a swipe no longer opens an event.
+- UiSegmented: one thumb springs between segments.
+- Calendar store: a dropped event lands at once (optimistic), server row replaces it. EventPopover scales from the corner facing its slot. Top bar hairline appears only once content scrolls under it. Theme toggle cross-fades colours. Tap feel: `touch-action: manipulation`, no tap highlight. Type tracking per size.
+- Spec: docs/briefs/DESIGN.md Motion tokens and section 9.
+
+Verification: Playwright on the local SQLite stack, 390 by 844 with touch and 1440 desktop. Drawer at -126px 90 ms after opening and at 0 after; tracks a held finger at -80; a 60px drag springs back; a flick closes. Sheet rises from the bottom (236px up at 80 ms), anchored to the bottom edge, tracks a held finger at +90, small pull returns, flick dismisses. Day list tracks at -70 and springs home; a flick moves one day and settles at 0. Segmented thumb sampled mid-travel. Top bar hairline transparent at top, visible after scroll. Desktop dialog sampled mid-materialise, no grabber. Zero console errors, zero failed API calls.
+
 ## Week-one feedback round, 2026-09-23
 
 Seven points from a week of use, all in this pass:

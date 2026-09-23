@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import {
   PhCalendarBlank,
@@ -56,12 +56,23 @@ async function logout() {
 }
 
 watch(() => route.fullPath, () => (menuOpen.value = false))
+
+// Scroll edge: the bar is a floating material; its hairline shows only when content is under it.
+const scrolled = ref(false)
+function onScroll() {
+  scrolled.value = window.scrollY > 2
+}
+onMounted(() => {
+  onScroll()
+  window.addEventListener('scroll', onScroll, { passive: true })
+})
+onBeforeUnmount(() => window.removeEventListener('scroll', onScroll))
 </script>
 
 <template>
   <div class="shell">
     <div class="ambient" aria-hidden="true"></div>
-    <header class="topbar">
+    <header class="topbar" :class="{ scrolled }">
       <button v-if="auth.isAuthenticated" type="button" class="icon-btn menu-toggle" aria-label="Menu" :aria-expanded="menuOpen" @click="menuOpen = true"><PhList /></button>
       <RouterLink to="/" class="brand" aria-label="Pozzy home">
         <img :src="theme.isDark.value ? '/mark-dark.svg' : '/favicon.svg'" alt="" class="mark" width="26" height="26" />
@@ -119,8 +130,10 @@ watch(() => route.fullPath, () => (menuOpen.value = false))
   background: color-mix(in srgb, var(--surface) 88%, transparent);
   backdrop-filter: blur(14px) saturate(160%);
   -webkit-backdrop-filter: blur(14px) saturate(160%);
-  border-bottom: 1px solid var(--line);
+  border-bottom: 1px solid transparent;
+  transition: border-color var(--dur-ui) ease;
 }
+.topbar.scrolled { border-bottom-color: var(--line); }
 @media (prefers-reduced-transparency: reduce) { .topbar { background: var(--surface); backdrop-filter: none; -webkit-backdrop-filter: none; } }
 .brand { display: inline-flex; align-items: center; gap: 10px; text-decoration: none; color: var(--ink); flex: none; }
 .mark { width: 26px; height: 26px; }

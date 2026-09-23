@@ -30,11 +30,17 @@ export function applyTheme(value = read()) {
 
 export function useTheme() {
   const isDark = computed(() => preference.value === 'dark' || (preference.value === 'system' && systemDark()))
+  let switching = null
   function set(value) {
     try {
       if (value === 'system') localStorage.removeItem(KEY)
       else localStorage.setItem(KEY, value)
     } catch {}
+    // A short colour transition on everything, so dark to light is a fade, not a flash.
+    const root = document.documentElement
+    root.classList.add('theme-switching')
+    clearTimeout(switching)
+    switching = setTimeout(() => root.classList.remove('theme-switching'), 320)
     applyTheme(value)
   }
   // The button flips to the opposite of what is on screen now, so it always does the obvious thing.

@@ -160,10 +160,11 @@ body {
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
 }
-h1, h2, h3, h4 { margin: 0; font-weight: 600; line-height: 1.25; letter-spacing: -0.01em; }
-h1 { font-size: var(--fs-2xl); }
-h2 { font-size: var(--fs-xl); }
-h3 { font-size: var(--fs-lg); }
+/* Tracking follows size: tighter as type grows, a touch looser when it shrinks; body stays at 0. */
+h1, h2, h3, h4 { margin: 0; font-weight: 600; line-height: 1.25; letter-spacing: -0.01em; font-optical-sizing: auto; }
+h1 { font-size: var(--fs-2xl); letter-spacing: -0.02em; line-height: 1.15; }
+h2 { font-size: var(--fs-xl); letter-spacing: -0.012em; }
+h3 { font-size: var(--fs-lg); letter-spacing: -0.008em; }
 p { margin: 0 0 var(--sp-3); }
 p:last-child { margin-bottom: 0; }
 a { color: var(--ink); text-decoration-thickness: 1px; text-underline-offset: 3px; }
@@ -183,6 +184,8 @@ hr { border: 0; border-top: 1px solid var(--line); margin: var(--sp-4) 0; }
 
 /* Native controls that are not wrapped by a Ui component still get the vocabulary */
 button, input, select, textarea { font: inherit; color: inherit; letter-spacing: inherit; }
+/* Taps respond on the press: no double-tap zoom delay, no callout, feedback lives on :active. */
+button, [role='button'], a { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
 button { cursor: pointer; }
 button:disabled { cursor: default; }
 fieldset { border: 0; padding: 0; margin: 0; min-width: 0; }
@@ -230,7 +233,7 @@ button:not([class]):disabled { opacity: 0.55; }
 /* Utilities shared by views and widgets */
 .num { font-variant-numeric: tabular-nums; }
 .muted { color: var(--ink-3); }
-.small { font-size: var(--fs-sm); }
+.small { font-size: var(--fs-sm); letter-spacing: 0.006em; }
 .xs { font-size: var(--fs-xs); letter-spacing: 0.02em; }
 .error { color: var(--danger); font-size: var(--fs-md); }
 .ok { color: var(--ok); }
@@ -312,6 +315,11 @@ table.ui td.num, table.ui th.num { text-align: right; font-variant-numeric: tabu
 .list-row { display: flex; align-items: center; gap: var(--sp-3); padding: var(--sp-2) 0; border-top: 1px solid var(--line); font-size: var(--fs-base); min-width: 0; }
 .list-row:first-child { border-top: 0; }
 .list-row.done > .title, .list-row.done > * > .title { text-decoration: line-through; color: var(--ink-3); }
+
+/* Theme change: colours cross-fade for a moment (class set by useTheme) instead of snapping. */
+html.theme-switching, html.theme-switching *, html.theme-switching *::before, html.theme-switching *::after {
+  transition: background-color 280ms ease, color 280ms ease, border-color 280ms ease, box-shadow 280ms ease !important;
+}
 
 /* Reduced motion */
 @media (prefers-reduced-motion: reduce) {

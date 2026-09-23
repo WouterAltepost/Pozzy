@@ -4,6 +4,8 @@
 // swipe the list to change day. Planner suggestions show as dashed blocks and dashed rows.
 import { computed, ref } from 'vue'
 import { PhCaretLeft, PhCaretRight, PhCheck, PhPlus, PhSparkle, PhX } from '@phosphor-icons/vue'
+import { useDrag } from '../../composables/useDrag'
+import { createSpring, project, reducedMotion } from '../../lib/spring'
 import { formatDay, formatTime, mondayOf, shortDay, today, weekDays } from '../../lib/dates'
 import { useCalendarStore } from '../../stores/calendar'
 import UiBadge from '../ui/UiBadge.vue'
@@ -86,17 +88,55 @@ function addDaysLocal(day, n) {
   const x = new Date(y, m - 1, d + n)
   return `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, '0')}-${String(x.getDate()).padStart(2, '0')}`
 }
-let sx = null
-function swipeStart(e) {
-  sx = e.clientX
-}
-function swipeEnd(e) {
-  if (sx === null) return
-  const dx = e.clientX - sx
-  sx = null
-  if (dx < -40) store.step(1)
-  else if (dx > 40) store.step(-1)
-}
+// Day swipe: the list tracks the finger 1:1. On release the flick is projected forward; past a
+// third of the width (or a fast flick) the list leaves at the finger's speed, the day changes,
+// and the new day's list arrives from the other side carrying the same velocity.
+const listEl = ref(null)
+const listX = ref(0)
+let pendingStep = 0
+const listSpring = createSpring({
+  value: 0,
+  damping: 1,
+  response: 0.34,
+  onUpdate: (v) => (listX.value = v),
+  onRest: () => {
+    if (!pendingStep) return
+    const dir = pendingStep
+    pendingStep = 0
+    store.step(dir)
+    const w = listEl.value?.offsetWidth || 360
+    listSpring.jump(dir * w * 0.5)
+    listSpring.set(0, { velocity: -dir * Math.max(600, Math.abs(listSpring.velocity)) })
+  },
+})
+let startX = 0
+const swipe = useDrag({
+  axis: 'x',
+  onStart: () => {
+    startX = pendingStep ? 0 : listSpring.value
+    pendingStep = 0
+    listSpring.stop()
+  },
+  onMove: ({ dx }) => listSpring.jump(startX + dx),
+  onEnd: ({ vx }) => {
+    const w = listEl.value?.offsetWidth || 360
+    if (reducedMotion()) {
+      const dir = Math.abs(vx) > 250 ? (vx < 0 ? 1 : -1) : Math.abs(listSpring.value) > w / 3 ? (listSpring.value < 0 ? 1 : -1) : 0
+      listSpring.jump(0)
+      if (dir) store.step(dir)
+      return
+    }
+    const rest = listSpring.value + project(vx)
+    const dir = Math.abs(vx) > 250 ? (vx < 0 ? 1 : -1) : Math.abs(rest) > w / 3 ? (rest < 0 ? 1 : -1) : 0
+    if (dir) {
+      pendingStep = dir
+      listSpring.set(-dir * w, { velocity: vx, response: 0.3 })
+    } else {
+      listSpring.set(0, { velocity: vx, response: 0.34 })
+    }
+  },
+})
+const listStyle = computed(() => ({ transform: `translate3d(${listX.value}px, 0, 0)`, opacity: listEl.value ? Math.max(0.2, 1 - Math.abs(listX.value) / (listEl.value.offsetWidth || 360)) : 1 }))
 function dayNum(day) {
   return Number(day.slice(8))
 }
@@ -154,14 +194,15 @@ function wd(day) {
           <span class="wd">{{ wd(day) }}</span><span class="dn num">{{ dayNum(day) }}</span>
         </button>
       </div>
-      <section class="card daylist" @pointerdown="swipeStart" @pointerup="swipeEnd">
+      <section ref="listEl" class="card daylist" v-bind="swipe.handlers" @dragstart.prevent>
+        <div class="daybody" :style="listStyle">
         <div v-if="!dayItems.length" class="empty-wrap">
           <UiEmpty compact title="No events" hint="Nothing on the calendar mirror for this day." />
         </div>
         <ul v-else>
           <li v-for="(it, i) in dayItems" :key="(it.item.id || it.item.title) + it.from" :class="{ first: i === 0 }">
             <div v-if="i === nowIndex" class="nowrow"><span class="dot"></span><span class="rule"></span><span class="t num">{{ String(Math.floor(nowMinutes / 60)).padStart(2, '0') }}:{{ String(nowMinutes % 60).padStart(2, '0') }}</span></div>
-            <div class="row" :class="it.kind" @click="it.kind === 'event' || it.kind === 'linked' || it.kind === 'recurring' ? emit('select-event', it.item) : null">
+            <div class="row" :class="it.kind" @click="!swipe.wasDrag() && (it.kind === 'event' || it.kind === 'linked' || it.kind === 'recurring') ? emit('select-event', it.item) : null">
               <span class="times num"><span class="s">{{ formatTime(it.item.start) }}</span><span class="e">{{ formatTime(it.item.end) }}</span></span>
               <span class="bar"></span>
               <span class="body">
@@ -182,6 +223,7 @@ function wd(day) {
           </li>
           <li v-if="nowIndex === -1 && store.anchor === today() && dayItems.length" class="tail"><div class="nowrow"><span class="dot"></span><span class="rule"></span><span class="t num">{{ String(Math.floor(nowMinutes / 60)).padStart(2, '0') }}:{{ String(nowMinutes % 60).padStart(2, '0') }}</span></div></li>
         </ul>
+        </div>
       </section>
       <p class="hint muted small">Swipe the list to change day</p>
     </template>
@@ -224,7 +266,8 @@ function wd(day) {
 .dbtn.active { background: var(--ink); color: var(--on-ink); box-shadow: none; }
 .dbtn .wd { font-size: var(--fs-xs); letter-spacing: 0.02em; font-weight: 500; }
 .dbtn .dn { font-size: var(--fs-lg); font-weight: 600; }
-.daylist { padding: 4px 16px; margin: 0; touch-action: pan-y; user-select: none; }
+.daylist { padding: 4px 16px; margin: 0; touch-action: pan-y; user-select: none; -webkit-user-select: none; overflow: hidden; }
+.daybody { will-change: transform; }
 .empty-wrap { padding: 12px 0; }
 .daylist li { border-top: 1px solid var(--line); }
 .daylist li.first { border-top: 0; }
