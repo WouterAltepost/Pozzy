@@ -241,9 +241,16 @@ def series(weeks: int | None = 12, include_inactive: bool = False) -> dict:
         weeks = max(1, (week_start_of(today) - week_start_of(origin)).days // 7 + 1)
     start = week_start_of(today) - timedelta(days=7 * (weeks - 1))
     by_tracker = entries_between([t.id for t in trackers], start, today) if trackers else {}
+    # A habit counts from its creation week, or earlier when an entry was backdated. Weeks before
+    # that are "not started" and stay blank on the chart; later weeks without entries plot as 0.
+    first_by_tracker = dict(db.session.execute(
+        select(TrackerEntry.tracker_id, func.min(TrackerEntry.date)).where(TrackerEntry.tracker_id.in_([t.id for t in trackers])).group_by(TrackerEntry.tracker_id)
+    ).all()) if trackers else {}
     out = []
     for t in trackers:
         by_date = by_tracker.get(t.id, {})
+        origin = min([d for d in (t.created_at.date() if t.created_at else None, first_by_tracker.get(t.id)) if d is not None], default=start)
+        first_week = week_start_of(origin)
         points = [{"date": d.isoformat(), "value": e.value} for d, e in sorted(by_date.items())]
         weekly = []
         for i in range(weeks):
@@ -251,6 +258,6 @@ def series(weeks: int | None = 12, include_inactive: bool = False) -> dict:
             days = [(d, e) for d, e in by_date.items() if ws <= d < ws + timedelta(days=7)]
             vals = [e.value for _, e in days]
             met = sum(1 for _, e in days if _met(t, e.value)) if t.type == "daily_bool" else None
-            weekly.append({"week_start": ws.isoformat(), "sum": sum(vals), "avg": (sum(vals) / len(vals)) if vals else None, "count": len(vals), "met_days": met})
+            weekly.append({"week_start": ws.isoformat(), "sum": sum(vals), "avg": (sum(vals) / len(vals)) if vals else None, "count": len(vals), "met_days": met, "started": ws >= first_week})
         out.append({"tracker": t.to_dict(), "points": points, "weekly": weekly})
     return {"from": start.isoformat(), "to": today.isoformat(), "weeks": weeks, "series": out}

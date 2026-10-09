@@ -113,6 +113,20 @@ def test_series_covers_every_tracker_on_one_range(client, headers):
     assert [p["value"] for p in weight["points"]] == [84, 81.5]
 
 
+def test_series_marks_weeks_before_a_habit_started(client, headers):
+    """A week without hits after the habit started is a real 0 on the chart, not a gap. Weeks
+    before the first entry (or creation) are flagged so the chart leaves them blank."""
+    t = client.post("/api/trackers", json={"name": "Stretch", "type": "daily_bool"}, headers=headers).get_json()["data"]
+    today = date.today()
+    client.post(f"/api/trackers/{t['id']}/tick", json={"date": (today - timedelta(days=14)).isoformat()}, headers=headers)
+    client.post(f"/api/trackers/{t['id']}/tick", json={"date": today.isoformat()}, headers=headers)
+    data = client.get("/api/trackers/series?weeks=5", headers=headers).get_json()["data"]
+    weekly = next(s for s in data["series"] if s["tracker"]["name"] == "Stretch")["weekly"]
+    assert [w["started"] for w in weekly] == [False, False, True, True, True]
+    assert weekly[3]["count"] == 0 and weekly[3]["met_days"] == 0
+    assert weekly[2]["met_days"] == 1 and weekly[4]["met_days"] == 1
+
+
 def test_untick_reverses_one_tap_and_entry_endpoints_return_the_row(client, headers):
     """A mis-tap on a count cell can be taken back: untick subtracts one, removes the entry at
     zero, toggles a bool back. Every entry endpoint answers with the tracker's grid row."""

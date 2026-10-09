@@ -323,3 +323,8 @@ Known gaps and how to test:
 - `_call` commits the SQLAlchemy session when it logs; callers must not hold uncommitted work they want rolled back (A's and D's callers do not).
 - Haiku 4.5 prompt caching needs a 4096-token prefix; the classify system prompt is well under that, so cache reads stay 0 until it grows. Harmless.
 - Prices are the September 2026 list rates; update `PRICES` in `claude_client.py` when Anthropic changes them or when `.env` switches to `claude-sonnet-5`.
+
+## Tracking chart zero weeks, 2026-10-09
+
+- "All habits" chart: a week without hits now plots as 0% instead of a gap, so the line drops and comes back. `GET /api/trackers/series` adds `started` per weekly row (week on or after the tracker's creation week or first entry); only weeks before that stay blank. Numeric trackers without a target keep gaps for unmeasured weeks (missing is not zero there).
+- Test `test_series_marks_weeks_before_a_habit_started`; 225 pytest green, web build clean. Not deployed.

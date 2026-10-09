@@ -3,6 +3,8 @@
 // Daily habits: days done out of seven. Weekly counts: sum over target. Numeric with a daily
 // target: weekly average over target. Numeric without a target: scaled to its own best week
 // (marked in the legend). Legend chips toggle series; hidden set and range persist per device.
+// A week without hits plots as 0% so the line drops and comes back; only weeks before a habit
+// started, and unmeasured weeks of a numeric tracker without a target, stay blank.
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { trackerSeries } from '../../api/trackers'
 import UiSegmented from '../ui/UiSegmented.vue'
@@ -72,25 +74,25 @@ const series = computed(() => {
     let pct
     let label
     if (t.type === 'daily_bool') {
-      pct = s.weekly.map((w) => (w.count ? (w.met_days / 7) * 100 : null))
-      label = (w) => (w.count ? `${w.met_days} of 7 days` : 'no entries')
+      pct = s.weekly.map((w) => (w.started ? (w.met_days / 7) * 100 : null))
+      label = (w) => (w.started ? `${w.met_days} of 7 days` : 'not started')
     } else if (t.type === 'weekly_count') {
       const target = t.target_value || null
       if (target) {
-        pct = s.weekly.map((w) => (w.count ? (w.sum / target) * 100 : null))
-        label = (w) => (w.count ? `${round(w.sum)} of ${target}` : 'no entries')
+        pct = s.weekly.map((w) => (w.started ? (w.sum / target) * 100 : null))
+        label = (w) => (w.started ? `${round(w.sum)} of ${target}` : 'not started')
       } else {
         scaled = true
         const best = Math.max(...s.weekly.map((w) => w.sum), 0) || 1
-        pct = s.weekly.map((w) => (w.count ? (w.sum / best) * 100 : null))
-        label = (w) => (w.count ? `${round(w.sum)}` : 'no entries')
+        pct = s.weekly.map((w) => (w.started ? (w.sum / best) * 100 : null))
+        label = (w) => (w.started ? `${round(w.sum)}` : 'not started')
       }
     } else {
       const unit = t.unit ? ' ' + t.unit : ''
       const target = t.target_period === 'day' && t.target_value ? t.target_value : null
       if (target) {
-        pct = s.weekly.map((w) => (w.count ? (w.avg / target) * 100 : null))
-        label = (w) => (w.count ? `avg ${round(w.avg)}${unit} of ${target}${unit}` : 'no entries')
+        pct = s.weekly.map((w) => (!w.started ? null : w.count ? (w.avg / target) * 100 : 0))
+        label = (w) => (!w.started ? 'not started' : w.count ? `avg ${round(w.avg)}${unit} of ${target}${unit}` : `none of ${target}${unit}`)
       } else {
         scaled = true
         const best = Math.max(...s.weekly.map((w) => w.avg || 0), 0) || 1
