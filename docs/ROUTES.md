@@ -2,22 +2,24 @@
 
 Stream E wires these into `web/src/router/index.js` and the nav in `App.vue`. Every view below is a guarded route (not `meta.public`). Route names are referenced by widgets and views via `RouterLink :to="{ name }"`, so keep the names exactly as listed.
 
-| Nav order | Path | Route name | View file | Nav label | Stream |
-|---|---|---|---|---|---|
-| 1 | `/` | `home` | `views/HomeView.vue` | Home | M1 / E |
-| 2 | `/agenda` | `agenda` | `views/AgendaView.vue` | Agenda | B |
-| 3 | `/tasks` | `tasks` | `views/TasksView.vue` | Tasks | A |
-| 4 | `/goals` | `goals` | `views/GoalsView.vue` | Goals | A |
-| 5 | `/mail` | `mail` | `views/MailView.vue` | Mail | C |
-| 6 | `/trackers` | `trackers` | `views/TrackersView.vue` | Tracking | A |
-| 7 | `/hours` | `hours` | `views/HoursView.vue` | Hours | A |
-| 8 | `/capture` | `capture` | `views/CaptureView.vue` | Capture | D |
-| 9 | `/study` | `study` | `views/StudyView.vue` | Study | A |
-| 10 | `/notes` | `notes` | `views/NotesView.vue` | Notes (archived 2026-09-23: `hidden: true`, not in the nav, route kept) | A |
-| 11 | `/review` | `review` | `views/WeeklyReviewView.vue` | Review | D |
-| 99 | `/settings` | `settings` | `views/SettingsView.vue` | Settings | A |
+Habit-first since 2026-10-19: `home` is the Today screen; the widget dashboard moved to `overview`. Groups in `NAV_GROUPS` (router) drive both the desktop sidebar and the phone drawer.
 
-All nav orders 1 to 11 are taken; 99 is Settings.
+| Nav order | Path | Route name | View file | Nav label | Group |
+|---|---|---|---|---|---|
+| 1 | `/` | `home` | `views/TodayView.vue` | Today | Habits |
+| 2 | `/trackers` | `trackers` | `views/TrackersView.vue` | Habits | Habits |
+| - | `/trackers/:id` | `habit` | `views/HabitView.vue` | (not in nav; lights Habits) | Habits |
+| 3 | `/overview` | `overview` | `views/HomeView.vue` | Overview | Plan |
+| 4 | `/agenda` | `agenda` | `views/AgendaView.vue` | Agenda | Plan |
+| 5 | `/tasks` | `tasks` | `views/TasksView.vue` | Tasks | Plan |
+| 6 | `/goals` | `goals` | `views/GoalsView.vue` | Goals | Plan |
+| 7 | `/review` | `review` | `views/WeeklyReviewView.vue` | Review | Plan |
+| 8 | `/mail` | `mail` | `views/MailView.vue` | Mail | More |
+| 9 | `/hours` | `hours` | `views/HoursView.vue` | Hours | More |
+| 10 | `/capture` | `capture` | `views/CaptureView.vue` | Capture | More |
+| 11 | `/study` | `study` | `views/StudyView.vue` | Study | More |
+| - | `/notes` | `notes` | `views/NotesView.vue` | Notes (archived 2026-09-23: `hidden: true`, route kept) | - |
+| 99 | `/settings` | `settings` | `views/SettingsView.vue` | Settings | bottom |
 
 ## Stream A notes for E
 

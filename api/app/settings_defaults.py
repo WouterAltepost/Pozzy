@@ -47,6 +47,8 @@ DEFAULTS: dict = {
     # Standing rules and context Wouter writes for Pozzy; appended to every Claude system prompt.
     "ai_rules": [],
     "ai_context": "",
+    # Habits: push reminders on or off (each habit still needs its own reminder time).
+    "habit_reminders": True,
 }
 
 

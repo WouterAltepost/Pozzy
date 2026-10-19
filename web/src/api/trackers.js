@@ -18,3 +18,6 @@ export const tickTracker = (id, date) => api(`/api/trackers/${id}/tick`, { metho
 export const trackerSeries = (weeks = 12, includeInactive = false) => api(`/api/trackers/series?weeks=${weeks}${includeInactive ? '&include_inactive=1' : ''}`)
 // Reverse of tick: toggles a bool back, subtracts one step from a count or value.
 export const untickTracker = (id, date) => api(`/api/trackers/${id}/untick`, { method: 'POST', body: date ? { date } : {} })
+// Streaks, rates, a 53 week heatmap, months, weekdays and notes for the habit page.
+export const trackerStats = (id) => api(`/api/trackers/${id}/stats`)
+export const reorderTrackers = (ids) => api('/api/trackers/reorder', { method: 'POST', body: { ids } })

@@ -12,6 +12,7 @@ import { useSettingsStore } from '../stores/settings'
 
 import CalendarAccounts from '../components/settings/CalendarAccounts.vue'
 import MailAccounts from '../components/settings/MailAccounts.vue'
+import HabitReminders from '../components/settings/HabitReminders.vue'
 
 const store = useSettingsStore()
 const areas = useAreasStore()
@@ -86,6 +87,7 @@ async function save() {
     <p v-if="store.error" class="error">{{ store.error }}</p>
     <UiLoadGate :ready="Boolean(ready) || Boolean(store.error)" label="Loading settings">
 
+    <HabitReminders v-if="ready" />
     <form v-if="ready" @submit.prevent="save">
       <section class="card">
         <div class="card-head"><h2>Working window</h2></div>

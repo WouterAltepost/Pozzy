@@ -75,7 +75,7 @@ def test_week_grid_completion_and_streaks(client, headers, monkeypatch):
     rows = {r["name"]: r for r in grid["trackers"]}
     assert [d["date"] for d in rows["Creatine"]["days"]][0] == "2026-09-14"
     assert [d["met"] for d in rows["Creatine"]["days"]] == [True, True, True, False, False, False, False]
-    assert rows["Creatine"]["completion"] == 0.75  # 3 of 4 elapsed days
+    assert rows["Creatine"]["completion"] == 1.0  # 3 of 3 elapsed due days; today not done yet does not count
     assert rows["Creatine"]["streak"] == 4
     assert rows["Sauna"]["week_total"] == 1 and rows["Sauna"]["completion"] == 1.0 and rows["Sauna"]["streak"] == 2
     assert rows["Sleep"]["days"][0]["met"] is True and rows["Sleep"]["days"][1]["met"] is False

@@ -100,7 +100,11 @@ def build_context(day: date | None = None) -> dict:
     open_trackers = []
     for t in grid["trackers"]:
         today_cell = next((c for c in t["days"] if c["date"] == day.isoformat()), None)
-        if t["type"] in ("daily_bool", "weekly_count") and today_cell and not today_cell["met"]:
+        # Open: a day habit due today and not done or skipped, or a week habit short of its target.
+        if not today_cell or today_cell["status"] == "skipped":
+            continue
+        weekly_open = t["target_period"] == "week" and not t["week_met"]
+        if weekly_open or (t["target_period"] == "day" and today_cell["due"] and not today_cell["met"]):
             open_trackers.append({"name": t["name"], "type": t["type"], "week_total": t["week_total"], "target": t.get("target_value"), "streak": t["streak"]})
 
     hrs = hours.week_summary(week)

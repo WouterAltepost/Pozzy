@@ -23,6 +23,10 @@ OPTIONAL_DEFAULTS = {
     "ICLOUD_CALDAV_URL": "https://caldav.icloud.com",
     "MAIL_ACCOUNTS_JSON": None,
     "RUN_SCHEDULER": None,
+    # Web Push for habit reminders (scripts/vapid_keys.py makes a pair). Unset: no reminders.
+    "VAPID_PUBLIC_KEY": None,
+    "VAPID_PRIVATE_KEY": None,
+    "VAPID_SUBJECT": "mailto:admin@example.com",
 }
 
 

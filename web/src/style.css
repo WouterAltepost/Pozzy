@@ -109,11 +109,10 @@
   --row-h: 40px;
 }
 
-/* Phone shell: the top toolbar and the floating tab bar (62px pill plus its 14px lift). */
+/* Phone shell: the top toolbar. Navigation lives in the drawer, so nothing floats at the bottom. */
 @media (max-width: 1023px) {
   :root {
     --bar-h: 48px;
-    --tab-h: 76px;
   }
 }
 

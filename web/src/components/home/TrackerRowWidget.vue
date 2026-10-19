@@ -4,6 +4,7 @@ import { useWidgetLink } from '../../composables/useWidgetLink'
 import { useLongPress } from '../../composables/useLongPress'
 import { useToast } from '../../composables/useToast'
 import { computed, onMounted, ref } from 'vue'
+import { useRouter } from 'vue-router'
 import { PhCheck } from '@phosphor-icons/vue'
 import { deleteEntry, tickTracker, trackerWeek, upsertEntry } from '../../api/trackers'
 import { today } from '../../lib/dates'
@@ -14,7 +15,15 @@ const toast = useToast()
 const week = ref(null)
 const failed = ref(false)
 
-const quick = computed(() => (week.value?.trackers || []).filter((t) => t.type === 'daily_bool' || t.type === 'weekly_count'))
+// Yes/no habits due today (or already handled today) and the count habits of the week.
+const quick = computed(() =>
+  (week.value?.trackers || []).filter((t) => {
+    if (t.type === 'weekly_count') return true
+    if (t.type !== 'daily_bool') return false
+    const c = todayCell(t)
+    return c && (c.due || c.met || c.status === 'skipped')
+  }),
+)
 
 function todayCell(t) {
   return t.days.find((d) => d.date === today())
@@ -58,30 +67,24 @@ async function write(t, call) {
   }
 }
 
-// Tap counts one; a long press or right-click asks for the exact value (empty clears).
-const press = useLongPress((t) => {
-  const current = todayCell(t)?.value ?? ''
-  const answer = window.prompt(`${t.name} today (${t.type === 'daily_bool' ? '1 done, 0 not done' : 'count, empty to clear'}):`, current)
-  if (answer === null) return
-  if (answer.trim() === '') return write(t, () => deleteEntry(t.id, today()))
-  const value = Number(answer)
-  if (Number.isNaN(value) || value < 0) return
-  write(t, () => upsertEntry(t.id, { date: today(), value }))
-})
+// Tap counts one; a long press or right-click opens Today, where the check-in sheet takes an
+// exact value, a note or a skip.
+const router = useRouter()
+const press = useLongPress(() => router.push({ name: 'home' }))
 function tick(t) {
   if (press.consumed()) return
   write(t, () => tickTracker(t.id, today()))
 }
 
 onMounted(() => load().finally(settle))
-const link = useWidgetLink('trackers')
+const link = useWidgetLink('home')
 </script>
 
 <template>
-  <section v-if="!failed && week && quick.length" class="card widget clickable" tabindex="0" role="link" :aria-label="'Open trackers'" @click="link.onClick" @keydown="link.onKey">
+  <section v-if="!failed && week && quick.length" class="card widget clickable" tabindex="0" role="link" :aria-label="'Open today\'s habits'" @click="link.onClick" @keydown="link.onKey">
     <div class="card-head">
-      <h2>Trackers today</h2>
-      <span class="meta"><RouterLink :to="{ name: 'trackers' }">Tracking</RouterLink></span>
+      <h2>Habits today</h2>
+      <span class="meta"><RouterLink :to="{ name: 'home' }">Check in</RouterLink></span>
     </div>
     <div class="chips">
       <button
@@ -91,7 +94,7 @@ const link = useWidgetLink('trackers')
         class="chip"
         :class="{ met: todayCell(t)?.met, some: todayCell(t)?.value && !todayCell(t)?.met }"
         :aria-pressed="Boolean(todayCell(t)?.met)"
-        :title="t.type === 'weekly_count' ? `${t.week_total} of ${t.target_value || '?'} this week. Click for +1, right-click to set` : `streak ${t.streak}`"
+        :title="t.type === 'weekly_count' ? `${t.week_total} of ${t.target_value || '?'} this week. Click for +1, right-click to open Today` : `streak ${t.streak}`"
         v-bind="press.handlers(t)"
         @click.stop="tick(t)"
       >

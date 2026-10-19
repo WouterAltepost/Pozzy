@@ -12,6 +12,10 @@ web
 
 One user: Wouter Altepost, solo developer and student, founder of alpaca AI and UDefine. He runs his week from Pozzy: mostly at a desk on a laptop, secondarily on an iPhone (390px) as an installed PWA. [inferred] Typical sessions: a morning check of do's, agenda, mail and deadlines; short check-ins during the day (tick a tracker, log hours, capture a thought); an evening planning pass setting tomorrow's three do's.
 
+## Focus (2026-10-19)
+
+Habits first. Wouter uses Pozzy mainly to keep habits, so Home is the Today check-in and the habit pages carry the design effort; the other modules stay available from the menu.
+
 ## Product Purpose
 
 A private personal operating system: calendar (iCloud), mail triage (four Google accounts, read-only), tasks (Eisenhower), weekly goals and daily three do's, habit tracking, hours per life area, study deadlines and internship applications, notes, quick capture, and a weekly review. Claude is used only where judgement helps (email priority, slot ranking, briefing, capture parsing, reflection). Success: Wouter uses it for a full day with no manual edits and knows within seconds what today needs.
@@ -24,8 +28,8 @@ Everything Wouter needs to run a week in one screen, with AI as an assistant tha
 
 - Life areas: Study, Work, Personal, Health. Each has a colour stored in the database (areas table), used as data colour throughout.
 - Timezone Europe/Amsterdam, week starts Monday, UI in English.
-- Twelve routes: Home, Agenda, Tasks, Goals, Mail, Tracking, Hours, Capture, Study, Notes, Review, Settings. Route names and paths are fixed (docs/ROUTES.md).
-- Homepage is a grid of ten self-contained widgets in a fixed order (docs/WIDGETS.md).
+- Routes (docs/ROUTES.md): Today (`/`), Habits, a habit's stats page, Overview (the former Home widget grid), Agenda, Tasks, Goals, Review, Mail, Hours, Capture, Study, Settings; Notes archived.
+- Overview is a grid of ten self-contained widgets in a fixed order (docs/WIDGETS.md).
 - Background jobs sync calendar and mail every 10 and 15 minutes; the UI must be honest about "not synced yet" and job failures (Settings shows job runs).
 
 ## Capabilities and Constraints

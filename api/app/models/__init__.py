@@ -13,6 +13,7 @@ from .hours_log import HoursDismissal, HoursLog
 from .job_run import JobRun
 from .mail_account import MailAccount
 from .note import Note
+from .push_subscription import PushSubscription
 from .setting import Setting
 from .task import Task
 from .tracker import Tracker
@@ -37,6 +38,7 @@ __all__ = [
     "JobRun",
     "MailAccount",
     "Note",
+    "PushSubscription",
     "Setting",
     "Task",
     "Tracker",

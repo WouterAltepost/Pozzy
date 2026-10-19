@@ -1,364 +1,338 @@
 <script setup>
-import { computed, ref, watch } from 'vue'
-import { PhCaretDown, PhChartLineUp, PhCheck, PhMinus } from '@phosphor-icons/vue'
-import LineChart from '../components/trackers/LineChart.vue'
-import TrackerForm from '../components/trackers/TrackerForm.vue'
+// Habits: every habit's week at a glance, plus managing them. A tap on a cell checks a yes/no
+// or count habit with Undo in the toast; value cells, a long press or a right-click open the
+// check-in sheet. Days a habit is not due are dimmed, skipped days show a slash. The name opens
+// the habit's stats page. Reorder moves a habit within its area.
+import { computed, ref } from 'vue'
+import { PhArrowDown, PhArrowUp, PhFlame, PhPlus, PhSparkle } from '@phosphor-icons/vue'
+import CheckInSheet from '../components/habits/CheckInSheet.vue'
+import HabitEditor from '../components/habits/HabitEditor.vue'
+import HabitIcon from '../components/habits/HabitIcon.vue'
 import TrackerSeriesChart from '../components/trackers/TrackerSeriesChart.vue'
-import UiLoadGate from '../components/ui/UiLoadGate.vue'
-import { useReady } from '../composables/useReady'
-import { useMediaQuery } from '../composables/useMediaQuery'
-import { useLongPress } from '../composables/useLongPress'
-import { useToast } from '../composables/useToast'
 import WeekNav from '../components/shared/WeekNav.vue'
 import PageHeader from '../components/ui/PageHeader.vue'
 import UiButton from '../components/ui/UiButton.vue'
+import UiConfirm from '../components/ui/UiConfirm.vue'
 import UiEmpty from '../components/ui/UiEmpty.vue'
-import { shortDay, today } from '../lib/dates'
+import UiLoadGate from '../components/ui/UiLoadGate.vue'
+import { useLongPress } from '../composables/useLongPress'
+import { useMediaQuery } from '../composables/useMediaQuery'
+import { useReady } from '../composables/useReady'
+import { useToast } from '../composables/useToast'
+import { formatDay, shortDay, today as todayFn } from '../lib/dates'
+import { WEEKDAY_LETTERS, dayState, fmt, isBool, isCount, isWeekly, scheduleLabel, targetLabel } from '../lib/habits'
 import { useTrackersStore } from '../stores/trackers'
 
 const store = useTrackersStore()
 const toast = useToast()
 const error = ref('')
-const editing = ref(null) // null | 'new' | tracker
-const saving = ref(false)
-const charts = ref({})
+const today = todayFn()
+const phone = useMediaQuery('(max-width: 699px)')
+const reordering = ref(false)
 
 const ready = useReady(() => store.load())
-const phone = useMediaQuery('(max-width: 699px)')
 
-const metToday = computed(() => store.trackers.filter((t) => isGrid(t) && t.days.find((d) => d.date === today())?.met).length)
-const gridTrackers = computed(() => store.trackers.filter(isGrid))
-// A tap on a bool or count cell counts one; the toast offers Undo for a mis-tap. Value cells
-// ask for the number. A long press or right-click on any cell asks for the exact value
-// (empty clears it), so a count can be corrected as well as taken back.
-const press = useLongPress((payload) => promptValue(payload.t, payload.d))
-function cellTap(t, d) {
-  if (press.consumed()) return
-  if (!d || d.date > today()) return
-  if (isGrid(t)) change(t, d, () => store.tick(t.id, d.date))
-  else promptValue(t, d)
+function describe(t, d, value, status) {
+  const day = d === today ? 'today' : formatDay(d)
+  if (status === 'skipped') return `${t.name} skipped ${day}`
+  if (isBool(t)) return `${t.name} ${value ? 'done' : 'not done'} ${day}`
+  if (value === null || value === undefined) return `${t.name} cleared ${day}`
+  return `${t.name} ${day}: ${fmt(value)}${t.unit ? ' ' + t.unit : ''}`
 }
-function cellPress(t, d) {
-  return !d || d.date > today() ? {} : press.handlers({ t, d })
-}
-function cellMinus(t, d) {
-  change(t, d, () => store.untick(t.id, d.date))
-}
-function describe(t, d, value) {
-  const day = d.date === today() ? 'today' : shortDay(d.date)
-  if (t.type === 'daily_bool') return `${t.name} ${value ? 'ticked' : 'unticked'} ${day}`
-  if (value === null || value === undefined) return `${t.name} ${day} cleared`
-  return `${t.name} ${day}: ${value}${t.unit ? ' ' + t.unit : ''}`
-}
-// Runs a cell write and shows a toast with Undo that puts the previous value back.
-async function change(t, d, write) {
-  await run(async () => {
-    const { previous, value } = await write()
-    toast.undo(describe(t, d, value), () => run(() => store.revert(t.id, d.date, previous)))
-  })
-}
-function cellState(t, d) {
-  if (d.date > today()) return 'future'
-  if (d.met) return 'hit'
-  if (d.value) return 'part'
-  return 'none'
-}
-function cellText(t, d) {
-  if (d.date > today()) return ''
-  if (t.type === 'daily_bool') return d.met ? '\u2022' : ''
-  return d.value === null || d.value === undefined ? '' : String(d.value)
-}
-
-async function run(fn) {
+async function write(t, date, fn) {
   error.value = ''
   try {
-    await fn()
+    const { previous, value, status } = await fn()
+    toast.undo(describe(t, date, value, status), async () => {
+      try {
+        await store.revert(t.id, date, previous)
+      } catch (err) {
+        toast.error(err.message)
+      }
+    })
   } catch (err) {
     error.value = err.message
   }
 }
 
-function isGrid(t) {
-  return t.type === 'daily_bool' || t.type === 'weekly_count'
+const press = useLongPress(({ t, d }) => openSheet(t, d.date))
+function cellTap(t, d) {
+  if (press.consumed()) return
+  if (d.date > today) return
+  if (isBool(t) || isCount(t)) write(t, d.date, () => store.tick(t.id, d.date))
+  else openSheet(t, d.date)
+}
+function cellPress(t, d) {
+  return d.date > today ? {} : press.handlers({ t, d })
+}
+function cellClass(t, d) {
+  return `s-${dayState(t, d, today)}`
+}
+function cellText(t, d) {
+  if (d.date > today || d.status === 'skipped') return ''
+  if (isBool(t)) return ''
+  return d.value ? fmt(d.value) : ''
+}
+function cellLabel(t, d) {
+  const state = dayState(t, d, today)
+  return `${t.name} ${shortDay(d.date)}: ${state === 'off' ? 'not due' : state}${d.value && !isBool(t) ? ' ' + fmt(d.value) : ''}${d.note ? ', note: ' + d.note : ''}`
 }
 
+// Check-in sheet
+const sheet = ref(null) // { id, date }
+const sheetBusy = ref(false)
+const sheetTracker = computed(() => (sheet.value ? store.byId(sheet.value.id) : null))
+function openSheet(t, date) {
+  sheet.value = { id: t.id, date }
+}
+async function saveSheet(body) {
+  const t = sheetTracker.value
+  const date = sheet.value.date
+  sheetBusy.value = true
+  try {
+    await write(t, date, () => store.setEntry(t.id, date, body.value, body.note, body.status))
+    sheet.value = null
+  } finally {
+    sheetBusy.value = false
+  }
+}
+async function clearSheet() {
+  const t = sheetTracker.value
+  const date = sheet.value.date
+  sheetBusy.value = true
+  try {
+    await write(t, date, () => store.clearEntry(t.id, date))
+    sheet.value = null
+  } finally {
+    sheetBusy.value = false
+  }
+}
+
+// Create and edit
+const editing = ref(null) // null | 'new' | tracker
+const saving = ref(false)
+const editError = ref('')
 async function save(body) {
   saving.value = true
+  editError.value = ''
   try {
-    await run(async () => {
-      if (editing.value === 'new') await store.create(body)
-      else await store.update(editing.value.id, body)
-      editing.value = null
-    })
+    if (editing.value === 'new') await store.create(body)
+    else await store.update(editing.value.id, body)
+    editing.value = null
+  } catch (err) {
+    editError.value = err.message
   } finally {
     saving.value = false
   }
 }
+function openEditor(t) {
+  editError.value = ''
+  editing.value = t
+}
 
-// Clicking a habit opens its chart for the whole run since it was created.
-async function toggleChart(t) {
-  if (charts.value[t.id]) {
-    delete charts.value[t.id]
-    return
+async function archive(t) {
+  error.value = ''
+  try {
+    await store.update(t.id, { active: !t.active })
+    toast.success(t.active ? `${t.name} archived` : `${t.name} restored`)
+  } catch (err) {
+    error.value = err.message
   }
-  await run(async () => {
-    charts.value[t.id] = await store.history(t.id, 'all')
-  })
 }
 
-// Value trackers plot the daily values; bool and count trackers plot the weekly totals once
-// there are at least three weeks, and the daily values before that so a young habit still shows a line.
-function weeklyChart(t, h) {
-  return isGrid(t) && h.weeks >= 3
-}
-function chartPoints(t, h) {
-  if (weeklyChart(t, h)) return h.weekly.map((w) => ({ date: w.week_start, value: w.sum }))
-  return h.points
-}
-function chartTarget(t, h) {
-  if (weeklyChart(t, h)) return t.type === 'daily_bool' ? 7 : t.target_value || null
-  return t.target_period === 'day' ? t.target_value : null
-}
-function chartSummary(t, h) {
-  const n = h.points.length
-  const since = h.from
-  if (t.type === 'daily_bool') {
-    const done = h.points.filter((p) => p.value >= 1).length
-    return `${done} of ${n} days done since ${since}, ${h.weeks} weeks`
+const deleting = ref(null)
+const deleteBusy = ref(false)
+async function confirmDelete() {
+  deleteBusy.value = true
+  try {
+    await store.remove(deleting.value.id)
+    deleting.value = null
+  } catch (err) {
+    error.value = err.message
+  } finally {
+    deleteBusy.value = false
   }
-  const total = h.points.reduce((a, p) => a + (p.value || 0), 0)
-  const avg = n ? Math.round((total / n) * 10) / 10 : 0
-  if (t.type === 'weekly_count') return `${Math.round(total * 10) / 10} total since ${since}, ${h.weeks} weeks`
-  return `${n} entries since ${since}, average ${avg}${t.unit ? ' ' + t.unit : ''}`
 }
 
-function promptValue(t, day) {
-  if (day.date > today()) return
-  const current = day.value ?? ''
-  const what = t.type === 'daily_bool' ? '1 for done, 0 or empty for not done' : t.type === 'weekly_count' ? 'count, empty to clear' : (t.unit || 'value') + ', empty to clear'
-  const answer = window.prompt(`${t.name} on ${day.date} (${what}):`, current)
-  if (answer === null) return
-  if (answer.trim() === '') return change(t, day, () => store.clearEntry(t.id, day.date))
-  const value = Number(answer)
-  if (Number.isNaN(value) || value < 0) return
-  change(t, day, async () => {
-    const out = await store.setEntry(t.id, day.date, value)
-    if (charts.value[t.id]) charts.value[t.id] = await store.history(t.id, 'all')
-    return out
-  })
+// Move a habit one place up or down among the habits of its own area.
+async function move(t, dir) {
+  const group = store.grouped.find((g) => g.trackers.some((x) => x.id === t.id))?.trackers || []
+  const i = group.findIndex((x) => x.id === t.id)
+  const other = group[i + dir]
+  if (!other) return
+  const ids = store.trackers.map((x) => x.id)
+  const a = ids.indexOf(t.id)
+  const b = ids.indexOf(other.id)
+  ;[ids[a], ids[b]] = [ids[b], ids[a]]
+  try {
+    await store.reorder(ids)
+  } catch (err) {
+    error.value = err.message
+    await store.load()
+  }
 }
 
-watch(() => store.version, async () => {
-  for (const id of Object.keys(charts.value)) charts.value[id] = await store.history(id, 'all')
-})
-
-function cellLabel(t, day) {
-  if (day.value === null || day.value === undefined) return ''
-  if (t.type === 'daily_bool') return ''
-  return day.value
-}
-
-function archive(t) {
-  run(() => store.update(t.id, { active: !t.active }))
-}
-
-function remove(t) {
-  if (window.confirm(`Delete tracker "${t.name}" and all its entries?`)) run(() => store.remove(t.id))
-}
+const days = computed(() => store.week?.trackers[0]?.days.map((d) => d.date) || [])
 </script>
 
 <template>
-  <div class="trackers">
-    <PageHeader v-if="!phone" title="Tracking">
-      <WeekNav :week-start="store.weekStart" @change="run(() => store.setWeek($event))" />
-      <label class="check"><input v-model="store.includeInactive" type="checkbox" @change="store.load()" /> Show archived</label>
-      <UiButton variant="primary" @click="editing = 'new'">New tracker</UiButton>
+  <div class="habits">
+    <PageHeader v-if="!phone" title="Habits" eyebrow="Week view">
+      <WeekNav :week-start="store.weekStart" @change="store.setWeek($event)" />
+      <label class="check"><input v-model="store.includeInactive" type="checkbox" @change="store.load()" /> Archived</label>
+      <UiButton v-if="store.trackers.length > 1" :variant="reordering ? 'primary' : 'secondary'" @click="reordering = !reordering">{{ reordering ? 'Done' : 'Reorder' }}</UiButton>
+      <UiButton variant="primary" @click="openEditor('new')"><PhPlus />New habit</UiButton>
     </PageHeader>
     <div v-else class="phead">
-      <div><h1>Tracking</h1><span class="muted small">{{ metToday }} of {{ gridTrackers.length }} met today</span></div>
-      <UiButton variant="primary" size="sm" @click="editing = 'new'">New tracker</UiButton>
+      <h1>Habits</h1>
+      <UiButton variant="primary" size="sm" @click="openEditor('new')"><PhPlus />New</UiButton>
     </div>
     <p v-if="error || store.error" class="error">{{ error || store.error }}</p>
-    <UiLoadGate :ready="ready" label="Loading trackers">
-    <TrackerSeriesChart v-if="store.trackers.length" :refresh-key="store.week" />
-    <div v-if="editing" class="card">
-      <div class="card-head"><h2>{{ editing === 'new' ? 'New tracker' : 'Edit tracker' }}</h2></div>
-      <TrackerForm :tracker="editing === 'new' ? null : editing" :busy="saving" @save="save" @cancel="editing = null" />
-    </div>
 
-    <div v-if="!store.trackers.length" class="card">
-      <UiEmpty title="No trackers yet" hint="Creatine, vitamins, sauna, weight, sleep: anything you want to see per week.">
-        <template #icon><PhChartLineUp /></template>
-        <template #action><UiButton variant="primary" @click="editing = 'new'">New tracker</UiButton></template>
-      </UiEmpty>
-    </div>
-
-    <template v-if="phone && store.trackers.length">
-      <section class="card">
-        <h2 class="ptitle">Today</h2>
-        <div class="chips">
-          <button v-for="t in store.trackers" :key="t.id" type="button" class="chip" :class="{ met: t.days.find((d) => d.date === today())?.met, some: t.days.find((d) => d.date === today())?.value && !t.days.find((d) => d.date === today())?.met }" v-bind="cellPress(t, t.days.find((d) => d.date === today()))" @click="cellTap(t, t.days.find((d) => d.date === today()))">
-            <span class="dot" :style="{ background: t.area_color || 'var(--ink-3)' }"></span>{{ t.name }}
-            <span v-if="t.type === 'weekly_count'" class="count num">{{ t.week_total }}<span v-if="t.target_value">/{{ t.target_value }}</span></span>
-            <span v-else-if="!isGrid(t)" class="count num">{{ cellLabel(t, t.days.find((d) => d.date === today())) || (t.unit || '') }}</span>
-            <PhCheck v-else-if="t.days.find((d) => d.date === today())?.met" class="mark" weight="bold" />
-          </button>
-        </div>
+    <UiLoadGate :ready="ready" label="Loading habits">
+      <section v-if="!store.trackers.length" class="card">
+        <UiEmpty title="No habits yet" hint="Creatine, gym three times a week, sleep hours, reading on weekdays: anything you want to keep up.">
+          <template #icon><PhSparkle /></template>
+          <template #action><UiButton variant="primary" @click="openEditor('new')">New habit</UiButton></template>
+        </UiEmpty>
       </section>
-      <section class="card">
-        <div class="card-head"><h2>This week</h2><span class="meta"><WeekNav :week-start="store.weekStart" compact @change="run(() => store.setWeek($event))" /></span></div>
-        <template v-for="t in store.trackers" :key="t.id">
-          <div class="wrow">
-            <button type="button" class="tname" :aria-expanded="Boolean(charts[t.id])" @click="toggleChart(t)"><span class="dot" :style="{ background: t.area_color || 'var(--ink-3)' }"></span>{{ t.name }}</button>
+
+      <!-- Phone: one block per habit, the name above its seven days. -->
+      <template v-if="phone && store.trackers.length">
+        <section class="card">
+          <div class="card-head">
+            <h2>This week</h2>
+            <span class="meta"><WeekNav :week-start="store.weekStart" compact @change="store.setWeek($event)" /></span>
+          </div>
+          <div class="letters" aria-hidden="true"><span v-for="(l, i) in WEEKDAY_LETTERS" :key="i" :class="{ now: days[i] === today }">{{ l }}</span></div>
+          <div v-for="t in store.trackers" :key="t.id" class="prow" :class="{ inactive: !t.active }">
+            <RouterLink :to="{ name: 'habit', params: { id: t.id } }" class="pname">
+              <HabitIcon :tracker="t" :size="28" />
+              <span class="truncate">{{ t.name }}</span>
+              <span v-if="t.streak > 1" class="streak num"><PhFlame weight="fill" />{{ t.streak }}</span>
+            </RouterLink>
             <span class="cells">
-              <button v-for="d in t.days" :key="d.date" type="button" class="dcell" :class="[cellState(t, d), { today: d.date === today() }]" :aria-label="`${t.name} ${d.date}`" :disabled="d.date > today()" v-bind="cellPress(t, d)" @click="cellTap(t, d)">{{ cellText(t, d) }}</button>
+              <button v-for="d in t.days" :key="d.date" type="button" class="cell" :class="[cellClass(t, d), { today: d.date === today }]" :aria-label="cellLabel(t, d)" :disabled="d.date > today" v-bind="cellPress(t, d)" @click="cellTap(t, d)">{{ cellText(t, d) }}</button>
             </span>
-            <button type="button" class="link-btn edit" @click="editing = t">edit</button>
           </div>
-          <div v-if="charts[t.id]" class="pchart">
-            <LineChart :points="chartPoints(t, charts[t.id])" :target="chartTarget(t, charts[t.id])" :unit="weeklyChart(t, charts[t.id]) ? 'per week' : t.unit || ''" />
-            <div class="muted xs">{{ chartSummary(t, charts[t.id]) }}</div>
-          </div>
-        </template>
-      </section>
-    </template>
+        </section>
+        <label class="check pcheck"><input v-model="store.includeInactive" type="checkbox" @change="store.load()" /> Show archived habits</label>
+      </template>
 
-    <section v-for="group in store.grouped" v-else :key="group.area" class="card group">
-      <div class="card-head">
-        <h2><span class="dot" :style="{ background: group.color }" aria-hidden="true"></span>{{ group.area }}</h2>
-      </div>
-      <div class="table-wrap">
-        <table class="ui grid">
-          <thead>
-            <tr>
-              <th class="name"></th>
-              <th v-for="d in store.week.trackers[0].days" :key="d.date" class="day" :class="{ today: d.date === today() }">{{ shortDay(d.date) }}</th>
-              <th class="num">week</th>
-              <th class="num">streak</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody>
-            <template v-for="t in group.trackers" :key="t.id">
-              <tr :class="{ inactive: !t.active }">
+      <!-- Desktop: a table per area. -->
+      <section v-for="group in store.grouped" v-else :key="group.area" class="card group">
+        <div class="card-head">
+          <h2><span class="dot" :style="{ background: group.color }" aria-hidden="true"></span>{{ group.area }}</h2>
+        </div>
+        <div class="table-wrap">
+          <table class="ui grid">
+            <thead>
+              <tr>
+                <th class="name"></th>
+                <th v-for="d in days" :key="d" class="day" :class="{ today: d === today }">{{ shortDay(d) }}</th>
+                <th class="num">week</th>
+                <th class="num">streak</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="(t, i) in group.trackers" :key="t.id" :class="{ inactive: !t.active }">
                 <td class="name">
-                  <button type="button" class="tname" :aria-expanded="Boolean(charts[t.id])" :title="charts[t.id] ? 'Hide chart' : 'Show chart since created'" @click="toggleChart(t)">
-                    {{ t.name }}<PhCaretDown class="caret" :class="{ open: charts[t.id] }" aria-hidden="true" />
-                  </button>
-                  <div class="muted xs">
-                    {{ t.type.replace('_', ' ') }}<span v-if="t.target_value && t.type !== 'daily_bool'">, target {{ t.target_value }}{{ t.unit ? ' ' + t.unit : '' }} per {{ t.target_period }}</span>
-                  </div>
+                  <RouterLink :to="{ name: 'habit', params: { id: t.id } }" class="tname">
+                    <HabitIcon :tracker="t" :size="30" />
+                    <span class="tname-text">
+                      <span class="truncate">{{ t.name }}</span>
+                      <span class="muted xs">{{ scheduleLabel(t) }}<template v-if="targetLabel(t) && !isWeekly(t)"> · {{ targetLabel(t) }}</template><template v-if="t.reminder_time"> · {{ t.reminder_time }}</template></span>
+                    </span>
+                  </RouterLink>
                 </td>
-                <td v-for="d in t.days" :key="d.date" class="cell" :class="{ met: d.met, has: d.value !== null, today: d.date === today(), future: d.date > today(), count: t.type !== 'daily_bool' }">
-                  <button v-if="isGrid(t)" type="button" class="tick" :class="{ bool: t.type === 'daily_bool' }" :title="d.note || (t.type === 'daily_bool' ? 'Click to toggle' : 'Click for +1, right-click to set a value')" :aria-label="`${t.name} ${d.date}`" :aria-pressed="t.type === 'daily_bool' ? Boolean(d.met) : undefined" :disabled="d.date > today()" v-bind="cellPress(t, d)" @click="cellTap(t, d)">
-                    <PhCheck v-if="t.type === 'daily_bool' && d.met" weight="bold" class="mark" />
-                    <span v-else class="num">{{ cellLabel(t, d) }}</span>
-                  </button>
-                  <button v-else type="button" class="tick value" :title="d.note || 'Click to set a value'" :aria-label="`${t.name} ${d.date}`" :disabled="d.date > today()" @click="promptValue(t, d)"><span class="num">{{ cellLabel(t, d) }}</span></button>
-                  <button v-if="t.type !== 'daily_bool' && d.value" type="button" class="minus" :aria-label="`${t.name} ${d.date}: one less`" title="One less" @click.stop="cellMinus(t, d)"><PhMinus weight="bold" /></button>
+                <td v-for="d in t.days" :key="d.date" class="c">
+                  <button type="button" class="cell" :class="[cellClass(t, d), { today: d.date === today, wide: !isBool(t) && !isCount(t) }]" :title="d.note || ''" :aria-label="cellLabel(t, d)" :disabled="d.date > today" v-bind="cellPress(t, d)" @click="cellTap(t, d)">{{ cellText(t, d) }}</button>
                 </td>
                 <td class="num">
-                  <span v-if="t.type === 'daily_bool'">{{ Math.round(t.completion * 100) }}%</span>
-                  <span v-else>{{ Math.round(t.week_total * 10) / 10 }}<span v-if="t.target_value && t.target_period === 'week'" class="muted"> / {{ t.target_value }}</span></span>
+                  <span v-if="isWeekly(t)">{{ fmt(t.week_total) }}<span v-if="t.target_value" class="muted"> / {{ fmt(t.target_value) }}</span></span>
+                  <span v-else-if="t.completion !== null">{{ Math.round(t.completion * 100) }}%</span>
+                  <span v-else class="muted">-</span>
                 </td>
-                <td class="num">{{ t.streak }}</td>
+                <td class="num"><span class="streak"><PhFlame v-if="t.streak" weight="fill" />{{ t.streak }}</span></td>
                 <td class="actions">
-                  <button type="button" class="link-btn" @click="toggleChart(t)">{{ charts[t.id] ? 'hide chart' : 'chart' }}</button>
-                  <button type="button" class="link-btn" @click="editing = t">edit</button>
-                  <button type="button" class="link-btn" @click="archive(t)">{{ t.active ? 'archive' : 'restore' }}</button>
-                  <button type="button" class="link-btn danger" @click="remove(t)">delete</button>
+                  <template v-if="reordering">
+                    <button type="button" class="icon-btn" :disabled="i === 0" :aria-label="`Move ${t.name} up`" @click="move(t, -1)"><PhArrowUp /></button>
+                    <button type="button" class="icon-btn" :disabled="i === group.trackers.length - 1" :aria-label="`Move ${t.name} down`" @click="move(t, 1)"><PhArrowDown /></button>
+                  </template>
+                  <template v-else>
+                    <button type="button" class="link-btn" @click="openEditor(t)">edit</button>
+                    <button type="button" class="link-btn" @click="archive(t)">{{ t.active ? 'archive' : 'restore' }}</button>
+                    <button type="button" class="link-btn danger" @click="deleting = t">delete</button>
+                  </template>
                 </td>
               </tr>
-              <tr v-if="charts[t.id]" class="chart-row">
-                <td :colspan="11">
-                  <LineChart :points="chartPoints(t, charts[t.id])" :target="chartTarget(t, charts[t.id])" :unit="weeklyChart(t, charts[t.id]) ? 'per week' : t.unit || ''" />
-                  <div class="muted xs sums">
-                    <span>{{ chartSummary(t, charts[t.id]) }}</span>
-                    <span v-if="!isGrid(t)" class="weeks">Weekly sums:
-                      <span v-for="w in charts[t.id].weekly.slice(-8)" :key="w.week_start" class="num">{{ w.week_start.slice(5) }}: {{ Math.round(w.sum * 10) / 10 }}</span>
-                    </span>
-                  </div>
-                </td>
-              </tr>
-            </template>
-          </tbody>
-        </table>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <div v-if="store.trackers.length" class="legend muted xs">
+        <span><i class="sw s-done"></i>done</span><span><i class="sw s-part"></i>partly</span><span><i class="sw s-skipped"></i>skipped</span><span><i class="sw s-off"></i>not due</span>
+        <span v-if="!phone">Click to check, right-click for value, note or skip</span>
+        <span v-else>Tap to check, hold for value, note or skip</span>
       </div>
-    </section>
+
+      <TrackerSeriesChart v-if="store.trackers.length" :refresh-key="store.version" />
     </UiLoadGate>
+
+    <CheckInSheet :open="Boolean(sheetTracker)" :tracker="sheetTracker" :day="sheet?.date || ''" :busy="sheetBusy" @save="saveSheet" @clear="clearSheet" @close="sheet = null" />
+    <HabitEditor :open="Boolean(editing)" :tracker="editing === 'new' ? null : editing" :busy="saving" :error="editError" @save="save" @close="editing = null" />
+    <UiConfirm :open="Boolean(deleting)" title="Delete habit?" :message="deleting ? `${deleting.name} and every check-in it has will be gone. Archive keeps the history instead.` : ''" confirm-label="Delete" danger :busy="deleteBusy" @confirm="confirmDelete" @cancel="deleting = null" />
   </div>
 </template>
 
 <style scoped>
 .phead { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-2); margin-bottom: var(--sp-4); }
-.phead h1 { font-size: var(--fs-title); }
-.ptitle { margin-bottom: 10px; }
-.chips { display: flex; flex-wrap: wrap; gap: var(--sp-2); }
-.chip { display: inline-flex; align-items: center; gap: 8px; height: 32px; padding: 0 12px; border-radius: var(--r-pill); border: 1px solid var(--line-2); background: var(--surface); color: var(--ink); font-size: var(--fs-md); font-weight: 500; transition: background-color var(--dur-hover) ease, border-color var(--dur-hover) ease, color var(--dur-hover) ease, transform var(--dur-press) var(--ease-out); }
-.chip:active { transform: scale(0.97); }
-.chip.met { background: var(--ok-soft); border-color: transparent; color: var(--ok); }
-.chip.some { background: var(--warn-soft); border-color: transparent; color: var(--warn); }
-.chip .count { color: var(--ink-3); font-size: var(--fs-sm); }
-.chip.met .count { color: inherit; }
-.wrow { display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: 'name edit' 'cells cells'; gap: 6px 8px; align-items: center; padding: 10px 0; border-top: 1px solid var(--line); }
-.wrow > .tname { grid-area: name; }
-.wrow > .cells { grid-area: cells; }
-.wrow > .edit { grid-area: edit; }
-.wrow .tname { display: inline-flex; align-items: center; gap: 8px; font-size: var(--fs-base); font-weight: 500; min-width: 0; max-width: 100%; min-height: 36px; }
-.wrow .tname > span:last-child, .wrow .tname { white-space: nowrap; }
-.wrow .tname { overflow: hidden; text-overflow: ellipsis; display: block; }
-.wrow .tname .dot { display: inline-block; margin-right: 8px; vertical-align: middle; }
-.cells { display: flex; gap: 4px; width: 100%; }
-.dcell { flex: 1; max-width: 40px; height: 34px; border-radius: var(--r-sm); border: 0; padding: 0; background: var(--surface-2); color: var(--ink-3); font-size: var(--fs-xs); font-weight: 500; display: inline-flex; align-items: center; justify-content: center; }
-.dcell.hit { background: var(--ok-soft); color: var(--ok); }
-.dcell.part { background: var(--warn-soft); color: var(--warn); }
-.dcell.future { opacity: 0.35; }
-.dcell.today { box-shadow: 0 0 0 1px var(--brand) inset; }
-.wrow .edit { font-size: var(--fs-xs); }
-.pchart { padding: 4px 0 10px; }
 .check { display: flex; align-items: center; gap: 6px; font-size: var(--fs-md); white-space: nowrap; }
+.pcheck { margin: 0 4px var(--sp-5); color: var(--ink-3); }
 .card-head h2 { display: flex; align-items: center; gap: 8px; }
 .dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
+
+/* Cells: one vocabulary for the grid and the phone rows. */
+.cell { width: 34px; height: 32px; padding: 0; border-radius: var(--r-md); border: 1px solid var(--line); background: var(--surface); color: var(--ink-2); font-size: var(--fs-sm); font-weight: 600; display: inline-flex; align-items: center; justify-content: center; font-variant-numeric: tabular-nums; touch-action: manipulation; -webkit-touch-callout: none; user-select: none; -webkit-user-select: none; transition: background-color var(--dur-hover) ease, border-color var(--dur-hover) ease, color var(--dur-hover) ease, transform var(--dur-press) var(--ease-out); }
+.cell.wide { width: 46px; }
+.cell:active:not(:disabled) { transform: scale(0.92); }
+.cell:disabled { opacity: 0.35; }
+.cell.today { border-color: var(--brand); }
+.s-done { background: var(--ok); border-color: var(--ok); color: #fff; }
+.s-part { background: var(--warn-soft); border-color: transparent; color: var(--warn); }
+.s-skipped { background: repeating-linear-gradient(135deg, var(--surface-2) 0 4px, var(--surface-3) 4px 6px); border-color: transparent; }
+.s-off { background: transparent; border-style: dashed; border-color: var(--line); }
+.s-done.today { box-shadow: 0 0 0 2px var(--surface), 0 0 0 3px var(--brand); }
+@media (hover: hover) and (pointer: fine) { .cell:not(:disabled):not(.s-done):hover { border-color: var(--ink-4); } }
+
 .grid th.day { text-align: center; }
 .grid th.today { color: var(--brand); }
-.grid td { text-align: center; padding: 6px 4px; }
-.grid td.name { text-align: left; min-width: 150px; padding-left: 0; }
-.tname { font: inherit; font-weight: 500; color: var(--ink); background: none; border: 0; padding: 0; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; text-align: left; }
-.caret { width: 12px; height: 12px; color: var(--ink-3); transition: transform var(--dur-hover) var(--ease-out); }
-.caret.open { transform: rotate(180deg); }
-@media (hover: hover) and (pointer: fine) { .tname:hover { text-decoration: underline; text-underline-offset: 3px; } }
-tr.inactive { opacity: 0.55; }
-.tick {
-  width: 34px;
-  height: 32px;
-  padding: 0;
-  border-radius: var(--r-md);
-  border: 1px solid var(--line);
-  background: var(--surface);
-  color: var(--ink-3);
-  font-size: var(--fs-md);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  transition: background-color var(--dur-hover) ease, border-color var(--dur-hover) ease, color var(--dur-hover) ease, transform var(--dur-press) var(--ease-out);
-}
-.tick.value { width: 48px; }
-.cell { position: relative; }
-.minus { position: absolute; top: 1px; right: 2px; width: 16px; height: 16px; padding: 0; border: 0; border-radius: 50%; background: var(--ink); color: var(--on-ink); display: none; align-items: center; justify-content: center; cursor: pointer; box-shadow: var(--shadow-1); }
-.minus :deep(svg) { width: 10px; height: 10px; }
-@media (hover: hover) and (pointer: fine) { .cell.count:hover .minus { display: inline-flex; } }
-.tick, .dcell, .chip { touch-action: manipulation; -webkit-touch-callout: none; user-select: none; -webkit-user-select: none; }
-.tick:active { transform: scale(0.94); }
-.mark { width: 14px; height: 14px; }
-.cell.has .tick { color: var(--ink); background: var(--surface-2); }
-.cell.met .tick { background: var(--ok-soft); border-color: transparent; color: var(--ok); }
-.cell.today .tick { border-color: var(--brand); }
-.cell.future .tick { opacity: 0.5; }
-@media (hover: hover) and (pointer: fine) { .tick:hover { border-color: var(--line-2); } }
+.grid td { text-align: center; padding: 6px 3px; }
+.grid td.name { text-align: left; min-width: 200px; max-width: 280px; padding-left: 0; }
+.tname { display: flex; align-items: center; gap: 10px; color: var(--ink); text-decoration: none; min-width: 0; }
+.tname:hover { text-decoration: none; }
+.tname-text { display: flex; flex-direction: column; min-width: 0; line-height: 1.3; }
+.tname-text .truncate { font-weight: 600; }
+@media (hover: hover) and (pointer: fine) { .tname:hover .truncate { color: var(--brand); } }
+.streak { display: inline-flex; align-items: center; gap: 3px; color: var(--warn); font-weight: 600; }
+.streak :deep(svg) { width: 13px; height: 13px; }
+tr.inactive, .prow.inactive { opacity: 0.5; }
 .actions { white-space: nowrap; text-align: right; }
 .actions .link-btn { margin-left: var(--sp-2); }
 .link-btn.danger { color: var(--danger); }
-.chart-row td { padding: var(--sp-3) 0 var(--sp-4); text-align: left; }
-.sums { display: flex; flex-wrap: wrap; gap: var(--sp-3); margin-top: 4px; }
-.weeks { display: inline-flex; flex-wrap: wrap; gap: var(--sp-2); }
+
+/* Phone rows */
+.letters, .prow .cells { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; }
+.letters { font-size: var(--fs-xs); font-weight: 600; color: var(--ink-3); text-align: center; margin-bottom: 4px; }
+.letters .now { color: var(--brand); }
+.prow { padding: 10px 0; border-top: 1px solid var(--line); }
+.pname { display: flex; align-items: center; gap: 10px; min-width: 0; color: var(--ink); font-weight: 600; margin-bottom: 8px; text-decoration: none; }
+.pname .streak { margin-left: auto; }
+.prow .cell { width: 100%; height: 36px; }
+
+.legend { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 16px; margin: calc(var(--sp-2) * -1) 4px var(--sp-6); }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.sw { display: inline-block; width: 12px; height: 12px; border-radius: 4px; border: 1px solid var(--line); }
 </style>

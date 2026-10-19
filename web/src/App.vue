@@ -1,19 +1,21 @@
 <script setup>
 // App shell. Desktop: one sidebar carries everything (brand, the capture command, grouped
 // navigation with eyebrows, the account row); the content area is a quiet canvas with room to
-// breathe and no bar glued to the top. Phone: a slim toolbar with the mark and the capture
-// command, and a floating glass tab bar at the bottom (Home, Tasks, Tracking, More).
+// breathe and no bar glued to the top. Phone: a slim toolbar with the menu button, the mark and
+// the capture command; the menu opens the navigation drawer. No tab bar: habits are Home.
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import {
   PhCalendarBlank,
   PhChartLineUp,
+  PhCheckCircle,
+  PhList,
+  PhSquaresFour,
   PhCheckSquare,
   PhClipboardText,
   PhEnvelopeSimple,
   PhGearSix,
   PhGraduationCap,
-  PhHouse,
   PhLightning,
   PhMoon,
   PhNote,
@@ -23,21 +25,21 @@ import {
   PhTimer,
 } from '@phosphor-icons/vue'
 import CaptureBar from './components/CaptureBar.vue'
-import MoreSheet from './components/MoreSheet.vue'
-import TabBar from './components/TabBar.vue'
+import NavDrawer from './components/NavDrawer.vue'
 import UiToast from './components/ui/UiToast.vue'
 import { useTheme } from './composables/useTheme'
-import { NAV } from './router'
+import { NAV, NAV_GROUPS } from './router'
 import { useAuthStore } from './stores/auth'
 
 const auth = useAuthStore()
 const router = useRouter()
 const route = useRoute()
-const moreOpen = ref(false)
+const menuOpen = ref(false)
 const theme = useTheme()
 
 const ICONS = {
-  home: PhHouse,
+  home: PhCheckCircle,
+  overview: PhSquaresFour,
   agenda: PhCalendarBlank,
   tasks: PhCheckSquare,
   goals: PhTarget,
@@ -51,26 +53,19 @@ const ICONS = {
   settings: PhGearSix,
 }
 const items = computed(() => NAV.filter((n) => !n.hidden).map((n) => ({ ...n, icon: ICONS[n.name] })))
-// Sidebar groups: what you look at, what you plan, what you track.
-const GROUPS = [
-  { label: 'Today', names: ['home', 'agenda', 'tasks', 'mail'] },
-  { label: 'Plan', names: ['goals', 'review', 'capture'] },
-  { label: 'Track', names: ['trackers', 'hours', 'study'] },
-]
-const groups = computed(() => GROUPS.map((g) => ({ ...g, items: g.names.map((n) => items.value.find((i) => i.name === n)).filter(Boolean) })))
+const groups = computed(() => NAV_GROUPS.map((g) => ({ ...g, items: g.names.map((n) => items.value.find((i) => i.name === n)).filter(Boolean) })))
 const settingsItem = computed(() => items.value.find((i) => i.name === 'settings'))
-// Phone: what the tab bar does not carry goes under More (Settings has its own row there).
-const TAB_NAMES = new Set(['home', 'tasks', 'trackers', 'settings'])
-const moreItems = computed(() => items.value.filter((n) => !TAB_NAMES.has(n.name)))
+// The habit detail page lights Habits in the navigation.
+const currentName = computed(() => (route.name === 'habit' ? 'trackers' : String(route.name || '')))
 const initial = computed(() => (auth.user?.email || '?')[0].toUpperCase())
 
 async function logout() {
-  moreOpen.value = false
+  menuOpen.value = false
   await auth.logout()
   router.push({ name: 'login' })
 }
 
-watch(() => route.fullPath, () => (moreOpen.value = false))
+watch(() => route.fullPath, () => (menuOpen.value = false))
 
 const scrolled = ref(false)
 function onScroll() {
@@ -86,6 +81,7 @@ onBeforeUnmount(() => window.removeEventListener('scroll', onScroll))
 <template>
   <div class="shell" :class="{ authed: auth.isAuthenticated }">
     <header v-if="auth.isAuthenticated" class="topbar" :class="{ scrolled }">
+      <button type="button" class="icon-btn menu-btn" aria-label="Open menu" :aria-expanded="menuOpen" @click="menuOpen = true"><PhList weight="regular" /></button>
       <RouterLink to="/" class="topbar-brand" aria-label="Pozzy home">
         <img :src="theme.isDark.value ? '/mark-dark.svg' : '/favicon.svg'" alt="" class="mark" width="26" height="26" />
       </RouterLink>
@@ -101,7 +97,7 @@ onBeforeUnmount(() => window.removeEventListener('scroll', onScroll))
         <CaptureBar class="rail-capture" />
         <div v-for="g in groups" :key="g.label" class="group">
           <span class="eyebrow group-label">{{ g.label }}</span>
-          <RouterLink v-for="item in g.items" :key="item.name" :to="{ name: item.name }" class="nav-item" :class="{ active: route.name === item.name }" :aria-current="route.name === item.name ? 'page' : undefined">
+          <RouterLink v-for="item in g.items" :key="item.name" :to="{ name: item.name }" class="nav-item" :class="{ active: currentName === item.name }" :aria-current="currentName === item.name ? 'page' : undefined">
             <component :is="item.icon" class="nav-icon" aria-hidden="true" />
             <span>{{ item.label }}</span>
           </RouterLink>
@@ -130,8 +126,7 @@ onBeforeUnmount(() => window.removeEventListener('scroll', onScroll))
       </main>
     </div>
 
-    <TabBar v-if="auth.isAuthenticated" :current="String(route.name || '')" :more-active="moreOpen" @more="moreOpen = true" />
-    <MoreSheet :open="moreOpen" :items="moreItems" :current="String(route.name || '')" :email="auth.user?.email || ''" @close="moreOpen = false" @logout="logout" />
+    <NavDrawer v-if="auth.isAuthenticated" :open="menuOpen" :groups="groups" :current="currentName" :email="auth.user?.email || ''" @close="menuOpen = false" @logout="logout" />
     <UiToast />
   </div>
 </template>
@@ -192,7 +187,9 @@ onBeforeUnmount(() => window.removeEventListener('scroll', onScroll))
 .avatar { width: 28px; height: 28px; border-radius: 50%; display: inline-grid; place-items: center; background: linear-gradient(180deg, var(--brand-2), var(--brand)); color: #fff; font-size: var(--fs-sm); font-weight: 600; box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.3); flex: none; }
 .email { flex: 1; min-width: 0; font-size: var(--fs-sm); color: var(--ink-3); }
 .page { flex: 1; min-width: 0; width: 100%; }
-.topbar-brand { flex: none; display: inline-flex; padding: 4px; margin-left: -4px; border-radius: var(--r-pill); }
+.topbar-brand { flex: none; display: inline-flex; padding: 4px; border-radius: var(--r-pill); }
+.menu-btn { flex: none; margin-left: -8px; color: var(--ink); }
+.menu-btn svg { width: 22px; height: 22px; }
 
 @media (max-width: 1023px) {
   .rail { display: none; }

@@ -3,12 +3,15 @@ import { useAuthStore } from '../stores/auth'
 
 // Order and names from docs/ROUTES.md. Widgets and views link by route name.
 export const NAV = [
-  { path: '/', name: 'home', label: 'Home', view: () => import('../views/HomeView.vue') },
+  // Habit-first (2026-10-19): Home is today's habits; the old widget dashboard lives at /overview.
+  { path: '/', name: 'home', label: 'Today', view: () => import('../views/TodayView.vue') },
+  { path: '/trackers', name: 'trackers', label: 'Habits', view: () => import('../views/TrackersView.vue') },
+  { path: '/trackers/:id', name: 'habit', label: 'Habit', view: () => import('../views/HabitView.vue'), hidden: true },
+  { path: '/overview', name: 'overview', label: 'Overview', view: () => import('../views/HomeView.vue') },
   { path: '/agenda', name: 'agenda', label: 'Agenda', view: () => import('../views/AgendaView.vue') },
   { path: '/tasks', name: 'tasks', label: 'Tasks', view: () => import('../views/TasksView.vue') },
   { path: '/goals', name: 'goals', label: 'Goals', view: () => import('../views/GoalsView.vue') },
   { path: '/mail', name: 'mail', label: 'Mail', view: () => import('../views/MailView.vue') },
-  { path: '/trackers', name: 'trackers', label: 'Tracking', view: () => import('../views/TrackersView.vue') },
   { path: '/hours', name: 'hours', label: 'Hours', view: () => import('../views/HoursView.vue') },
   { path: '/capture', name: 'capture', label: 'Capture', view: () => import('../views/CaptureView.vue') },
   { path: '/study', name: 'study', label: 'Study', view: () => import('../views/StudyView.vue') },
@@ -16,6 +19,13 @@ export const NAV = [
   { path: '/notes', name: 'notes', label: 'Notes', view: () => import('../views/NotesView.vue'), hidden: true },
   { path: '/review', name: 'review', label: 'Review', view: () => import('../views/WeeklyReviewView.vue') },
   { path: '/settings', name: 'settings', label: 'Settings', view: () => import('../views/SettingsView.vue') },
+]
+
+// Navigation groups, shared by the desktop sidebar and the phone drawer.
+export const NAV_GROUPS = [
+  { label: 'Habits', names: ['home', 'trackers'] },
+  { label: 'Plan', names: ['overview', 'agenda', 'tasks', 'goals', 'review'] },
+  { label: 'More', names: ['mail', 'hours', 'capture', 'study'] },
 ]
 
 const routes = [
@@ -32,6 +42,7 @@ const routes = [
 const router = createRouter({
   history: createWebHistory(),
   routes,
+  scrollBehavior: (to, from, saved) => saved || (to.name === from.name ? undefined : { top: 0 }),
 })
 
 router.beforeEach(async (to) => {

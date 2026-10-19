@@ -9,11 +9,11 @@ export default defineConfig({
     vue(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['favicon.svg', 'mark-dark.svg', 'apple-touch-icon.png', 'logo.png', 'fonts/geist-latin.woff2'],
+      includeAssets: ['push-sw.js', 'favicon.svg', 'mark-dark.svg', 'apple-touch-icon.png', 'logo.png', 'fonts/geist-latin.woff2'],
       manifest: {
         name: 'Pozzy',
         short_name: 'Pozzy',
-        description: 'Personal operating system: agenda, mail triage, tasks, goals, tracking, hours, study.',
+        description: 'Habits first: check in every day, keep streaks, see your year. Plus agenda, tasks, mail and hours.',
         theme_color: '#F4F5F9',
         background_color: '#F4F5F9',
         display: 'standalone',
@@ -26,6 +26,8 @@ export default defineConfig({
         ],
       },
       workbox: {
+        // Push and notification click handlers for habit reminders (public/push-sw.js).
+        importScripts: ['/push-sw.js'],
         // App shell and built assets are precached (cache-first). API is network-first with a short fallback.
         navigateFallback: '/index.html',
         navigateFallbackDenylist: [/^\/api\//],

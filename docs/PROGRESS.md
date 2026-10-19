@@ -1,5 +1,19 @@
 # Pozzy progress
 
+## Habit-first update, 2026-10-19 (migration applied, code not deployed)
+
+Wouter: habits are practically the only module he uses; make the app about them, keep the rest reachable through a menu. Plan section 0 records the new scope.
+
+1. Backend. Migration `j1000000habits` (applied to Supabase on 2026-10-19 with Wouter's go-ahead; 8 trackers now `daily`, 95 entries `done`, RLS on the new table, no anon/authenticated grants): `trackers.schedule` / `schedule_days` / `schedule_n` / `icon` / `reminder_time` / `last_reminded_on`, `tracker_entries.status` (done, skipped), table `push_subscriptions`. Service: `is_due` (every day, weekday bitmask, flexible every N days), streaks walk forward over due days only (skips and off days pass, today never breaks), best streak, completion over elapsed due days (today counts once met, None when nothing was due), skips never add to week totals. New endpoints `GET /api/trackers/<id>/stats` (streaks, 30 day and all time rate, 53 week heatmap, months, weekdays, notes), `POST /api/trackers/reorder`, `PUT .../entries` takes `status` and clears a note on "". Series weeks carry `due_days` so the chart divides by due days. Briefing `trackers_open` and the review's slipped list follow schedules.
+2. Navigation and Today. `/` is `TodayView` (ring, week strip to check in for past days, due list, This week targets, Not due collapsed, reloads when the PWA returns on a new day); the widget grid moved to `/overview`. Tab bar and More sheet removed; `NavDrawer` restored from git (spring drag) with groups from `NAV_GROUPS`, opened by a menu button in the phone toolbar; the desktop sidebar uses the same groups. Shared `components/habits/*`: `HabitRow`, `CheckInSheet` (done, not done, skip, value stepper, note), `HabitEditor` (icon, kind, schedule, goal, area, reminder), `WeekStrip`, `ProgressRing`, `HabitIcon`; `ui/UiConfirm`. Every `window.prompt` and `window.confirm` in the habit screens is gone.
+3. Stats page `/trackers/:id` (`HabitView`): tiles, heatmap, per month and per weekday bars, history chart (running week left out), notes, check in today, edit, archive, delete.
+4. Reminders. `integrations/webpush.py` (pywebpush, gone subscriptions deleted), `/api/push/config|subscriptions|test`, job `habit_reminders` every 5 min (due and open, once per day, dropped when over an hour late, off switch Settings `habit_reminders`). Web: `public/push-sw.js` loaded by the generated worker via `importScripts`, `lib/push.js`, Settings card "Habit reminders". VAPID pair generated into the local `.env`; `api/scripts/vapid_keys.py` makes a new one.
+5. Docs: plan section 0 and 6.6, ROUTES, WIDGETS, JOBS, PRODUCT, CLAUDE.md.
+
+Tests: 235 pass (new `tests/a/test_habits.py`, `tests/a/test_habit_reminders.py`). The two planner tests that failed since the DST change now build Amsterdam wall-clock times. Verified on the local SQLite stack with Playwright at 390 and 1440, light and dark: no console errors, no failed API calls, no horizontal overflow; a click-through ticked, undid, skipped with a note, logged a value, created a habit on set days and checked in on a past day, and the rows landed as expected. Not verified: a real push delivery (headless Chrome cannot subscribe).
+
+Next (Wouter): add `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` (from `.env`) and `VAPID_SUBJECT=mailto:<your address>` to the Railway api service, commit and push, then on the iPhone open the installed app, Settings, Turn on for this device, Send a test. Give habits a reminder time and icon in their editor.
+
 ## Phone tab bar, 2026-09-23 (later)
 
 Wouter: replace the hamburger drawer on the phone PWA with a bottom nav bar in the iOS 26 glass style (from `~/Desktop/inspo-nav-bar.png`), icons only, Home, Tasks, Tracking and More.

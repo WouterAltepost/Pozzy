@@ -16,3 +16,4 @@ icalendar~=6.1
 recurring-ical-events~=3.4
 anthropic~=0.84
 pydantic~=2.9
+pywebpush~=2.0

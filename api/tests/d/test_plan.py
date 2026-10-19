@@ -5,6 +5,14 @@ from datetime import date, timedelta
 from app.modules.ai import planner
 
 
+def _local(day, hour, minute):
+    """A wall-clock time in Amsterdam as UTC, right on both sides of a DST change."""
+    from datetime import datetime, timezone
+    from zoneinfo import ZoneInfo
+
+    return datetime(day.year, day.month, day.day, hour, minute, tzinfo=ZoneInfo("Europe/Amsterdam")).astimezone(timezone.utc)
+
+
 def _next_monday():
     t = date.today()
     return t + timedelta(days=(7 - t.weekday()) % 7 or 7)
@@ -94,8 +102,8 @@ def test_options_carry_neighbours_and_buffer_keeps_distance(client, headers, fak
     # A class on campus from 09:30 to 12:00 on the Monday.
     acct = CalendarAccount(name="iCloud", caldav_url="https://caldav.example", username="x", secret_ref="env:x", enabled=True)
     db.session.add(acct); db.session.flush()
-    start = datetime(monday.year, monday.month, monday.day, 7, 30, tzinfo=timezone.utc)  # 09:30 Amsterdam
-    db.session.add(CalendarEvent(account_id=acct.id, calendar_url="c", uid="u1", title="Sprint 3 NGS", location="AM00.02.270", start=start, end=start.replace(hour=10, minute=0), all_day=False))
+    start = _local(monday, 9, 30)
+    db.session.add(CalendarEvent(account_id=acct.id, calendar_url="c", uid="u1", title="Sprint 3 NGS", location="AM00.02.270", start=start, end=start + timedelta(hours=2, minutes=30), all_day=False))
     db.session.commit()
     client.post("/api/tasks", json={"title": "Buy new book", "estimated_minutes": 15, "due_date": monday.isoformat()}, headers=headers)
     data = client.post("/api/ai/plan", json={"start": monday.isoformat(), "days": 1}, headers=headers).get_json()["data"]
@@ -124,10 +132,10 @@ def test_rules_become_buffers_before_the_slot_search(client, headers, fake_claud
     client.put("/api/settings", json={"ai_rules": ["My commute to school takes 45 minutes, so nothing right before or after a class on campus.", "Leave 1 hour free after workouts."]}, headers=headers)
     acct = CalendarAccount(name="iCloud", caldav_url="https://caldav.example", username="x", secret_ref="env:x", enabled=True)
     db.session.add(acct); db.session.flush()
-    cls = datetime(monday.year, monday.month, monday.day, 7, 30, tzinfo=timezone.utc)  # 09:30 to 12:00 Amsterdam
-    gym = datetime(monday.year, monday.month, monday.day, 12, 0, tzinfo=timezone.utc)  # 14:00 to 15:00 Amsterdam
-    db.session.add(CalendarEvent(account_id=acct.id, calendar_url="c", uid="u1", title="Sprint 3 NGS", location="AM00.02.270", start=cls, end=cls.replace(hour=10, minute=0), all_day=False))
-    db.session.add(CalendarEvent(account_id=acct.id, calendar_url="c", uid="u2", title="Workout Push Day", location="", start=gym, end=gym.replace(hour=13), all_day=False))
+    cls = _local(monday, 9, 30)  # 09:30 to 12:00 Amsterdam
+    gym = _local(monday, 14, 0)  # 14:00 to 15:00 Amsterdam
+    db.session.add(CalendarEvent(account_id=acct.id, calendar_url="c", uid="u1", title="Sprint 3 NGS", location="AM00.02.270", start=cls, end=cls + timedelta(hours=2, minutes=30), all_day=False))
+    db.session.add(CalendarEvent(account_id=acct.id, calendar_url="c", uid="u2", title="Workout Push Day", location="", start=gym, end=gym + timedelta(hours=1), all_day=False))
     db.session.commit()
     client.post("/api/tasks", json={"title": "Buy new book", "estimated_minutes": 15, "due_date": monday.isoformat()}, headers=headers)
     # First call: constraints. Second call: ranking.

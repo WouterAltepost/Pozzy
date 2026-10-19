@@ -8,7 +8,7 @@ Wouter, solo developer, thinks in systems and workflows, intermediate coder. He 
 
 ## Project
 
-Single-user personal dashboard. Modules: Homepage, Agenda (iCloud CalDAV read/write), Mail (IMAP read-only, 4 Google accounts, Haiku classification), Tasks (Eisenhower + due date + Claude slot suggestions), Goals (weekly goals + daily three do's with rollover), Tracking (habits), Hours (time per area), Capture (NL quick inbox), Study, Notes, Weekly Review, Settings.
+Single-user personal dashboard, habit-first since 2026-10-19 (plan section 0: Home is the habit Today screen, the rest sits behind the menu). Modules: Homepage, Agenda (iCloud CalDAV read/write), Mail (IMAP read-only, 4 Google accounts, Haiku classification), Tasks (Eisenhower + due date + Claude slot suggestions), Goals (weekly goals + daily three do's with rollover), Tracking (habits), Hours (time per area), Capture (NL quick inbox), Study, Notes, Weekly Review, Settings.
 
 Life areas: Study, Work, Personal, Health. Timezone Europe/Amsterdam. Week starts Monday. UI in English.
 

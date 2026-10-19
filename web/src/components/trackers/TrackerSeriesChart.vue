@@ -1,6 +1,6 @@
 <script setup>
 // Live chart of every habit on one scale: per week, how much of its target each habit hit.
-// Daily habits: days done out of seven. Weekly counts: sum over target. Numeric with a daily
+// Daily habits: days done out of the days they were due. Weekly counts: sum over target. Numeric with a daily
 // target: weekly average over target. Numeric without a target: scaled to its own best week
 // (marked in the legend). Legend chips toggle series; hidden set and range persist per device.
 // A week without hits plots as 0% so the line drops and comes back; only weeks before a habit
@@ -74,8 +74,9 @@ const series = computed(() => {
     let pct
     let label
     if (t.type === 'daily_bool') {
-      pct = s.weekly.map((w) => (w.started ? (w.met_days / 7) * 100 : null))
-      label = (w) => (w.started ? `${w.met_days} of 7 days` : 'not started')
+      // Done out of the days it was due (so a Mon, Wed, Fri habit can reach 100%).
+      pct = s.weekly.map((w) => (w.started && w.due_days ? (w.met_days / w.due_days) * 100 : null))
+      label = (w) => (!w.started ? 'not started' : w.due_days ? `${w.met_days} of ${w.due_days} due days` : 'nothing due yet')
     } else if (t.type === 'weekly_count') {
       const target = t.target_value || null
       if (target) {
@@ -100,6 +101,9 @@ const series = computed(() => {
         label = (w) => (w.count ? `avg ${round(w.avg)}${unit}` : 'no entries')
       }
     }
+    // The running week with nothing logged yet is not a 0: it simply has not happened.
+    const last = s.weekly.length - 1
+    if (t.type !== 'daily_bool' && last >= 0 && !s.weekly[last].count) pct[last] = null
     return { id: t.id, name: t.name, type: t.type, color, scaled, pct, label, weekly: s.weekly }
   })
 })

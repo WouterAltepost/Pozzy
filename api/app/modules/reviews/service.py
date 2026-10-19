@@ -35,7 +35,7 @@ def deterministic_reflection(stats: dict) -> str:
     lines = [f"Week of {stats['week_start']}: {g['done']} of {g['total']} weekly goals done, {t['done']} tasks completed, {h['total_hours']} hours logged."]
     if d["total"]:
         lines.append(f"Three do's: {d['done']} of {d['total']} done ({round((d['rate'] or 0) * 100)}%), {d['rolled']} rolled over.")
-    slipped = [tr["name"] for tr in stats["trackers"] if tr["completion"] < 0.5]
+    slipped = [tr["name"] for tr in stats["trackers"] if tr["completion"] is not None and tr["completion"] < 0.5]
     if slipped:
         lines.append("Habits under half: " + ", ".join(slipped) + ".")
     behind = [f"{a['area']} {a['hours']}/{a['target_hours']}h" for a in h["areas"] if a["target_hours"] and a["hours"] < a["target_hours"]]

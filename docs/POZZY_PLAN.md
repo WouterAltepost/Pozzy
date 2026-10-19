@@ -1,8 +1,20 @@
 # Pozzy (Personal Operating System) — v1 Plan
 
-Status: planning complete, ready to build. Last updated 2026-09-14.
+Status: v1 built and deployed. Habit-first update 2026-10-19 (section 0). Last updated 2026-10-19.
 
 Owner: Wouter Altepost. Built with Claude Code. Deployed on Railway.
+
+## 0. Habit-first (2026-10-19)
+
+Wouter uses Pozzy almost only for habit tracking, so the app turned around that module. The other modules stay fully working and reachable from the menu; nothing was removed.
+
+- Home (`/`, route `home`) is Today: the habits due today with a progress ring, a week strip to check in for earlier days, week targets, and the habits not due today (collapsed). The old widget dashboard moved to `/overview` (route `overview`).
+- Navigation: the phone tab bar is gone; a menu button in the phone toolbar opens a drawer. Desktop keeps the sidebar, grouped Habits, Plan, More.
+- Schedules (`trackers.schedule`): every day, set weekdays (`schedule_days` bitmask, Monday bit 0), or every N days (`schedule_n`, flexible: due again N days after it was last done). Week habits (weekly_count, or a target per week) are judged on the week total. Days a habit is not due never break its streak.
+- Skips (`tracker_entries.status = skipped`): an excused day, value 0, no streak break, left out of completion. Every check-in can carry a note.
+- Stats per habit (`/trackers/:id`, `GET /api/trackers/<id>/stats`): current and best streak, last 30 days and all time rate, a 53 week heatmap, completion per month and weekday, history chart, notes.
+- Reminders: per habit `reminder_time`; job `habit_reminders` (every 5 min) sends a Web Push when the habit is due and still open, once per day. Devices subscribe in Settings (`push_subscriptions`). Needs `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT`. On iPhone only from the installed home screen app.
+- Migration `j1000000habits`.
 
 ## 1. What Pozzy is
 
@@ -156,8 +168,8 @@ List and Eisenhower board (four quadrants, drag between them). Fields per sectio
 ### 6.5 Goals
 Weekly goals for the current week with progress, plus the three do's for today and tomorrow. Setting tomorrow's do's in the evening is the intended flow. Rollover job at 00:05: any undone do from yesterday is copied to today with `rolled_from_date` set; a do rolled twice shows a warning badge. Optional "suggest three do's" (Claude picks from urgent/important tasks and deadlines).
 
-### 6.6 Tracking
-Trackers grouped by area. Weekly grid (Mon–Sun columns) for bool and count types; numeric and duration types get a line chart over the last 8 weeks. Streaks and weekly completion percentage. Create, edit, archive trackers.
+### 6.6 Habits (was Tracking)
+The main module since 2026-10-19 (section 0). Today screen at `/`, the week grid per area with reorder at `/trackers`, a stats page per habit at `/trackers/:id`. Check-in sheet for value, note and skip; schedules, skips, streaks over due days only, push reminders. Create, edit, archive, delete habits.
 
 ### 6.7 Hours
 Log minutes per area/tag, optionally linked to a task. Week table with per-area totals against targets. Simple timer (start/stop) that creates a log on stop.
@@ -188,6 +200,7 @@ Working window, timezone, hour targets per area, calendar and mail accounts (add
 | daily_briefing | daily 07:00 |
 | weekly_review_draft | Sunday 18:00 |
 | ai_cost_rollup | daily 23:55 |
+| habit_reminders | every 5 min (Web Push for due, open habits at their reminder time) |
 
 Jobs must be idempotent and must log to an `job_runs` table (name, started, finished, ok, message) shown in Settings so failures are visible.
 
@@ -211,7 +224,7 @@ REST, JSON, all under `/api`. One blueprint per module: `auth` (verify), `tasks`
 
 Supabase project (URL, anon key, service key, Postgres connection string). Anthropic API key. Apple app-specific password and Apple ID email. App passwords for the three Gmail accounts and the Workspace account (each needs 2-step verification enabled). Railway project with two services. Decide the domain (e.g. pozzy.up.railway.app is fine for v1).
 
-Env vars: `DATABASE_URL`, `SUPABASE_URL`, `SUPABASE_JWT_SECRET`, `ANTHROPIC_API_KEY`, `ICLOUD_USERNAME`, `ICLOUD_APP_PASSWORD`, `MAIL_ACCOUNTS_JSON` (or per-account vars), `SECRET_KEY`, `TZ=Europe/Amsterdam`.
+Env vars: `DATABASE_URL`, `SUPABASE_URL`, `SUPABASE_JWT_SECRET`, `ANTHROPIC_API_KEY`, `ICLOUD_USERNAME`, `ICLOUD_APP_PASSWORD`, `MAIL_ACCOUNTS_JSON` (or per-account vars), `SECRET_KEY`, `TZ=Europe/Amsterdam`. Habit reminders: `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` (generate with `api/scripts/vapid_keys.py`).
 
 ## 11. Explicitly out of v1
 

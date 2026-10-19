@@ -2,7 +2,10 @@ from flask import Blueprint, request
 
 from ...auth import require_auth
 from ...errors import fail, ok
-from ...models.tracker import TARGET_PERIODS, TRACKER_TYPES
+import re
+
+from ...models.tracker import SCHEDULES, TARGET_PERIODS, TRACKER_TYPES
+from ...models.tracker_entry import ENTRY_STATUSES
 from ...utils.dates import today_local, week_start_of
 from ...utils.validation import (
     date_from_str,
@@ -13,6 +16,7 @@ from ...utils.validation import (
     parse_number,
     parse_str,
     parse_uuid,
+    ValidationError,
     register_validation_handler,
     require_object,
 )
@@ -40,6 +44,19 @@ def _fields(body: dict, partial: bool) -> dict:
         out["active"] = parse_bool(body, "active", default=True)
     if "sort_order" in body:
         out["sort_order"] = parse_int(body, "sort_order", min_value=0)
+    if "schedule" in body:
+        out["schedule"] = parse_enum(body, "schedule", SCHEDULES, default="daily")
+    if "schedule_days" in body:
+        out["schedule_days"] = parse_int(body, "schedule_days", min_value=0, max_value=127)
+    if "schedule_n" in body:
+        out["schedule_n"] = parse_int(body, "schedule_n", min_value=2, max_value=60)
+    if "icon" in body:
+        out["icon"] = parse_str(body, "icon", max_len=40)
+    if "reminder_time" in body:
+        value = parse_str(body, "reminder_time", max_len=5)
+        if value and not re.fullmatch(r"([01]\d|2[0-3]):[0-5]\d", value):
+            raise ValidationError("'reminder_time' must be HH:MM")
+        out["reminder_time"] = value or None
     return out
 
 
@@ -90,6 +107,16 @@ def series():
     return ok(service.series(max(1, min(weeks, 104)), include_inactive))
 
 
+@bp.post("/reorder")
+@require_auth
+def reorder():
+    body = require_object(request.get_json(silent=True))
+    ids = body.get("ids")
+    if not isinstance(ids, list) or not ids:
+        return fail("validation_error", "'ids' must be a non-empty list", 400)
+    return ok([t.to_dict() for t in service.reorder(ids)])
+
+
 @bp.patch("/<tracker_id>")
 @require_auth
 def update_tracker(tracker_id):
@@ -124,6 +151,16 @@ def history(tracker_id):
     return ok(service.history(tracker, max(1, min(weeks, 52))))
 
 
+@bp.get("/<tracker_id>/stats")
+@require_auth
+def stats(tracker_id):
+    """Streaks, rates, heatmap, months, weekdays and notes for the habit detail page."""
+    tracker, err = _load(tracker_id)
+    if err:
+        return err
+    return ok(service.stats(tracker))
+
+
 @bp.put("/<tracker_id>/entries")
 @require_auth
 def upsert_entry(tracker_id):
@@ -132,11 +169,12 @@ def upsert_entry(tracker_id):
         return err
     body = require_object(request.get_json(silent=True))
     day = parse_date(body, "date") or today_local()
-    value = parse_number(body, "value", required=True)
+    status = parse_enum(body, "status", ENTRY_STATUSES, default="done")
+    value = parse_number(body, "value", required=status != "skipped") or 0
     note = parse_str(body, "note")
     if value < 0:
         return fail("validation_error", "'value' must not be negative", 400)
-    entry = service.upsert_entry(tracker, day, value, note)
+    entry = service.upsert_entry(tracker, day, value, note, status)
     return ok(_entry_payload(tracker, entry, day))
 
 

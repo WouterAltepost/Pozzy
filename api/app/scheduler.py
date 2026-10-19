@@ -24,6 +24,7 @@ JOBS = [
     ("daily_briefing", "app.jobs.daily_briefing", None),
     ("weekly_review_draft", "app.jobs.weekly_review_draft", "0 18 * * 0"),
     ("ai_cost_rollup", "app.jobs.ai_cost_rollup", "55 23 * * *"),
+    ("habit_reminders", "app.jobs.habit_reminders", "*/5 * * * *"),
 ]
 
 _started = False
