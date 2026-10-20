@@ -253,8 +253,8 @@ async function remove() {
       </div>
 
       <section v-if="history && chartPoints.length > 1" class="card">
-        <div class="card-head"><h2>History</h2><span class="meta">{{ weeklyChart ? 'per week' : unitOf(t) || 'per day' }}</span></div>
-        <LineChart :points="chartPoints" :target="chartTarget" :unit="weeklyChart ? 'per week' : unitOf(t)" />
+        <div class="card-head"><h2>History</h2><span class="meta">{{ weeklyChart ? 'Total per week' : chartPoints.length > 60 ? `Weekly average${unitOf(t) ? ', ' + unitOf(t) : ''}` : chartPoints.length > 21 ? `7 day average${unitOf(t) ? ', ' + unitOf(t) : ''}` : unitOf(t) || 'Per day' }}</span></div>
+        <LineChart :points="chartPoints" :target="chartTarget" :unit="weeklyChart ? 'per week' : unitOf(t)" :color="t.area_color || ''" />
       </section>
 
       <section v-if="stats" class="card">
