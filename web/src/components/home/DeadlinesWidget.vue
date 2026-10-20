@@ -5,21 +5,22 @@ import { onMounted, ref } from 'vue'
 import { upcoming } from '../../api/study'
 import { daysUntil, formatDateTime, formatDay } from '../../lib/dates'
 import UiBadge from '../ui/UiBadge.vue'
+import ShowAll from './ShowAll.vue'
 
 const settle = useLoadTask()
 
 const data = ref(null)
 const failed = ref(false)
 
-onMounted(async () => {
+async function load() {
   try {
     data.value = await upcoming(14)
+    failed.value = false
   } catch {
     failed.value = true
-  } finally {
-    settle()
   }
-})
+}
+onMounted(() => load().finally(settle))
 
 function tone(day) {
   const d = daysUntil(day)
@@ -28,13 +29,15 @@ function tone(day) {
   return 'neutral'
 }
 const link = useWidgetLink('study')
+// Pull to refresh on the Overview reloads every widget through this.
+defineExpose({ load })
 </script>
 
 <template>
   <section v-if="!failed && data && (data.deadlines.length || data.application_steps.length)" class="card widget clickable" tabindex="0" role="link" :aria-label="'Open study'" @click="link.onClick" @keydown="link.onKey">
     <div class="card-head">
       <h2>Next two weeks</h2>
-      <span class="meta"><RouterLink :to="{ name: 'study' }">Study</RouterLink></span>
+      <span class="meta"><ShowAll to="study">Study</ShowAll></span>
     </div>
     <ul>
       <li v-for="d in data.deadlines" :key="d.id" class="list-row">

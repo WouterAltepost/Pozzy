@@ -7,6 +7,9 @@ import { addGoalProgress, listGoals, updateGoal } from '../../api/goals'
 import AreaDot from '../shared/AreaDot.vue'
 import UiButton from '../ui/UiButton.vue'
 import UiEmpty from '../ui/UiEmpty.vue'
+import ShowAll from './ShowAll.vue'
+import { tick } from '../../lib/haptics'
+import { useMediaQuery } from '../../composables/useMediaQuery'
 
 const settle = useLoadTask()
 
@@ -28,6 +31,7 @@ function replace(goal) {
 }
 
 async function toggle(g) {
+  tick()
   try {
     replace(await updateGoal(g.id, { done: !g.done }))
   } catch {
@@ -36,6 +40,7 @@ async function toggle(g) {
 }
 
 async function bump(g) {
+  tick()
   try {
     replace(await addGoalProgress(g.id, 1))
   } catch {
@@ -45,14 +50,18 @@ async function bump(g) {
 
 onMounted(() => load().finally(settle))
 const link = useWidgetLink('goals')
+const phone = useMediaQuery('(max-width: 1023px)')
+// Pull to refresh on the Overview reloads every widget through this.
+defineExpose({ load })
 </script>
 
 <template>
   <section v-if="!failed && data" class="card widget clickable" tabindex="0" role="link" :aria-label="'Open goals'" @click="link.onClick" @keydown="link.onKey">
     <div class="card-head">
       <h2>Weekly goals</h2>
-      <span class="meta"><RouterLink :to="{ name: 'goals' }" class="num">{{ data.goals.filter((g) => g.done).length }} of {{ data.goals.length }} done</RouterLink></span>
+      <span class="meta"><ShowAll to="goals" class="num">{{ data.goals.filter((g) => g.done).length }} of {{ data.goals.length }} done</ShowAll></span>
     </div>
+    <p v-if="phone && data.goals.length" class="headline num">{{ data.goals.filter((g) => g.done).length }}<span class="unit"> of {{ data.goals.length }} done</span></p>
     <ul v-if="data.goals.length">
       <li v-for="g in data.goals" :key="g.id" class="list-row" :class="{ done: g.done }">
         <input type="checkbox" :checked="g.done" :aria-label="g.title" @change="toggle(g)" />

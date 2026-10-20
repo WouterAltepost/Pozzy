@@ -15,7 +15,9 @@ import UiButton from '../components/ui/UiButton.vue'
 import UiConfirm from '../components/ui/UiConfirm.vue'
 import UiEmpty from '../components/ui/UiEmpty.vue'
 import UiSkeleton from '../components/ui/UiSkeleton.vue'
+import { useMediaQuery } from '../composables/useMediaQuery'
 import { useToast } from '../composables/useToast'
+import PullToRefresh from '../components/ios/PullToRefresh.vue'
 import { formatDay, today as todayFn } from '../lib/dates'
 import { WEEKDAYS, cellOf, fmt, isBool, isCount, isWeekly, nextDueLabel, scheduleLabel, targetLabel, unitOf } from '../lib/habits'
 import { useTrackersStore } from '../stores/trackers'
@@ -25,6 +27,7 @@ const router = useRouter()
 const store = useTrackersStore()
 const toast = useToast()
 const today = todayFn()
+const phone = useMediaQuery('(max-width: 1023px)')
 const id = computed(() => String(route.params.id))
 const stats = ref(null)
 const history = ref(null)
@@ -49,6 +52,13 @@ async function load() {
   }
 }
 watch(id, load, { immediate: true })
+// Pull to refresh: drop the cached numbers and fetch everything again.
+async function refresh() {
+  delete store.stats[id.value]
+  delete store.histories[id.value]
+  await store.load()
+  await load()
+}
 // Any write (here or in the sheet) drops the cached stats; fetch them again.
 watch(() => store.version, async () => {
   if (!stats.value) return
@@ -160,8 +170,12 @@ async function remove() {
 </script>
 
 <template>
+  <PullToRefresh :action="refresh">
   <div class="habit-page">
     <RouterLink :to="{ name: 'trackers' }" class="back"><PhArrowLeft /> Habits</RouterLink>
+    <Teleport v-if="phone && route.name === 'habit' && t" defer to="#nav-trailing">
+      <button type="button" class="nav-text" @click="editing = true">Edit</button>
+    </Teleport>
 
     <p v-if="error" class="error">{{ error }}</p>
 
@@ -180,7 +194,7 @@ async function remove() {
         </div>
         <div class="head-actions">
           <UiButton v-if="row && t.active" variant="primary" @click="sheetOpen = true">{{ todayCell?.met ? 'Today: done' : todayCell?.status === 'skipped' ? 'Today: skipped' : 'Check in today' }}</UiButton>
-          <UiButton @click="editing = true">Edit</UiButton>
+          <UiButton v-if="!phone" @click="editing = true">Edit</UiButton>
         </div>
       </header>
 
@@ -266,6 +280,7 @@ async function remove() {
     <HabitEditor :open="editing" :tracker="t" :busy="saving" :error="editError" @save="save" @close="editing = false" />
     <UiConfirm :open="deleting" title="Delete habit?" :message="t ? `${t.name} and every check-in it has will be gone. Archive keeps the history instead.` : ''" confirm-label="Delete" danger :busy="deleteBusy" @confirm="remove" @cancel="deleting = false" />
   </div>
+  </PullToRefresh>
 </template>
 
 <style scoped>
@@ -301,6 +316,14 @@ async function remove() {
 .date { font-variant-numeric: tabular-nums; }
 .more { margin-top: var(--sp-3); }
 .danger-zone { display: flex; justify-content: flex-end; gap: var(--sp-2); margin-top: var(--sp-2); }
+/* iOS: the nav bar carries Back and Edit; tiles are flat plates. */
+@media (max-width: 1023px) {
+  .back { display: none; }
+  .head { margin-top: 4px; }
+  .tile { border: 0; box-shadow: none; border-radius: var(--r-lg); }
+  .big { font-size: 1.75rem; font-weight: 700; }
+  .danger-zone { justify-content: stretch; flex-direction: column; }
+}
 @media (max-width: 760px) {
   .tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--sp-3); }
   .tile { padding: var(--sp-3) var(--sp-4); }

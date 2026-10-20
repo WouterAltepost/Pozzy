@@ -1,6 +1,10 @@
 <script setup>
+// The week grid on the desktop, AgendaMobile's day list on the phone. iOS layer: below 1024px
+// Plan and New event are nav bar buttons and a pull on the page reloads the range.
 import { computed, ref } from 'vue'
-import { PhCaretLeft, PhCaretRight, PhCheck, PhSparkle, PhX } from '@phosphor-icons/vue'
+import { useRoute } from 'vue-router'
+import { PhCaretLeft, PhCaretRight, PhCheck, PhPlus, PhSparkle, PhX } from '@phosphor-icons/vue'
+import PullToRefresh from '../components/ios/PullToRefresh.vue'
 import AgendaGrid from '../components/agenda/AgendaGrid.vue'
 import AgendaMobile from '../components/agenda/AgendaMobile.vue'
 import EventForm from '../components/agenda/EventForm.vue'
@@ -8,6 +12,7 @@ import EventPopover from '../components/agenda/EventPopover.vue'
 import SyncBar from '../components/agenda/SyncBar.vue'
 import PageHeader from '../components/ui/PageHeader.vue'
 import UiButton from '../components/ui/UiButton.vue'
+import UiConfirm from '../components/ui/UiConfirm.vue'
 import UiSegmented from '../components/ui/UiSegmented.vue'
 import UiLoadGate from '../components/ui/UiLoadGate.vue'
 import UiModal from '../components/ui/UiModal.vue'
@@ -28,6 +33,8 @@ const saving = ref(false)
 const formError = ref('')
 const narrow = useMediaQuery('(max-width: 899px)')
 const phone = useMediaQuery('(max-width: 699px)')
+const ios = useMediaQuery('(max-width: 1023px)')
+const route = useRoute()
 const suggestions = ref([]) // planner items still waiting for a decision
 const constraints = ref(null) // what the rules turned into for this range
 const planning = ref(false)
@@ -184,13 +191,33 @@ async function remove() {
   }
 }
 
+// Delete from the day list's long-press menu: ask first, as the sheet's Delete does.
+const deleting = ref(null)
+async function confirmDelete() {
+  saving.value = true
+  try {
+    await store.removeEvent(deleting.value.id)
+    toast.success(`Deleted "${deleting.value.title}"`)
+    deleting.value = null
+  } catch (err) {
+    toast.error(err.message)
+  } finally {
+    saving.value = false
+  }
+}
+
 function pickDay(evt) {
   if (evt.target.value) store.setAnchor(evt.target.value)
 }
 </script>
 
 <template>
+  <PullToRefresh :action="() => store.load()">
   <div class="agenda">
+    <Teleport v-if="ios && route.name === 'agenda'" defer to="#nav-trailing">
+      <button type="button" class="icon-btn" aria-label="Plan the week" :disabled="planning" :aria-busy="planning || undefined" @click="plan"><span v-if="planning" class="nav-spin" aria-hidden="true"></span><PhSparkle v-else weight="regular" /></button>
+      <button type="button" class="icon-btn" aria-label="New event" @click="openNew({ day: store.anchor })"><PhPlus weight="regular" /></button>
+    </Teleport>
     <PageHeader v-if="!phone" title="Agenda">
       <template #meta>{{ title }}</template>
       <div class="nav">
@@ -200,11 +227,11 @@ function pickDay(evt) {
         <input type="date" :value="store.anchor" aria-label="Go to date" @change="pickDay" />
       </div>
       <UiSegmented v-model="view" :options="VIEWS" />
-      <UiButton :loading="planning" title="Suggest where open tasks, deadline prep and goal work could go" @click="plan">
+      <UiButton :loading="planning" class="plan-btn" title="Suggest where open tasks, deadline prep and goal work could go" @click="plan">
         <PhSparkle :size="16" weight="fill" aria-hidden="true" />
         Plan
       </UiButton>
-      <UiButton variant="primary" @click="openNew({ day: store.anchor })">New event</UiButton>
+      <UiButton variant="primary" class="new-btn" @click="openNew({ day: store.anchor })">New event</UiButton>
     </PageHeader>
 
     <div v-if="!phone" class="status">
@@ -240,7 +267,7 @@ function pickDay(evt) {
           </ul>
         </section>
       </Transition>
-      <AgendaMobile v-if="phone" :suggestions="suggestions" :planning="planning" :deciding="deciding" @select-event="openEvent" @create="openNew" @plan="plan" @accept="accept" @deny="deny" />
+      <AgendaMobile v-if="phone" :suggestions="suggestions" :planning="planning" :deciding="deciding" @select-event="openEvent" @create="openNew" @plan="plan" @accept="accept" @deny="deny" @delete-event="deleting = $event" />
       <div v-else class="gridwrap">
         <div class="gridpos">
           <AgendaGrid :days="store.days" :events="store.events" :tasks="store.tasks" :draft="draft" :suggestions="suggestions" :deciding="deciding" @select-event="openEvent" @create="onSlot" @move="onMove" @accept="accept" @deny="deny" />
@@ -279,7 +306,9 @@ function pickDay(evt) {
         @close="closePanel"
       />
     </UiModal>
+    <UiConfirm :open="Boolean(deleting)" title="Delete this event?" :message="deleting ? `${deleting.title} is removed from iCloud.` : ''" confirm-label="Delete event" danger :busy="saving" @confirm="confirmDelete" @cancel="deleting = null" />
   </div>
+  </PullToRefresh>
 </template>
 
 <style scoped>
@@ -315,4 +344,21 @@ function pickDay(evt) {
 .sw.recurring { background: var(--surface-2); border: 1px solid color-mix(in srgb, var(--ink-3) 35%, transparent); }
 .sw.linked { background: var(--ok-soft); border: 1px solid color-mix(in srgb, var(--ok) 35%, transparent); }
 .sw.task { border: 1px dashed var(--ok); }
+.nav-spin { display: inline-block; width: 18px; height: 18px; border-radius: 50%; border: 2px solid currentColor; border-right-color: transparent; animation: nav-spin 700ms linear infinite; }
+@keyframes nav-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .nav-spin { animation: none; opacity: 0.5; } }
+/* iOS layer: Plan and New event moved to the nav bar; the suggestion tray is a flat plate with
+   inset rows. */
+@media (max-width: 1023px) {
+  .plan-btn, .new-btn { display: none; }
+  .tray { padding: 12px 0 4px; }
+  .tray-head { padding: 0 16px; gap: var(--sp-2); }
+  .tray-head strong { font-size: 1.0625rem; font-weight: 600; }
+  .tray-head .muted { font-size: 0.8125rem; }
+  .tray-actions { margin-left: 0; width: 100%; }
+  .tray-list { margin-top: var(--sp-2); }
+  .tray-row { position: relative; min-height: 44px; padding: 8px 16px; border-top: 0; font-size: 0.9375rem; }
+  .tray-row::before { content: ''; position: absolute; top: 0; left: 16px; right: 0; border-top: 0.5px solid var(--line-2); }
+  .tray-row .t { font-size: 1.0625rem; }
+}
 </style>

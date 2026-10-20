@@ -32,4 +32,10 @@ async function act() {
 .toast-leave-active { transition: opacity var(--dur-hover) ease, transform var(--dur-hover) ease; }
 .toast-enter-from, .toast-leave-to { opacity: 0; transform: translateY(10px) scale(0.98); }
 @media (prefers-reduced-motion: reduce) { .toast-enter-from, .toast-leave-to { transform: none; } }
+@media (max-width: 1023px) {
+  .toaster { bottom: calc(var(--tab-h) + 12px); }
+  .toast { background: var(--material); -webkit-backdrop-filter: var(--material-blur); backdrop-filter: var(--material-blur); color: var(--ink); box-shadow: 0 8px 30px rgb(0 0 0 / 0.16); font-size: 0.9375rem; }
+  .toast .act { background: transparent; color: var(--brand); font-weight: 600; }
+  .toast.danger { background: var(--danger); color: #fff; }
+}
 </style>

@@ -73,4 +73,16 @@ defineProps({
 }
 @keyframes spin { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) { .spin { animation: none; border-right-color: currentColor; opacity: 0.5; } }
+/* iOS buttons on the phone: the filled one stays ink, secondary is the grey tinted button, quiet
+   ones are plain tint text. No borders, no lit edges; pressing dims. */
+@media (max-width: 1023px) {
+  .btn { height: 34px; min-height: 34px; padding: 0 16px; font-size: 0.9375rem; box-shadow: none; }
+  .btn-sm { height: 30px; min-height: 30px; padding: 0 12px; font-size: 0.9375rem; }
+  .btn:active:not(:disabled) { transform: none; opacity: 0.55; }
+  .btn-primary { box-shadow: none; font-weight: 600; }
+  .btn-secondary { background: var(--surface-2); border-color: transparent; color: var(--brand); box-shadow: none; font-weight: 600; }
+  .btn-ghost { color: var(--brand); }
+  .btn-danger { font-weight: 600; }
+  .btn-link { font-size: 1.0625rem; font-weight: 400; }
+}
 </style>

@@ -2,19 +2,24 @@
 // Phone agenda (design: Pozzy Phone, Agenda). Week: a compact grid, 30px per hour from 07:00,
 // tap a day to open it. Day: a seven-day strip and a list of the day's events with the now line;
 // swipe the list to change day. Planner suggestions show as dashed blocks and dashed rows.
+// iOS layer: it reads like Calendar's day list. Large title, the week strip with today's number
+// in the tint, one inset grouped plate per day with a coloured bar per event; Plan and New event
+// sit in the nav bar (AgendaView). A long press on a row opens its context menu.
 import { computed, ref } from 'vue'
-import { PhCaretLeft, PhCaretRight, PhCheck, PhPlus, PhSparkle, PhX } from '@phosphor-icons/vue'
+import { PhArrowSquareOut, PhCaretLeft, PhCaretRight, PhCheck, PhPencilSimple, PhTrash, PhX } from '@phosphor-icons/vue'
+import { useContextMenu } from '../../composables/useContextMenu'
 import { useDrag } from '../../composables/useDrag'
+import { useLongPress } from '../../composables/useLongPress'
 import { createSpring, project, reducedMotion } from '../../lib/spring'
 import { formatDay, formatTime, mondayOf, shortDay, today, weekDays } from '../../lib/dates'
 import { useCalendarStore } from '../../stores/calendar'
-import UiBadge from '../ui/UiBadge.vue'
 import UiEmpty from '../ui/UiEmpty.vue'
 import UiSegmented from '../ui/UiSegmented.vue'
 
 const props = defineProps({ suggestions: { type: Array, default: () => [] }, planning: { type: Boolean, default: false }, deciding: { type: Object, default: () => ({}) } })
-const emit = defineEmits(['select-event', 'create', 'plan', 'accept', 'deny'])
+const emit = defineEmits(['select-event', 'create', 'plan', 'accept', 'deny', 'delete-event'])
 const store = useCalendarStore()
+const menu = useContextMenu()
 
 const H0 = 7
 const H1 = 23
@@ -71,7 +76,42 @@ const count = computed(() => {
   const n = dayItems.value.filter((i) => i.kind !== 'suggest').length
   return `${n} ${n === 1 ? 'event' : 'events'}`
 })
-const synced = computed(() => (store.account?.last_synced_at ? `synced ${formatTime(store.account.last_synced_at)}` : store.account ? 'not synced' : 'no calendar'))
+const synced = computed(() => (store.account?.last_synced_at ? `Synced ${formatTime(store.account.last_synced_at)}` : store.account ? 'Not synced' : 'No calendar'))
+const syncTone = computed(() => (store.account?.last_sync_error ? 'danger' : store.account ? 'ok' : 'neutral'))
+const dayTitle = computed(() => (store.anchor === today() ? 'Today' : new Date(`${store.anchor}T12:00:00`).toLocaleDateString('en-GB', { weekday: 'long' })))
+const opens = (it) => it.kind === 'event' || it.kind === 'linked' || it.kind === 'recurring'
+function metaOf(it) {
+  const out = []
+  if (it.item.location) out.push(it.item.location)
+  if (it.kind === 'task') out.push('Scheduled task')
+  if (it.kind === 'linked') out.push('Linked task')
+  if (it.kind === 'recurring') out.push('Recurring')
+  if (it.kind === 'suggest' && it.suggestion.reason) out.push(it.suggestion.reason)
+  return out.join(' \u00B7 ')
+}
+
+// Long press: the row's actions, the same ones a tap and the sheet offer, in one place.
+const press = useLongPress((it, evt) => {
+  // The timer fires after the event has finished dispatching, so its currentTarget is gone;
+  // the composable kept the row for us (a right-click arrives live and still has it).
+  const el = press.target() || evt?.currentTarget
+  if (it.kind === 'suggest') {
+    return menu.open(el, [
+      { label: 'Accept', icon: PhCheck, action: () => emit('accept', it.suggestion) },
+      { label: 'Deny', icon: PhX, danger: true, action: () => emit('deny', it.suggestion) },
+    ])
+  }
+  if (!opens(it)) return
+  if (it.kind === 'recurring') return menu.open(el, [{ label: 'Open', icon: PhArrowSquareOut, action: () => emit('select-event', it.item) }])
+  menu.open(el, [
+    { label: 'Edit', icon: PhPencilSimple, action: () => emit('select-event', it.item) },
+    { label: 'Delete', icon: PhTrash, danger: true, action: () => emit('delete-event', it.item) },
+  ])
+})
+function tapRow(it) {
+  if (press.consumed() || swipe.wasDrag()) return
+  if (opens(it)) emit('select-event', it.item)
+}
 
 function openDay(day) {
   store.anchor = day
@@ -143,28 +183,31 @@ function dayNum(day) {
 function wd(day) {
   return shortDay(day).slice(0, 3)
 }
+// The strip shows one letter per day, as Calendar does.
+function letter(day) {
+  return shortDay(day).slice(0, 1)
+}
 </script>
 
 <template>
   <div class="magenda">
     <div class="head">
-      <div>
-        <h1>Agenda</h1>
-        <span class="muted small">{{ store.view === 'week' ? 'Week of ' + formatDay(week[0]) : formatDay(store.anchor) }}</span>
-      </div>
-      <UiSegmented v-model="view" :options="VIEWS" />
+      <h1>Agenda</h1>
+      <span class="sub">{{ store.view === 'week' ? 'Week of ' + formatDay(week[0]) : formatDay(store.anchor) }}</span>
     </div>
+    <UiSegmented v-model="view" :options="VIEWS" class="views" />
     <div class="status">
       <button type="button" class="icon-btn" aria-label="Previous week" @click="stepWeek(-1)"><PhCaretLeft /></button>
+      <span class="mid">
+        <button type="button" class="sync" :class="syncTone" :disabled="!store.account || store.syncing" @click="store.sync()">
+          <span class="dot" aria-hidden="true"></span>{{ store.syncing ? 'Syncing' : synced }}
+        </button>
+        <template v-if="store.view === 'week'">
+          <span class="sep" aria-hidden="true">&middot;</span>
+          <span class="num">{{ count }}</span>
+        </template>
+      </span>
       <button type="button" class="icon-btn" aria-label="Next week" @click="stepWeek(1)"><PhCaretRight /></button>
-      <button type="button" class="sync" :disabled="!store.account || store.syncing" @click="store.sync()">
-        <UiBadge :tone="store.account?.last_sync_error ? 'danger' : store.account ? 'ok' : 'neutral'" dot>{{ store.syncing ? 'syncing' : synced }}</UiBadge>
-      </button>
-      <span class="muted small src">iCloud</span>
-      <span class="spacer"></span>
-      <span class="muted small num">{{ count }}</span>
-      <button type="button" class="icon-btn" title="Plan the week" aria-label="Plan the week" :disabled="planning" :aria-busy="planning || undefined" @click="emit('plan')"><span v-if="planning" class="spin" aria-hidden="true"></span><PhSparkle v-else weight="fill" /></button>
-      <button type="button" class="icon-btn" aria-label="New event" @click="emit('create', { day: store.anchor })"><PhPlus weight="bold" /></button>
     </div>
 
     <template v-if="store.view === 'week'">
@@ -185,116 +228,134 @@ function wd(day) {
           </span>
         </div>
       </div>
-      <p class="hint muted small">Tap a day to open it</p>
+      <p class="hint">Tap a day to open it</p>
     </template>
 
     <template v-else>
       <div class="strip">
-        <button v-for="day in week" :key="day" type="button" class="dbtn" :class="{ active: day === store.anchor, today: day === today() }" :aria-pressed="day === store.anchor" @click="pickDay(day)">
-          <span class="wd">{{ wd(day) }}</span><span class="dn num">{{ dayNum(day) }}</span>
+        <button v-for="day in week" :key="day" type="button" class="dbtn" :class="{ active: day === store.anchor, today: day === today() }" :aria-pressed="day === store.anchor" :aria-label="formatDay(day)" @click="pickDay(day)">
+          <span class="wd">{{ letter(day) }}</span><span class="dn num">{{ dayNum(day) }}</span>
         </button>
       </div>
       <section ref="listEl" class="card daylist" v-bind="swipe.handlers" @dragstart.prevent>
         <div class="daybody" :style="listStyle">
+        <header class="dayhead">
+          <h2>{{ dayTitle }}</h2>
+          <span class="num">{{ count }}</span>
+        </header>
         <div v-if="!dayItems.length" class="empty-wrap">
           <UiEmpty compact title="No events" hint="Nothing on the calendar mirror for this day." />
         </div>
         <ul v-else>
           <li v-for="(it, i) in dayItems" :key="(it.item.id || it.item.title) + it.from" :class="{ first: i === 0 }">
             <div v-if="i === nowIndex" class="nowrow"><span class="dot"></span><span class="rule"></span><span class="t num">{{ String(Math.floor(nowMinutes / 60)).padStart(2, '0') }}:{{ String(nowMinutes % 60).padStart(2, '0') }}</span></div>
-            <div class="row" :class="it.kind" @click="!swipe.wasDrag() && (it.kind === 'event' || it.kind === 'linked' || it.kind === 'recurring') ? emit('select-event', it.item) : null">
+            <div class="row" :class="[it.kind, { opens: opens(it) }]" v-bind="press.handlers(it)" @click="tapRow(it)">
               <span class="times num"><span class="s">{{ formatTime(it.item.start) }}</span><span class="e">{{ formatTime(it.item.end) }}</span></span>
-              <span class="bar"></span>
+              <span class="ebar"></span>
               <span class="body">
                 <span class="title">{{ it.item.title }}</span>
-                <span class="meta">
-                  <span v-if="it.item.location" class="muted small truncate">{{ it.item.location }}</span>
-                  <UiBadge v-if="it.kind === 'task'" tone="ok">task</UiBadge>
-                  <UiBadge v-if="it.kind === 'linked'" tone="ok">linked</UiBadge>
-                  <UiBadge v-if="it.kind === 'recurring'" tone="neutral">recurring</UiBadge>
-                  <span v-if="it.kind === 'suggest'" class="muted small truncate">{{ it.suggestion.reason }}</span>
-                </span>
+                <span v-if="metaOf(it)" class="meta">{{ metaOf(it) }}</span>
               </span>
               <span v-if="it.kind === 'suggest'" class="sactions">
                 <button type="button" class="s-btn ok" :aria-label="'Accept: ' + it.item.title" :disabled="deciding[it.suggestion.id]" :aria-busy="deciding[it.suggestion.id] || undefined" @click.stop="emit('accept', it.suggestion)"><span v-if="deciding[it.suggestion.id]" class="spin" aria-hidden="true"></span><PhCheck v-else weight="bold" /></button>
                 <button type="button" class="s-btn no" :aria-label="'Deny: ' + it.item.title" :disabled="deciding[it.suggestion.id]" @click.stop="emit('deny', it.suggestion)"><PhX weight="bold" /></button>
               </span>
+              <PhCaretRight v-else-if="opens(it)" class="chev" aria-hidden="true" />
             </div>
           </li>
           <li v-if="nowIndex === -1 && store.anchor === today() && dayItems.length" class="tail"><div class="nowrow"><span class="dot"></span><span class="rule"></span><span class="t num">{{ String(Math.floor(nowMinutes / 60)).padStart(2, '0') }}:{{ String(nowMinutes % 60).padStart(2, '0') }}</span></div></li>
         </ul>
         </div>
       </section>
-      <p class="hint muted small">Swipe the list to change day</p>
+      <p class="hint">Swipe the list to change day</p>
     </template>
   </div>
 </template>
 
 <style scoped>
-.magenda { display: flex; flex-direction: column; gap: var(--sp-4); }
-.head { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-2); }
-.head h1 { font-size: var(--fs-2xl); }
-.status { display: flex; align-items: center; gap: 6px; font-size: var(--fs-sm); color: var(--ink-3); }
-.status .icon-btn { width: 34px; height: 36px; flex: none; }
-.status .num { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
-.sync { border: 0; background: none; padding: 0; min-height: 36px; display: inline-flex; align-items: center; }
-.status .num { white-space: nowrap; }
-.status .src { display: none; }
-@media (min-width: 400px) { .status .src { display: inline; } }
-.spacer { flex: 1; }
-.mini { display: grid; grid-template-columns: 30px repeat(7, minmax(0, 1fr)); background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-lg); overflow: hidden; font-size: var(--fs-xs); }
-.corner { border-bottom: 1px solid var(--line); }
-.dhead { border: 0; border-left: 1px solid var(--line); border-bottom: 1px solid var(--line); padding: 6px 0; background: transparent; color: var(--ink-2); display: flex; flex-direction: column; align-items: center; line-height: 1.3; }
-.dhead.today { background: var(--brand-soft); color: var(--brand); }
-.dhead .wd { font-size: 10px; letter-spacing: 0.02em; font-weight: 500; }
-.dhead .dn { font-size: 13px; font-weight: 600; }
+/* This component only renders on the phone (AgendaView, under 700px), so it is all iOS layer. */
+.magenda { display: flex; flex-direction: column; gap: var(--sp-3); }
+.head { display: flex; flex-direction: column; gap: 0; margin-top: 4px; }
+.sub { font-size: 0.9375rem; color: var(--ink-3); }
+.views { display: flex; width: 100%; }
+.views :deep(.seg-item) { flex: 1; }
+/* One tidy row: week back and forward at the ends, the sync state and the count between. */
+.status { display: flex; align-items: center; gap: 4px; margin: -4px -8px 0; font-size: 0.8125rem; color: var(--ink-3); }
+.status .icon-btn { width: 44px; height: 36px; flex: none; }
+.mid { flex: 1; min-width: 0; display: flex; align-items: center; justify-content: center; gap: 6px; white-space: nowrap; }
+.mid .num { overflow: hidden; text-overflow: ellipsis; }
+.sep { color: var(--ink-4); }
+.sync { display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 0; border: 0; background: none; color: var(--ink-3); font: inherit; }
+.sync:disabled { opacity: 1; }
+.sync .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--ink-4); }
+.sync.ok .dot { background: var(--ok); }
+.sync.danger { color: var(--danger); }
+.sync.danger .dot { background: var(--danger); }
+.mini { display: grid; grid-template-columns: 30px repeat(7, minmax(0, 1fr)); background: var(--surface); border-radius: var(--r-lg); overflow: hidden; font-size: var(--fs-xs); }
+.corner { border-bottom: 0.5px solid var(--line-2); }
+.dhead { border: 0; border-left: 0.5px solid var(--line); border-bottom: 0.5px solid var(--line-2); padding: 6px 0; background: transparent; color: var(--ink); display: flex; flex-direction: column; align-items: center; gap: 2px; line-height: 1.2; }
+.dhead .wd { font-size: 11px; color: var(--ink-3); }
+.dhead .dn { display: grid; place-items: center; width: 26px; height: 26px; border-radius: 50%; font-size: 15px; font-weight: 500; }
+.dhead.today .wd { color: var(--brand); }
+.dhead.today .dn { background: var(--brand); color: #fff; font-weight: 600; }
 .gutter { position: relative; }
 .hl { position: absolute; right: 4px; font-size: 10px; color: var(--ink-3); transform: translateY(-50%); }
-.col { position: relative; border-left: 1px solid var(--line); }
-.col.today { background: color-mix(in srgb, var(--brand-soft) 35%, transparent); }
-.line { position: absolute; left: 0; right: 0; border-top: 1px solid var(--line); opacity: 0.7; pointer-events: none; }
+.col { position: relative; border-left: 0.5px solid var(--line); }
+.col.today { background: color-mix(in srgb, var(--brand) 5%, transparent); }
+.line { position: absolute; left: 0; right: 0; border-top: 0.5px solid var(--line); pointer-events: none; }
 .now { position: absolute; left: 0; right: 0; border-top: 2px solid var(--brand); z-index: 3; pointer-events: none; }
 .now::before { content: ''; position: absolute; left: -1px; top: -4px; width: 6px; height: 6px; border-radius: 50%; background: var(--brand); }
-.blk { --accent: var(--info); position: absolute; left: 2px; right: 2px; border-radius: 4px; overflow: hidden; background: var(--info-soft); border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent); border-left: 3px solid var(--accent); padding: 2px 3px; z-index: 2; display: flex; flex-direction: column; line-height: 1.2; }
-.blk.recurring { --accent: var(--ink-3); background: var(--surface-2); }
-.blk.linked { --accent: var(--ok); background: var(--ok-soft); }
-.blk.task { --accent: var(--ok); background: var(--surface); border-style: dashed; }
-.blk.suggest { --accent: var(--ok); background: color-mix(in srgb, var(--ok) 10%, var(--surface)); border-style: dashed; border-width: 1.5px; }
+/* Calendar's blocks: a tint of the calendar colour with a solid bar on the leading edge. */
+.blk { --accent: var(--info); position: absolute; left: 1px; right: 1px; border-radius: 4px; overflow: hidden; background: color-mix(in srgb, var(--accent) 18%, var(--surface)); border-left: 3px solid var(--accent); padding: 2px 3px; z-index: 2; display: flex; flex-direction: column; line-height: 1.2; }
+.blk.recurring { --accent: #8E8E93; }
+.blk.linked { --accent: var(--ok); }
+.blk.task { --accent: var(--ok); background: var(--surface); border: 1px dashed var(--accent); border-left: 3px solid var(--accent); }
+.blk.suggest { --accent: var(--ok); background: color-mix(in srgb, var(--ok) 10%, var(--surface)); border: 1.5px dashed var(--accent); }
 .blk.suggest.event { --accent: var(--info); }
-.bt { font-size: 9px; color: var(--accent); font-weight: 500; }
+.bt { font-size: 9px; color: var(--accent); font-weight: 600; }
 .bn { font-size: 10px; font-weight: 500; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.hint { text-align: center; margin: 0; }
-.strip { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; }
-.dbtn { height: 52px; border: 0; border-radius: var(--r-md); background: var(--surface); color: var(--ink-2); box-shadow: 0 0 0 1px var(--line) inset; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; transition: background-color var(--dur-hover) ease, color var(--dur-hover) ease, transform var(--dur-press) var(--ease-out); }
-.dbtn:active { transform: scale(0.96); }
-.dbtn.today { background: var(--brand-soft); color: var(--brand); }
-.dbtn.active { background: var(--ink); color: var(--on-ink); box-shadow: none; }
-.dbtn .wd { font-size: var(--fs-xs); letter-spacing: 0.02em; font-weight: 500; }
-.dbtn .dn { font-size: var(--fs-lg); font-weight: 600; }
-.daylist { padding: 4px 16px; margin: 0; touch-action: pan-y; user-select: none; -webkit-user-select: none; overflow: hidden; }
+.hint { text-align: center; margin: 0; font-size: 0.8125rem; color: var(--ink-3); }
+/* The week strip: a letter over the number, the chosen day in a filled circle (tint when it
+   is today), today's number in the tint otherwise. */
+.strip { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); }
+.dbtn { height: 56px; padding: 0; border: 0; background: transparent; color: var(--ink); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; }
+.dbtn .wd { font-size: 0.6875rem; font-weight: 500; color: var(--ink-3); }
+.dbtn .dn { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 50%; font-size: 1.25rem; font-weight: 400; transition: background-color 200ms ease, color 200ms ease; }
+.dbtn:active .dn { background: var(--surface-2); }
+.dbtn.today .dn { color: var(--brand); font-weight: 600; }
+.dbtn.active .dn { background: var(--ink); color: var(--bg); font-weight: 600; }
+.dbtn.active.today .dn { background: var(--brand); color: #fff; }
+.daylist { padding: 0; margin: 0; touch-action: pan-y; user-select: none; -webkit-user-select: none; overflow: hidden; }
 .daybody { will-change: transform; }
-.empty-wrap { padding: 12px 0; }
-.daylist li { border-top: 1px solid var(--line); }
-.daylist li.first { border-top: 0; }
-.daylist li.tail { border-top: 0; padding-bottom: 8px; }
-.nowrow { display: flex; align-items: center; gap: 8px; height: 0; position: relative; z-index: 1; }
-.nowrow .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--brand); flex: none; margin-left: -4px; }
+.dayhead { display: flex; align-items: baseline; justify-content: space-between; gap: var(--sp-2); padding: 12px 16px 4px; }
+.dayhead h2 { font-size: 1.0625rem; font-weight: 600; }
+.dayhead .num { font-size: 0.9375rem; color: var(--ink-3); }
+.empty-wrap { padding: 4px 16px 12px; }
+.daylist ul { padding-bottom: 4px; }
+.daylist li { position: relative; }
+.daylist li + li:not(.tail)::before { content: ''; position: absolute; top: 0; left: 16px; right: 0; border-top: 0.5px solid var(--line-2); }
+.daylist li.tail { padding: 0 16px 8px; }
+.nowrow { display: flex; align-items: center; gap: 8px; height: 0; position: relative; z-index: 1; margin: 0 16px 0 12px; }
+.daylist li.tail .nowrow { margin: 0; }
+.nowrow .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--brand); flex: none; }
 .nowrow .rule { flex: 1; border-top: 2px solid var(--brand); }
-.nowrow .t { font-size: var(--fs-xs); color: var(--brand); font-weight: 500; }
-.row { display: flex; gap: 12px; padding: 12px 0; align-items: flex-start; }
-.times { color: var(--ink-3); font-size: var(--fs-sm); width: 40px; flex: none; display: flex; flex-direction: column; line-height: 1.5; }
-.times .s { color: var(--ink); }
-.bar { --accent: var(--info); width: 3px; border-radius: 2px; background: var(--accent); align-self: stretch; flex: none; }
-.row.recurring .bar { --accent: var(--ink-3); }
-.row.linked .bar, .row.task .bar, .row.suggest .bar { --accent: var(--ok); }
-.row.suggest { border: 1.5px dashed var(--ok); border-radius: var(--r-md); padding: 8px 8px; margin: 6px 0; background: color-mix(in srgb, var(--ok) 8%, var(--surface)); }
-.body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
-.title { font-size: var(--fs-base); font-weight: 500; line-height: 1.35; }
-.meta { display: flex; gap: 8px; align-items: center; min-width: 0; }
-.sactions { display: inline-flex; gap: 4px; align-self: center; }
-.s-btn { width: 28px; height: 28px; border-radius: 50%; border: 0; display: inline-flex; align-items: center; justify-content: center; padding: 0; }
+.nowrow .t { font-size: 0.75rem; color: var(--brand); font-weight: 600; }
+.row { display: flex; gap: 10px; min-height: 44px; padding: 10px 16px; align-items: stretch; }
+.times { color: var(--ink-3); font-size: 0.9375rem; width: 44px; flex: none; display: flex; flex-direction: column; line-height: 20px; }
+.times .e { font-size: 0.8125rem; }
+/* Not .bar: that is the global progress bar class, which would flatten this to 4px tall. */
+.ebar { --accent: var(--info); width: 4px; border-radius: 2px; background: var(--accent); flex: none; }
+.row.recurring .ebar { --accent: #8E8E93; }
+.row.linked .ebar, .row.task .ebar, .row.suggest .ebar { --accent: var(--ok); }
+.row.suggest { margin: 6px 12px; padding: 8px; border: 1.5px dashed var(--ok); border-radius: var(--r-md); background: color-mix(in srgb, var(--ok) 8%, var(--surface)); }
+.body { flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: center; gap: 1px; }
+.title { font-size: 1.0625rem; line-height: 22px; }
+.meta { font-size: 0.9375rem; line-height: 20px; color: var(--ink-3); overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.chev { width: 14px; height: 14px; flex: none; align-self: center; color: var(--ink-4); }
+.sactions { display: inline-flex; gap: 6px; align-self: center; }
+.s-btn { width: 30px; height: 30px; border-radius: 50%; border: 0; display: inline-flex; align-items: center; justify-content: center; padding: 0; }
 .s-btn.ok { background: var(--ok); color: #fff; }
-.s-btn.no { background: var(--surface-3); color: var(--ink-2); }
+.s-btn.no { background: var(--surface-2); color: var(--ink-2); }
 .spin { display: inline-block; width: 14px; height: 14px; border-radius: 50%; border: 2px solid currentColor; border-right-color: transparent; animation: spin 700ms linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) { .spin { animation: none; border-right-color: currentColor; opacity: 0.5; } }

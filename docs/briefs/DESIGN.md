@@ -16,6 +16,32 @@ Shell. Desktop has no top bar: the sidebar (252px, hairline right edge, same bac
 
 Components. Buttons are pills: primary is an accent gradient lit from above with a coloured shadow, secondary is a raised plate, ghost is quiet text, danger tinted red. Fields are inset wells with eyebrow labels. Checkboxes are 18px rounded wells that fill with the accent gradient. Segmented control: inset pill track, raised sliding thumb. Dialogs and sheets use the double bezel: a tray in the well tone with a hairline holding the plate, concentric corners (22 plus 6). Toast is a dark pill. Progress bars are inset tracks with a lit accent fill. Table heads are eyebrows. Home widgets rise in one after the other on load (40ms stagger).
 
+## iOS layer (2026-10-20): the iPhone app
+
+Wouter wants the installed PWA to look and behave like a native iOS app; there is no Apple Developer account, so it stays a PWA. Everything below applies only under 1024px (the phone and iPad); the desktop keeps sections 0 to 10 unchanged. Never restyle the desktop in this layer: put iOS rules inside `@media (max-width: 1023px)` (or 720px for phone-only layout) or behind `useMediaQuery('(max-width: 1023px)')`.
+
+Tokens (`style.css`, "iOS layer"): San Francisco via `-apple-system`; Apple text styles at 720px and under (body 17, subhead 15, footnote 13, caption 12, headline 17 semibold, title 22/28, large title 34 bold); systemGroupedBackground `#F2F2F7` and white plates, true black and `#1C1C1E` in dark; iOS system colours for ok (green), warn (orange), danger (red); separators `--line`/`--line-2`; no shadows, no lit edges, no inset wells; `--r-lg` 12 for plates, `--r-md` 10 for fields; `--tab-h` is the tab bar height including the home indicator.
+
+Shell (`App.vue`, `components/ios/`, `lib/nav.js`, `composables/usePageStack.js`):
+- `IosNavBar`: 44pt bar, see-through at the top, material plus hairline once the page's first `h1` (its large title) scrolls under it, then the small centred title. Back shows a chevron and the previous page's name. Capture is the lightning on the right. A view puts its own bar buttons on the right with `<Teleport v-if="phone && route.name === '<its route>'" defer to="#nav-trailing">` holding `button.icon-btn` with a regular-weight Phosphor symbol (the route check makes the button leave with the page).
+- `IosTabBar`: Today, Habits, Overview, More. Every other module is pushed from More (`views/MoreView.vue`), so its Back says More.
+- Push/pop transitions and the interactive swipe from the left edge (installed app only; `localStorage['pozzy.swipeBack'] = '1'` forces it for testing).
+- `UiModal` on the phone is an iOS sheet (grabber, centred title, grey round close) and the page behind sinks back into the card stack (`lib/sheetStack.js`).
+
+Building blocks for views:
+- Large title: every page starts with one `h1` (34 bold). `PageHeader` does this on the phone (no eyebrow, actions under the title). Prefer moving a page's primary add action into the nav bar as a `+` (Teleport above) instead of a filled button under the title.
+- Lists are inset grouped: a `.card` plate (flat, radius 12) with 44pt rows, 16pt side insets, hairline separators that start at the text (not the icon), chevrons (`PhCaretRight`, `--ink-4`) on rows that push. Section headers sit inside the plate as a 17pt semibold `h2`, or above it as a 13pt uppercase `--ink-3` footnote.
+- `components/ios/SwipeRow.vue`: swipe actions on rows (leading green for complete, trailing grey or orange or red for skip, note, delete). Wrap the row; the plate needs `padding: 0; overflow: hidden` on the phone so actions reach its edges.
+- `composables/useContextMenu.js`: long press menus (`menu.open(element, items)`), items `{ label, icon, danger, action }`.
+- `components/ios/PullToRefresh.vue`: wrap a page's root to reload its data (`:action="() => store.load()"`).
+- `components/ui/UiConfirm.vue`: on the phone an iOS action sheet. Use it for every destructive confirmation; never `window.confirm` or `window.prompt`.
+- `lib/haptics.js`: `tick()` on a commit (check, toggle, swipe action), `bump()` on a long press, `success()` when a day completes.
+- Checkboxes are Reminders circles; settings-style toggles are iOS switches: `<input type="checkbox" role="switch">`.
+- `UiSegmented` is the iOS segmented control; filters and modes use it, full width on the phone (`:deep(.seg) { display: flex; width: 100% }`, `:deep(.seg-item) { flex: 1 }`).
+- Buttons: filled ink for the one primary action, `secondary` is the grey tinted button with tint text, `ghost` and `.link-btn` are tint text. Pressing dims; nothing scales.
+- Fields are filled rounded rects at 17px (iOS will not zoom). Forms in sheets read best as grouped rows.
+- Tables do not exist on the phone: turn them into list rows.
+
 ## 1. Direction in one paragraph
 
 Pozzy is a desk instrument, not a SaaS dashboard. A matte stone housing carries raised bone panels separated by hairlines; numbers are tabular; one red lamp marks "now". Brand red is the logo, the today marker, the current time line, the running timer and the focus ring, nothing else. Primary actions are ink, secondary are outlined, area and mail account colours come from the database and are data, never decoration. Both colour schemes follow the system.

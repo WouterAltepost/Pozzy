@@ -1,5 +1,19 @@
 # Pozzy progress
 
+## iOS layer for the iPhone app, 2026-10-20 (not committed)
+
+Wouter: make the PWA look and feel like a native iOS app (no Apple Developer account, so no native build). Choices: iOS tab bar, San Francisco on the phone, every module. Applies only under 1024px; the desktop is unchanged (verified at 1440 on every route). Spec: docs/briefs/DESIGN.md "iOS layer".
+
+- Tokens and base (`style.css`): San Francisco and Apple's text styles, systemGroupedBackground and flat inset grouped plates, true black dark mode, iOS system colours, 17px fields (no zoom), Reminders circles and `role="switch"` switches, launch screens for 11 iPhone sizes in light and dark (`public/splash`, links in `index.html`), theme colours.
+- Shell: `components/ios/IosNavBar.vue` (large title that condenses into the bar, Back with the previous page's name, `#nav-trailing` for page buttons), `IosTabBar.vue` (Today, Habits, Overview, More), `views/MoreView.vue` (the other modules, Settings, dark mode, log out), `lib/nav.js` and `composables/usePageStack.js` (push and pop transitions, interactive swipe back from the left edge in the installed app using a static copy of the previous page). Menu drawer removed.
+- Sheets (`UiModal` on the phone) are iOS sheets and push the page behind into the card stack (`lib/sheetStack.js`). `UiConfirm` is an iOS action sheet. New `IosContextMenu` plus `useContextMenu` (long press), `SwipeRow` (swipe actions), `PullToRefresh`. `lib/haptics.js` plays the iOS 18 switch haptic. Segmented control, buttons and toast restyled.
+- Screens: Today and Habits (swipe Done, Skip, Note; long press menu; pull to refresh; + in the bar), habit page (Edit in the bar). Every other module had its own pass: Tasks (Reminders rows, swipe Done, Edit, Delete, filter menu), Agenda (Calendar day list, grouped event form), Mail (Mail cells, swipe Handled and Task, filters sheet), Goals, Review, Capture, Notes, Hours (stopwatch, swipe delete), Study (status filter instead of the kanban on the phone), Settings (iOS Settings layout, Save in the bar), Overview (summary plates), Login.
+- Every `window.confirm` and `window.prompt` left is gone (Tasks, Study, Notes, Review now use `UiConfirm` or a small sheet on the desktop too).
+
+Verified on the local SQLite stack with Playwright at 390 (light and dark) and 1440: every route, no console errors, no failed API calls, no horizontal overflow; push mid-transition, swipe back, swipe actions, context menu, card stack and action sheet captured. Not verifiable here: haptics and the feel of gestures on a real iPhone. One test run sent two rejected sign-in attempts with a fake address to Supabase Auth while checking the login error state.
+
+Next: Wouter tries it on the iPhone (remove and re-add the home screen icon once so the new launch screens and theme colour are picked up), then commit and deploy.
+
 ## Habit-first update, 2026-10-19 (migration applied, code not deployed)
 
 Wouter: habits are practically the only module he uses; make the app about them, keep the rest reachable through a menu. Plan section 0 records the new scope.

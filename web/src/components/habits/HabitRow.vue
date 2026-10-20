@@ -2,7 +2,7 @@
 // One habit on the Today screen. The body opens the check-in sheet (value, note, skip); the
 // control on the right is the one-tap action: a check for yes/no habits, +1 for counts, and
 // "Log" for values. A long press or right-click on the control opens the sheet too.
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { PhCheck, PhFlame, PhNotePencil, PhPlus, PhSkipForward } from '@phosphor-icons/vue'
 import HabitIcon from './HabitIcon.vue'
 import { useLongPress } from '../../composables/useLongPress'
@@ -13,7 +13,8 @@ const props = defineProps({
   day: { type: String, required: true },
   today: { type: String, required: true },
 })
-const emit = defineEmits(['act', 'open'])
+const emit = defineEmits(['act', 'open', 'menu'])
+const root = ref(null)
 
 const t = computed(() => props.tracker)
 const cell = computed(() => cellOf(t.value, props.day))
@@ -39,6 +40,12 @@ const meta = computed(() => {
 })
 
 const press = useLongPress(() => emit('open'))
+// A long press on the row opens the context menu (Done, Skip, Note, Stats).
+const bodyPress = useLongPress(() => emit('menu', root.value))
+function openRow() {
+  if (bodyPress.consumed()) return
+  emit('open')
+}
 function act() {
   if (press.consumed()) return
   emit('act')
@@ -52,8 +59,8 @@ const actionLabel = computed(() => {
 </script>
 
 <template>
-  <div class="habit" :class="[`is-${state}`, { done, skipped }]">
-    <button type="button" class="body" @click="emit('open')">
+  <div ref="root" class="habit" :class="[`is-${state}`, { done, skipped }]">
+    <button type="button" class="body" v-bind="bodyPress.handlers()" @click="openRow">
       <HabitIcon :tracker="t" :done="done" />
       <span class="text">
         <span class="name">{{ t.name }}</span>
@@ -91,8 +98,7 @@ const actionLabel = computed(() => {
 </template>
 
 <style scoped>
-.habit { display: flex; align-items: center; gap: var(--sp-3); padding: 10px 0; border-top: 1px solid var(--line); }
-.habit:first-child { border-top: 0; }
+.habit { position: relative; display: flex; align-items: center; gap: var(--sp-3); padding: 10px 0; background: var(--surface); }
 .body { flex: 1; min-width: 0; display: flex; align-items: center; gap: 14px; padding: 4px 0; border: 0; background: none; color: inherit; text-align: left; font: inherit; border-radius: var(--r-md); touch-action: manipulation; }
 .text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .name { font-size: var(--fs-lg); font-weight: 600; letter-spacing: -0.01em; color: var(--ink); transition: color var(--dur-ui) ease; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -139,4 +145,15 @@ const actionLabel = computed(() => {
   .body:hover .name { color: var(--brand); }
 }
 @media (prefers-reduced-motion: reduce) { .done .action .tick { animation: none; } }
+/* iOS: a cell with 16pt insets; the body darkens while pressed. */
+@media (max-width: 1023px) {
+  .habit { padding: 8px 16px; min-height: 64px; }
+  .body { touch-action: pan-y; }
+  .body:active { opacity: 0.6; }
+  .name { font-size: 1.0625rem; }
+  .meta { font-size: 0.9375rem; }
+  .action { min-width: 36px; height: 36px; border-width: 1.5px; }
+  .action :deep(svg) { width: 17px; height: 17px; }
+  .action.value { min-width: 58px; padding: 0 12px; font-size: 0.9375rem; }
+}
 </style>

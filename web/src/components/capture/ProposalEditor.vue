@@ -4,13 +4,17 @@ import { useAreasStore } from '../../stores/areas'
 import UiBadge from '../ui/UiBadge.vue'
 import UiButton from '../ui/UiButton.vue'
 import UiField from '../ui/UiField.vue'
+import UiSegmented from '../ui/UiSegmented.vue'
 
-const props = defineProps({ proposal: { type: Object, default: null }, busy: { type: Boolean, default: false } })
+// `ios`: the phone layout in the capture sheet. The type is a segmented control and the fields
+// are grouped form rows (label left, value right), like a new event in Calendar.
+const props = defineProps({ proposal: { type: Object, default: null }, busy: { type: Boolean, default: false }, ios: { type: Boolean, default: false } })
 const emit = defineEmits(['confirm', 'discard'])
 const areas = useAreasStore()
 onMounted(() => areas.load())
 
 const TYPES = ['task', 'event', 'goal', 'note', 'tracker']
+const TYPE_OPTIONS = TYPES.map((t) => ({ value: t, label: t[0].toUpperCase() + t.slice(1) }))
 const form = reactive({ type: 'task', fields: {} })
 
 const DEFAULTS = {
@@ -72,7 +76,55 @@ watch(() => props.proposal, reset, { immediate: true })
 </script>
 
 <template>
-  <form class="proposal" @submit.prevent="submit">
+  <form v-if="ios" class="iprop" @submit.prevent="submit">
+    <UiSegmented :model-value="form.type" :options="TYPE_OPTIONS" class="iseg" @update:model-value="(t) => t !== form.type && switchType(t)" />
+    <p v-if="proposal?.reason" class="ireason">{{ proposal.source === 'claude' ? 'Claude' : 'Rules' }}: {{ proposal.reason }}</p>
+
+    <div v-if="form.type === 'tracker'" class="grp">
+      <label class="frow"><span class="flabel">Tracker</span><input v-model="form.fields.tracker" type="text" class="fval" required /></label>
+      <label class="frow"><span class="flabel">Date</span><input v-model="form.fields.date" type="date" class="fval" /></label>
+      <label class="frow"><span class="flabel">Value</span><input v-model="form.fields.value" type="number" step="any" inputmode="decimal" class="fval" /></label>
+      <label class="frow"><span class="flabel">Note</span><input v-model="form.fields.note" type="text" class="fval" placeholder="None" /></label>
+    </div>
+    <template v-else>
+      <div class="grp">
+        <label class="frow"><input v-model="form.fields.title" type="text" class="fin" placeholder="Title" aria-label="Title" required maxlength="200" /></label>
+        <label class="frow">
+          <span class="flabel">Area</span>
+          <select v-model="form.fields.area" class="fval">
+            <option :value="null">None</option>
+            <option v-for="a in areas.items" :key="a.id" :value="a.name">{{ a.name }}</option>
+          </select>
+        </label>
+      </div>
+      <div v-if="form.type === 'task'" class="grp">
+        <label class="frow"><span class="flabel">Due</span><input v-model="form.fields.due_date" type="date" class="fval" /></label>
+        <label class="frow"><span class="flabel">Minutes</span><input v-model="form.fields.estimated_minutes" type="number" min="1" inputmode="numeric" class="fval" placeholder="None" /></label>
+        <label class="frow"><span class="flabel">Urgent</span><input v-model="form.fields.urgent" type="checkbox" role="switch" /></label>
+        <label class="frow"><span class="flabel">Important</span><input v-model="form.fields.important" type="checkbox" role="switch" /></label>
+      </div>
+      <div v-if="form.type === 'event'" class="grp">
+        <label class="frow"><span class="flabel">Starts</span><input v-model="form.fields.start" type="datetime-local" class="fval" required /></label>
+        <label class="frow"><span class="flabel">Ends</span><input v-model="form.fields.end" type="datetime-local" class="fval" /></label>
+      </div>
+      <div v-if="form.type === 'goal'" class="grp">
+        <label class="frow"><span class="flabel">Target</span><input v-model="form.fields.target_value" type="number" step="any" min="0" inputmode="decimal" class="fval" placeholder="None" /></label>
+        <label class="frow">
+          <span class="flabel">Week</span>
+          <select v-model="form.fields.week" class="fval"><option value="this">This week</option><option value="next">Next week</option></select>
+        </label>
+      </div>
+      <div v-if="form.type === 'task' || form.type === 'note'" class="grp">
+        <label class="frow"><span class="flabel">Tags</span><input v-model="form.fields.tagsText" type="text" class="fval" placeholder="Comma separated" /></label>
+      </div>
+      <div v-if="form.type === 'note'" class="grp"><textarea v-model="form.fields.body" rows="5" class="farea" placeholder="Body (markdown)" aria-label="Body"></textarea></div>
+      <div v-else-if="form.type !== 'goal'" class="grp"><textarea v-model="form.fields.description" rows="3" class="farea" placeholder="Description" aria-label="Description"></textarea></div>
+    </template>
+
+    <UiButton type="submit" variant="primary" block :loading="busy" class="iconfirm">Confirm</UiButton>
+    <button type="button" class="idiscard" :disabled="busy" @click="emit('discard')">Discard</button>
+  </form>
+  <form v-else class="proposal" @submit.prevent="submit">
     <div class="types" role="radiogroup" aria-label="Type">
       <label v-for="t in TYPES" :key="t" class="type" :class="{ on: form.type === t }">
         <input type="radio" name="capture-type" :value="t" :checked="form.type === t" @change="switchType(t)" />
@@ -141,4 +193,23 @@ watch(() => props.proposal, reset, { immediate: true })
 .check { display: flex; align-items: center; gap: 6px; height: var(--control-h); }
 .actions { display: flex; gap: var(--sp-2); }
 .push { margin-left: auto; }
+/* Phone: grouped form rows in the sheet. */
+.iprop { display: flex; flex-direction: column; gap: var(--sp-4); }
+.iseg { display: flex; width: 100%; }
+.iseg :deep(.seg-item) { flex: 1; padding-left: 0; padding-right: 0; }
+.ireason { margin: calc(var(--sp-2) * -1) 4px 0; font-size: var(--fs-sm); color: var(--ink-3); }
+.grp { background: var(--surface-2); border-radius: var(--r-lg); overflow: hidden; }
+.frow { position: relative; display: flex; align-items: center; gap: var(--sp-3); min-height: 44px; padding: 0 16px; font-size: 1.0625rem; }
+.frow + .frow::before { content: ''; position: absolute; top: 0; left: 16px; right: 0; height: 0.5px; background: var(--line-2); }
+.flabel { flex: 1 0 auto; }
+.frow .fin, .frow .fval, .grp .farea { border: 0; background-color: transparent; box-shadow: none; }
+.frow .fin { flex: 1; min-width: 0; height: 44px; padding: 0; }
+.frow .fval { flex: 1 1 0; min-width: 0; height: 44px; padding: 0; color: var(--ink-3); text-align: right; text-align-last: right; }
+.frow select.fval { padding-right: 22px; background-position: right 2px center; }
+.frow input[type='date'].fval, .frow input[type='datetime-local'].fval { color: var(--brand); }
+.grp .farea { display: block; width: 100%; padding: 11px 16px; resize: vertical; line-height: 1.4; }
+.frow .fin:focus-visible, .frow .fval:focus-visible, .grp .farea:focus-visible { box-shadow: none; }
+.iconfirm { height: 50px; font-size: 1.0625rem; margin-top: var(--sp-2); }
+.idiscard { height: 44px; border: 0; background: none; box-shadow: none; color: var(--danger); font: inherit; font-size: 1.0625rem; }
+.idiscard:disabled { opacity: 0.5; }
 </style>

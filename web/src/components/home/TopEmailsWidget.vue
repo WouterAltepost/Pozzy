@@ -8,6 +8,8 @@ import { topEmails, updateEmail } from '../../api/mail'
 import PriorityBadge from '../mail/PriorityBadge.vue'
 import UiBadge from '../ui/UiBadge.vue'
 import UiEmpty from '../ui/UiEmpty.vue'
+import ShowAll from './ShowAll.vue'
+import { tick } from '../../lib/haptics'
 
 const settle = useLoadTask()
 
@@ -24,6 +26,7 @@ async function load() {
 }
 
 async function handled(e) {
+  tick()
   try {
     await updateEmail(e.id, { handled: true })
     emails.value = emails.value.filter((x) => x.id !== e.id)
@@ -34,13 +37,15 @@ async function handled(e) {
 
 onMounted(() => load().finally(settle))
 const link = useWidgetLink('mail')
+// Pull to refresh on the Overview reloads every widget through this.
+defineExpose({ load })
 </script>
 
 <template>
   <section v-if="!failed && emails" class="card widget clickable" tabindex="0" role="link" :aria-label="'Open mail'" @click="link.onClick" @keydown="link.onKey">
     <div class="card-head">
       <h2>Top emails</h2>
-      <span class="meta"><RouterLink :to="{ name: 'mail' }">Inbox</RouterLink></span>
+      <span class="meta"><ShowAll to="mail">Inbox</ShowAll></span>
     </div>
     <ul v-if="emails.length">
       <li v-for="e in emails" :key="e.id" class="list-row">

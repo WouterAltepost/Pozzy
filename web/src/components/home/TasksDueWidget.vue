@@ -8,6 +8,8 @@ import { daysUntil, formatDay } from '../../lib/dates'
 import AreaDot from '../shared/AreaDot.vue'
 import UiBadge from '../ui/UiBadge.vue'
 import UiEmpty from '../ui/UiEmpty.vue'
+import ShowAll from './ShowAll.vue'
+import { tick } from '../../lib/haptics'
 
 const settle = useLoadTask()
 
@@ -24,6 +26,7 @@ async function load() {
 }
 
 async function complete(t) {
+  tick()
   try {
     await completeTask(t.id)
     tasks.value = tasks.value.filter((x) => x.id !== t.id)
@@ -34,13 +37,15 @@ async function complete(t) {
 
 onMounted(() => load().finally(settle))
 const link = useWidgetLink('tasks')
+// Pull to refresh on the Overview reloads every widget through this.
+defineExpose({ load })
 </script>
 
 <template>
   <section v-if="!failed && tasks" class="card widget clickable" tabindex="0" role="link" :aria-label="'Open tasks'" @click="link.onClick" @keydown="link.onKey">
     <div class="card-head">
       <h2>Due today or overdue</h2>
-      <span class="meta"><RouterLink :to="{ name: 'tasks' }">All tasks</RouterLink></span>
+      <span class="meta"><ShowAll to="tasks">All tasks</ShowAll></span>
     </div>
     <ul v-if="tasks.length">
       <li v-for="t in tasks" :key="t.id" class="list-row">

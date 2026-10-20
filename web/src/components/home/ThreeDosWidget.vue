@@ -8,6 +8,9 @@ import { formatDay, today } from '../../lib/dates'
 import UiBadge from '../ui/UiBadge.vue'
 import UiButton from '../ui/UiButton.vue'
 import UiEmpty from '../ui/UiEmpty.vue'
+import ShowAll from './ShowAll.vue'
+import { tick } from '../../lib/haptics'
+import { useMediaQuery } from '../../composables/useMediaQuery'
 
 const settle = useLoadTask()
 
@@ -26,6 +29,7 @@ async function load() {
 }
 
 async function toggle(item) {
+  tick()
   try {
     const updated = await updateDo(item.id, { done: !item.done })
     Object.assign(item, updated)
@@ -48,13 +52,17 @@ async function add() {
 
 onMounted(() => load().finally(settle))
 const link = useWidgetLink('goals')
+const phone = useMediaQuery('(max-width: 1023px)')
+// Pull to refresh on the Overview reloads every widget through this.
+defineExpose({ load })
 </script>
 
 <template>
   <section v-if="!failed && dos" class="card widget clickable" tabindex="0" role="link" :aria-label="'Open goals'" @click="link.onClick" @keydown="link.onKey">
     <div class="card-head">
       <h2>Today's three do's</h2>
-      <span class="meta">{{ formatDay(today()) }}</span>
+      <span v-if="phone" class="meta"><ShowAll to="goals" /></span>
+      <span v-else class="meta">{{ formatDay(today()) }}</span>
     </div>
     <ul v-if="dos.length">
       <li v-for="d in dos" :key="d.id" class="list-row" :class="{ done: d.done }">

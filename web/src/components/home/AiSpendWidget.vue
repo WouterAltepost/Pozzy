@@ -3,6 +3,8 @@ import { useLoadTask } from '../../composables/useReady'
 import { useWidgetLink } from '../../composables/useWidgetLink'
 import { computed, onMounted, ref } from 'vue'
 import { getSpend } from '../../api/ai'
+import { useMediaQuery } from '../../composables/useMediaQuery'
+import ShowAll from './ShowAll.vue'
 
 const settle = useLoadTask()
 
@@ -25,14 +27,19 @@ async function load() {
 
 onMounted(() => load().finally(settle))
 const link = useWidgetLink('settings')
+const phone = useMediaQuery('(max-width: 1023px)')
+// Pull to refresh on the Overview reloads every widget through this.
+defineExpose({ load })
 </script>
 
 <template>
   <section v-if="!failed && data" class="card widget clickable" tabindex="0" role="link" :aria-label="'Open settings'" @click="link.onClick" @keydown="link.onKey">
     <div class="card-head">
       <h2>AI spend</h2>
-      <span class="meta num">{{ usd(data.month.cost) }} this month<template v-if="data.budget_usd"> of {{ usd(data.budget_usd) }}</template>, {{ usd(data.today_cost) }} today</span>
+      <span v-if="phone" class="meta"><ShowAll to="settings" /></span>
+      <span v-else class="meta num">{{ usd(data.month.cost) }} this month<template v-if="data.budget_usd"> of {{ usd(data.budget_usd) }}</template>, {{ usd(data.today_cost) }} today</span>
     </div>
+    <p v-if="phone" class="headline num">{{ usd(data.month.cost) }}<span class="unit"> this month<template v-if="data.budget_usd"> of {{ usd(data.budget_usd) }}</template>, {{ usd(data.today_cost) }} today</span></p>
     <div v-if="budgetPct !== null" class="bar"><div class="fill" :class="{ warn: budgetPct >= 80 }" :style="{ width: budgetPct + '%' }"></div></div>
     <div class="days" role="img" :aria-label="'Spend over the last 7 days'">
       <div v-for="d in data.last_7_days" :key="d.date" class="day" :title="d.date + ': ' + usd(d.cost) + ', ' + d.calls + ' calls'">

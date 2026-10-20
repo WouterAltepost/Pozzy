@@ -7,14 +7,17 @@ import { useRoute, useRouter } from 'vue-router'
 import { PhCaretDown, PhPlus, PhSparkle } from '@phosphor-icons/vue'
 import CheckInSheet from '../components/habits/CheckInSheet.vue'
 import HabitEditor from '../components/habits/HabitEditor.vue'
-import HabitRow from '../components/habits/HabitRow.vue'
+import HabitListItem from '../components/habits/HabitListItem.vue'
+import PullToRefresh from '../components/ios/PullToRefresh.vue'
 import ProgressRing from '../components/habits/ProgressRing.vue'
 import WeekStrip from '../components/habits/WeekStrip.vue'
 import UiButton from '../components/ui/UiButton.vue'
 import UiEmpty from '../components/ui/UiEmpty.vue'
 import UiLoadGate from '../components/ui/UiLoadGate.vue'
 import { useReady } from '../composables/useReady'
+import { useMediaQuery } from '../composables/useMediaQuery'
 import { useToast } from '../composables/useToast'
+import { success, tick } from '../lib/haptics'
 import { formatDay, mondayOf, today as todayFn } from '../lib/dates'
 import { cellOf, fmt, isBool, isWeekly } from '../lib/habits'
 import { useTrackersStore } from '../stores/trackers'
@@ -95,7 +98,9 @@ async function write(t, fn) {
   error.value = ''
   try {
     const d = day.value
+    const wasAllDone = allDone.value
     const { previous, value, status } = await fn()
+    if (!wasAllDone && allDone.value) success()
     toast.undo(describe(t, value, status), async () => {
       try {
         await store.revert(t.id, d, previous)
@@ -110,9 +115,20 @@ async function write(t, fn) {
 
 // One tap: a check toggles, a count adds one, a value habit opens the sheet for its number.
 function act(t) {
-  if (isBool(t) || t.type === 'weekly_count') write(t, () => store.tick(t.id, day.value))
-  else openSheet(t)
+  if (isBool(t) || t.type === 'weekly_count') {
+    tick()
+    write(t, () => store.tick(t.id, day.value))
+  } else openSheet(t)
 }
+
+// Skip from a swipe or the context menu; on a skipped day it takes the skip back.
+function skip(t) {
+  tick()
+  const c = cellOf(t, day.value)
+  write(t, () => (c?.status === 'skipped' ? store.clearEntry(t.id, day.value) : store.skip(t.id, day.value)))
+}
+
+const phone = useMediaQuery('(max-width: 1023px)')
 
 const sheet = ref(null)
 const sheetBusy = ref(false)
@@ -162,7 +178,11 @@ async function createHabit(body) {
 </script>
 
 <template>
+  <PullToRefresh :action="() => store.load()">
   <div class="today">
+    <Teleport v-if="phone && route.name === 'home'" defer to="#nav-trailing">
+      <button type="button" class="icon-btn" aria-label="New habit" @click="editing = true"><PhPlus weight="regular" /></button>
+    </Teleport>
     <header class="hero">
       <div class="titles">
         <span class="eyebrow">{{ eyebrow }}</span>
@@ -189,13 +209,13 @@ async function createHabit(body) {
 
       <template v-else>
         <section v-if="due.length" class="card list">
-          <HabitRow v-for="t in due" :key="t.id" :tracker="t" :day="day" :today="today" @act="act(t)" @open="openSheet(t)" />
+          <HabitListItem v-for="t in due" :key="t.id" :tracker="t" :day="day" :today="today" @act="act(t)" @open="openSheet(t)" @skip="skip(t)" />
         </section>
 
         <section v-if="weekly.length" class="card list">
           <div class="card-head"><h2>This week</h2><span class="meta">{{ weekly.filter((t) => t.week_met).length }} of {{ weekly.length }} met</span></div>
           <div v-for="t in weekly" :key="t.id" class="weekly">
-            <HabitRow :tracker="t" :day="day" :today="today" @act="act(t)" @open="openSheet(t)" />
+            <HabitListItem :tracker="t" :day="day" :today="today" @act="act(t)" @open="openSheet(t)" @skip="skip(t)" />
             <div v-if="t.target_value" class="bar"><div class="fill" :class="{ full: t.week_met }" :style="{ width: Math.min(100, (t.week_total / t.target_value) * 100) + '%' }"></div></div>
           </div>
         </section>
@@ -206,7 +226,7 @@ async function createHabit(body) {
             <PhCaretDown class="caret" :class="{ open: showOff }" aria-hidden="true" />
           </button>
           <div v-if="showOff" class="card list">
-            <HabitRow v-for="t in notDue" :key="t.id" :tracker="t" :day="day" :today="today" @act="act(t)" @open="openSheet(t)" />
+            <HabitListItem v-for="t in notDue" :key="t.id" :tracker="t" :day="day" :today="today" @act="act(t)" @open="openSheet(t)" @skip="skip(t)" />
           </div>
         </section>
 
@@ -220,6 +240,7 @@ async function createHabit(body) {
     <CheckInSheet :open="Boolean(sheetTracker)" :tracker="sheetTracker" :day="day" :busy="sheetBusy" @save="saveSheet" @clear="clearSheet" @close="sheet = null" />
     <HabitEditor :open="editing" :busy="saving" :error="editError" @save="createHabit" @close="editing = false" />
   </div>
+  </PullToRefresh>
 </template>
 
 <style scoped>
@@ -233,9 +254,9 @@ async function createHabit(body) {
 .strip { margin-bottom: var(--sp-5); }
 .list { padding-top: var(--sp-2); padding-bottom: var(--sp-2); }
 .list .card-head { padding-top: var(--sp-3); margin-bottom: var(--sp-1); }
-.weekly { border-top: 1px solid var(--line); padding-bottom: 12px; }
+.list :deep(.habit-item + .habit-item) { border-top: 1px solid var(--line); }
+.weekly { border-top: 1px solid var(--line); padding-bottom: 12px; background: var(--surface); }
 .weekly:first-of-type { border-top: 0; }
-.weekly :deep(.habit) { border-top: 0; }
 .weekly .bar { margin-left: 54px; }
 .off { margin-bottom: var(--sp-5); }
 .off-toggle { display: flex; align-items: center; gap: 6px; width: 100%; padding: 6px 4px 10px; border: 0; background: none; color: var(--ink-3); }
@@ -246,8 +267,18 @@ async function createHabit(body) {
 .today :deep(.card:nth-of-type(2)) { animation-delay: 50ms; }
 @keyframes rise { from { opacity: 0; transform: translateY(10px); } }
 @media (prefers-reduced-motion: reduce) { .today :deep(.card) { animation: none; } }
-@media (max-width: 720px) {
+/* iOS: an inset grouped list. Cells run to the plate's edges so swipe actions fill the row;
+   separators start at the text, after the symbol. */
+@media (max-width: 1023px) {
   .hero { margin-bottom: var(--sp-4); }
-  .card.list { padding-left: var(--sp-4); padding-right: var(--sp-4); }
+  .card.list { padding: 0; overflow: hidden; }
+  .list .card-head { padding: 12px 16px 4px; margin: 0; }
+  .list :deep(.habit-item + .habit-item) { border-top: 0; }
+  .list :deep(.habit-item + .habit-item .habit::before), .weekly + .weekly::before { content: ''; position: absolute; top: 0; left: 70px; right: 0; height: 0.5px; background: var(--line-2); z-index: 2; }
+  .weekly { position: relative; border-top: 0; padding-bottom: 12px; }
+  .weekly .bar { margin: 0 16px 0 70px; }
+  .off-toggle { padding: 6px 16px 8px; }
+  .off-toggle .eyebrow { font-size: var(--fs-sm); }
+  .foot { padding: 0 8px; }
 }
 </style>

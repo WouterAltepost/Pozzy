@@ -19,4 +19,10 @@ defineProps({ title: { type: String, required: true }, eyebrow: { type: String, 
 .title-row .eyebrow { flex-basis: 100%; }
 .meta { font-size: var(--fs-sm); color: var(--ink-3); font-variant-numeric: tabular-nums; }
 .toolbar { display: flex; align-items: center; gap: var(--sp-2); flex-wrap: wrap; }
+/* iOS: the large title on its own line under the navigation bar, page actions below it. */
+@media (max-width: 1023px) {
+  .page-header { flex-direction: column; align-items: stretch; gap: var(--sp-3); margin: 4px 0 var(--sp-5); }
+  .title-row .eyebrow { display: none; }
+  .toolbar { gap: var(--sp-2); }
+}
 </style>

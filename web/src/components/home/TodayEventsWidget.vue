@@ -8,6 +8,7 @@ import { addDays, formatTime, today } from '../../lib/dates'
 import { dayStartIso } from '../../stores/calendar'
 import UiBadge from '../ui/UiBadge.vue'
 import UiEmpty from '../ui/UiEmpty.vue'
+import ShowAll from './ShowAll.vue'
 
 const settle = useLoadTask()
 
@@ -34,13 +35,15 @@ async function load() {
 
 onMounted(() => load().finally(settle))
 const link = useWidgetLink('agenda')
+// Pull to refresh on the Overview reloads every widget through this.
+defineExpose({ load })
 </script>
 
 <template>
   <section v-if="!failed && items" class="card widget clickable" tabindex="0" role="link" :aria-label="'Open agenda'" @click="link.onClick" @keydown="link.onKey">
     <div class="card-head">
       <h2>Today</h2>
-      <span class="meta"><RouterLink :to="{ name: 'agenda' }">Agenda</RouterLink></span>
+      <span class="meta"><ShowAll to="agenda">Agenda</ShowAll></span>
     </div>
     <ul v-if="items.length">
       <li v-for="it in items" :key="it.id" class="list-row" :class="it.kind">

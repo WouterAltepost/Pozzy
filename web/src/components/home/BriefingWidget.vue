@@ -104,6 +104,8 @@ function onKey(e) {
 }
 
 onMounted(() => load().finally(settle))
+// Pull to refresh on the Overview reloads every widget through this.
+defineExpose({ load })
 </script>
 
 <template>

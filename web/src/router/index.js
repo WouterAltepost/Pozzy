@@ -18,6 +18,8 @@ export const NAV = [
   // Archived 2026-09-23: reachable at /notes for capture proposals and old links, hidden from the nav.
   { path: '/notes', name: 'notes', label: 'Notes', view: () => import('../views/NotesView.vue'), hidden: true },
   { path: '/review', name: 'review', label: 'Review', view: () => import('../views/WeeklyReviewView.vue') },
+  // The More tab on the phone: every module that is not a tab, Settings, appearance, log out.
+  { path: '/more', name: 'more', label: 'More', view: () => import('../views/MoreView.vue'), hidden: true },
   { path: '/settings', name: 'settings', label: 'Settings', view: () => import('../views/SettingsView.vue') },
 ]
 

@@ -10,6 +10,8 @@ import ProposalEditor from './capture/ProposalEditor.vue'
 import UiButton from './ui/UiButton.vue'
 import UiModal from './ui/UiModal.vue'
 
+// icon: a bare symbol for the iOS navigation bar instead of the search-style pill.
+defineProps({ icon: { type: Boolean, default: false } })
 const store = useCapturesStore()
 const toast = useToast()
 const open = ref(false)
@@ -80,8 +82,9 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKey))
 </script>
 
 <template>
-  <div class="capture-bar">
-    <button type="button" class="capture-btn" title="Capture anything (Cmd or Ctrl plus K)" @click="show">
+  <div class="capture-bar" :class="{ iconic: icon }">
+    <button v-if="icon" type="button" class="icon-btn capture-icon" aria-label="Capture" @click="show"><PhLightning weight="regular" /></button>
+    <button v-else type="button" class="capture-btn" title="Capture anything (Cmd or Ctrl plus K)" @click="show">
       <PhLightning class="bolt" weight="fill" aria-hidden="true" />
       <span class="label">Capture</span>
       <span class="label-long">Capture anything</span>
@@ -128,6 +131,9 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKey))
   .label-long { display: inline; color: var(--ink-3); font-weight: 400; }
   .capture-btn { width: 100%; height: 36px; justify-content: flex-start; padding-left: 12px; font-size: var(--fs-base); }
 }
+.iconic { width: auto; }
+.capture-icon { width: 44px; height: 44px; }
+.capture-icon :deep(svg) { width: 24px; height: 24px; }
 .entry { display: flex; flex-direction: column; gap: var(--sp-3); }
 .entry textarea { width: 100%; font-size: var(--fs-base); }
 .entry-row { display: flex; flex-wrap: wrap; gap: var(--sp-3); align-items: center; }

@@ -9,6 +9,7 @@ import { PhX } from '@phosphor-icons/vue'
 import { useDrag } from '../../composables/useDrag'
 import { useMediaQuery } from '../../composables/useMediaQuery'
 import { createSpring, project, reducedMotion, rubberband } from '../../lib/spring'
+import { dismissSheet, presentSheet, sheetProgress } from '../../lib/sheetStack'
 
 const props = defineProps({
   open: { type: Boolean, default: false },
@@ -24,13 +25,25 @@ let previousFocus = null
 const mounted = ref(false)
 const y = ref(0)
 const sheetHeight = () => panel.value?.offsetHeight || window.innerHeight
+// Whether this sheet holds the page behind in the card stack (phone only).
+let presented = false
+function release() {
+  if (presented) dismissSheet()
+  presented = false
+}
 const spring = createSpring({
   value: 0,
   damping: 1,
   response: 0.4,
-  onUpdate: (v) => (y.value = v),
+  onUpdate: (v) => {
+    y.value = v
+    if (presented) sheetProgress(1 - v / Math.max(1, sheetHeight()))
+  },
   onRest: () => {
-    if (!props.open) mounted.value = false
+    if (!props.open) {
+      mounted.value = false
+      release()
+    }
   },
 })
 
@@ -39,6 +52,10 @@ async function show() {
   document.addEventListener('keydown', onKey)
   document.body.style.overflow = 'hidden'
   mounted.value = true
+  if (phone.value && !presented) {
+    presentSheet()
+    presented = true
+  }
   await nextTick()
   if (phone.value) {
     if (spring.value <= 0.5 || !spring.running) spring.jump(sheetHeight())
@@ -54,7 +71,10 @@ function hide(velocity = 0) {
   previousFocus?.focus?.({ preventScroll: true })
   previousFocus = null
   if (phone.value && mounted.value && !reducedMotion()) spring.set(sheetHeight(), { velocity: Math.max(0, velocity) })
-  else mounted.value = false
+  else {
+    mounted.value = false
+    release()
+  }
 }
 function onKey(e) {
   if (e.key === 'Escape') emit('close')
@@ -66,6 +86,7 @@ watch(
 onMounted(() => props.open && show())
 onBeforeUnmount(() => {
   spring.stop()
+  release()
   document.removeEventListener('keydown', onKey)
   document.body.style.overflow = ''
 })
@@ -109,7 +130,7 @@ const sheetStyle = computed(() => (phone.value ? { transform: `translate3d(0, ${
             <div v-if="phone" class="grab" aria-hidden="true" v-bind="drag.handlers" @dragstart.prevent><span class="grabber"></span></div>
             <div v-if="title" class="dialog-head" v-bind="phone ? drag.handlers : {}" @dragstart.prevent>
               <h2>{{ title }}</h2>
-              <button type="button" class="icon-btn" aria-label="Close" @click="emit('close')"><PhX :size="18" /></button>
+              <button type="button" class="icon-btn" aria-label="Close" @click="emit('close')"><PhX :size="18" :weight="phone ? 'bold' : undefined" /></button>
             </div>
             <div class="dialog-body"><slot /></div>
           </div>
@@ -157,20 +178,29 @@ const sheetStyle = computed(() => (phone.value ? { transform: `translate3d(0, ${
 @media (prefers-reduced-motion: reduce) { .modal-enter-from .dialog, .modal-leave-to .dialog { transform: none; } }
 
 /* Phone: a sheet from the bottom edge. The spring drives transform; CSS only draws the material. */
-.phone { align-items: flex-end; padding: 0 6px; }
+.phone { align-items: flex-end; padding: 0; }
+.phone .scrim { background: rgb(0 0 0 / 0.25); -webkit-backdrop-filter: none; backdrop-filter: none; }
+/* An iOS sheet: one surface from edge to edge, 12pt top corners, grabber, centred title and the
+   grey round close button. */
 .phone .dialog {
   max-width: none;
-  max-height: calc(100dvh - env(safe-area-inset-top) - 24px);
-  border-radius: calc(var(--r-xl) + var(--tray)) calc(var(--r-xl) + var(--tray)) 0 0;
-  border-bottom: 0;
-  padding-bottom: 0;
+  max-height: calc(100dvh - env(safe-area-inset-top) - 10px);
+  padding: 0;
+  border: 0;
+  border-radius: 12px 12px 0 0;
+  background: var(--surface);
+  box-shadow: 0 -1px 0 rgb(0 0 0 / 0.04);
   will-change: transform;
   touch-action: none;
 }
-.phone .plate { border-radius: var(--r-xl) var(--r-xl) 0 0; border-bottom: 0; padding-bottom: env(safe-area-inset-bottom); }
-.phone .grab { display: flex; justify-content: center; padding: 10px 0 2px; touch-action: none; cursor: grab; user-select: none; -webkit-user-select: none; }
+.phone .plate { border: 0; border-radius: 12px 12px 0 0; box-shadow: none; background: transparent; padding-bottom: env(safe-area-inset-bottom); }
+.phone .grab { display: flex; justify-content: center; padding: 5px 0 0; touch-action: none; cursor: grab; user-select: none; -webkit-user-select: none; }
 .phone .grabber { width: 36px; height: 5px; border-radius: 3px; background: var(--ink-4); }
-.phone .dialog-head { padding: var(--sp-2) var(--sp-5) 0; touch-action: none; user-select: none; -webkit-user-select: none; }
-.phone .dialog-body { padding: var(--sp-4) var(--sp-5) var(--sp-6); touch-action: pan-y; }
+.phone .dialog-head { display: grid; grid-template-columns: 44px minmax(0, 1fr) 44px; align-items: center; padding: 4px var(--sp-2) 0; touch-action: none; user-select: none; -webkit-user-select: none; }
+.phone .dialog-head::before { content: ''; }
+.phone .dialog-head h2 { text-align: center; font-size: 1.0625rem; font-weight: 600; letter-spacing: normal; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.phone .dialog-head .icon-btn { width: 30px; height: 30px; margin: 0 auto; background: var(--surface-2); color: var(--ink-3); }
+.phone .dialog-head .icon-btn :deep(svg) { width: 14px; height: 14px; }
+.phone .dialog-body { padding: var(--sp-4) var(--sp-4) var(--sp-6); touch-action: pan-y; }
 .reduced.phone .dialog { transform: none !important; transition: opacity 200ms ease; }
 </style>

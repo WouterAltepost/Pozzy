@@ -4,6 +4,8 @@ import { useWidgetLink } from '../../composables/useWidgetLink'
 import { onMounted, ref } from 'vue'
 import { hoursSuggestions, hoursWeek } from '../../api/hours'
 import { minutesToHours } from '../../lib/dates'
+import { useMediaQuery } from '../../composables/useMediaQuery'
+import ShowAll from './ShowAll.vue'
 
 const settle = useLoadTask()
 
@@ -11,9 +13,10 @@ const summary = ref(null)
 const suggestions = ref(null)
 const failed = ref(false)
 
-onMounted(async () => {
+async function load() {
   try {
     summary.value = await hoursWeek()
+    failed.value = false
   } catch {
     failed.value = true
   } finally {
@@ -25,20 +28,25 @@ onMounted(async () => {
   } catch {
     suggestions.value = null
   }
-})
+}
+onMounted(load)
 
 function pct(row) {
   return row.target_minutes ? Math.min(100, Math.round((row.minutes / row.target_minutes) * 100)) : null
 }
 const link = useWidgetLink('hours')
+const phone = useMediaQuery('(max-width: 1023px)')
+// Pull to refresh on the Overview reloads every widget through this.
+defineExpose({ load })
 </script>
 
 <template>
   <section v-if="!failed && summary" class="card widget clickable" tabindex="0" role="link" :aria-label="'Open hours'" @click="link.onClick" @keydown="link.onKey">
     <div class="card-head">
       <h2>Hours this week</h2>
-      <span class="meta"><RouterLink :to="{ name: 'hours' }" class="num">{{ minutesToHours(summary.total_minutes) }} total</RouterLink></span>
+      <span class="meta"><ShowAll to="hours" class="num">{{ minutesToHours(summary.total_minutes) }} total</ShowAll></span>
     </div>
+    <p v-if="phone" class="headline num">{{ minutesToHours(summary.total_minutes) }}<span class="unit"> this week</span></p>
     <div v-for="row in summary.areas.filter((r) => r.area_id || r.minutes)" :key="row.area" class="hrow">
       <span class="label"><span class="dot" :style="{ background: row.color }" aria-hidden="true"></span>{{ row.area }}</span>
       <div class="bar"><div class="fill" :class="{ full: pct(row) >= 100 }" :style="{ width: (pct(row) ?? (row.minutes ? 100 : 0)) + '%' }"></div></div>

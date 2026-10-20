@@ -1,15 +1,15 @@
 <script setup>
 // App shell. Desktop: one sidebar carries everything (brand, the capture command, grouped
 // navigation with eyebrows, the account row); the content area is a quiet canvas with room to
-// breathe and no bar glued to the top. Phone: a slim toolbar with the menu button, the mark and
-// the capture command; the menu opens the navigation drawer. No tab bar: habits are Home.
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+// breathe and no bar glued to the top. Below 1024px Pozzy is the iPhone app (docs/briefs/DESIGN.md,
+// iOS layer): an iOS navigation bar with large titles and Back, pages pushed and popped with the
+// swipe from the left edge, and a tab bar (Today, Habits, Overview, More).
+import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import {
   PhCalendarBlank,
   PhChartLineUp,
   PhCheckCircle,
-  PhList,
   PhSquaresFour,
   PhCheckSquare,
   PhClipboardText,
@@ -25,8 +25,12 @@ import {
   PhTimer,
 } from '@phosphor-icons/vue'
 import CaptureBar from './components/CaptureBar.vue'
-import NavDrawer from './components/NavDrawer.vue'
+import IosContextMenu from './components/ios/IosContextMenu.vue'
+import IosNavBar from './components/ios/IosNavBar.vue'
+import IosTabBar from './components/ios/IosTabBar.vue'
 import UiToast from './components/ui/UiToast.vue'
+import { useMediaQuery } from './composables/useMediaQuery'
+import { usePageStack } from './composables/usePageStack'
 import { useTheme } from './composables/useTheme'
 import { NAV, NAV_GROUPS } from './router'
 import { useAuthStore } from './stores/auth'
@@ -34,8 +38,9 @@ import { useAuthStore } from './stores/auth'
 const auth = useAuthStore()
 const router = useRouter()
 const route = useRoute()
-const menuOpen = ref(false)
 const theme = useTheme()
+const phone = useMediaQuery('(max-width: 1023px)')
+const stack = usePageStack(phone)
 
 const ICONS = {
   home: PhCheckCircle,
@@ -60,33 +65,15 @@ const currentName = computed(() => (route.name === 'habit' ? 'trackers' : String
 const initial = computed(() => (auth.user?.email || '?')[0].toUpperCase())
 
 async function logout() {
-  menuOpen.value = false
   await auth.logout()
   router.push({ name: 'login' })
 }
 
-watch(() => route.fullPath, () => (menuOpen.value = false))
-
-const scrolled = ref(false)
-function onScroll() {
-  scrolled.value = window.scrollY > 2
-}
-onMounted(() => {
-  onScroll()
-  window.addEventListener('scroll', onScroll, { passive: true })
-})
-onBeforeUnmount(() => window.removeEventListener('scroll', onScroll))
 </script>
 
 <template>
   <div class="shell" :class="{ authed: auth.isAuthenticated }">
-    <header v-if="auth.isAuthenticated" class="topbar" :class="{ scrolled }">
-      <button type="button" class="icon-btn menu-btn" aria-label="Open menu" :aria-expanded="menuOpen" @click="menuOpen = true"><PhList weight="regular" /></button>
-      <RouterLink to="/" class="topbar-brand" aria-label="Pozzy home">
-        <img :src="theme.isDark.value ? '/mark-dark.svg' : '/favicon.svg'" alt="" class="mark" width="26" height="26" />
-      </RouterLink>
-      <CaptureBar class="topbar-capture" />
-    </header>
+    <IosNavBar v-if="auth.isAuthenticated" />
 
     <div class="body">
       <nav v-if="auth.isAuthenticated" class="rail" aria-label="Main">
@@ -119,14 +106,15 @@ onBeforeUnmount(() => window.removeEventListener('scroll', onScroll))
       </nav>
       <main class="page">
         <RouterView v-slot="{ Component }">
-          <Transition name="route" mode="out-in">
+          <Transition :name="stack.transitionName.value" :mode="stack.mode.value" @before-leave="stack.onBeforeLeave">
             <component :is="Component" :key="route.name" />
           </Transition>
         </RouterView>
       </main>
     </div>
 
-    <NavDrawer v-if="auth.isAuthenticated" :open="menuOpen" :groups="groups" :current="currentName" :email="auth.user?.email || ''" @close="menuOpen = false" @logout="logout" />
+    <IosTabBar v-if="auth.isAuthenticated" :current="String(route.name || '')" />
+    <IosContextMenu />
     <UiToast />
   </div>
 </template>
@@ -138,9 +126,6 @@ onBeforeUnmount(() => window.removeEventListener('scroll', onScroll))
 .route-enter-from { opacity: 0; transform: translateY(8px); }
 .route-leave-to { opacity: 0; }
 @media (prefers-reduced-motion: reduce) { .route-enter-from { transform: none; } }
-
-/* The phone toolbar. Hidden on the desktop, where the sidebar carries the same commands. */
-.topbar { display: none; }
 
 .body { display: flex; flex: 1; align-items: stretch; }
 .rail {
@@ -187,29 +172,8 @@ onBeforeUnmount(() => window.removeEventListener('scroll', onScroll))
 .avatar { width: 28px; height: 28px; border-radius: 50%; display: inline-grid; place-items: center; background: linear-gradient(180deg, var(--brand-2), var(--brand)); color: #fff; font-size: var(--fs-sm); font-weight: 600; box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.3); flex: none; }
 .email { flex: 1; min-width: 0; font-size: var(--fs-sm); color: var(--ink-3); }
 .page { flex: 1; min-width: 0; width: 100%; }
-.topbar-brand { flex: none; display: inline-flex; padding: 4px; border-radius: var(--r-pill); }
-.menu-btn { flex: none; margin-left: -8px; color: var(--ink); }
-.menu-btn svg { width: 22px; height: 22px; }
 
 @media (max-width: 1023px) {
   .rail { display: none; }
-  .topbar {
-    position: sticky;
-    top: 0;
-    z-index: var(--z-bar);
-    height: calc(var(--bar-h) + env(safe-area-inset-top));
-    padding: env(safe-area-inset-top) var(--sp-4) 0;
-    display: flex;
-    align-items: center;
-    gap: var(--sp-3);
-    background: var(--material);
-    -webkit-backdrop-filter: var(--material-blur);
-    backdrop-filter: var(--material-blur);
-    border-bottom: 1px solid transparent;
-    transition: border-color var(--dur-ui) ease;
-  }
-  .topbar.scrolled { border-bottom-color: var(--line); }
-  @media (prefers-reduced-transparency: reduce) { .topbar { background: var(--bg); backdrop-filter: none; -webkit-backdrop-filter: none; } }
-  .topbar-capture { flex: 1; min-width: 0; }
 }
 </style>

@@ -8,6 +8,8 @@ import { useRouter } from 'vue-router'
 import { PhCheck } from '@phosphor-icons/vue'
 import { deleteEntry, tickTracker, trackerWeek, upsertEntry } from '../../api/trackers'
 import { today } from '../../lib/dates'
+import { tick as haptic } from '../../lib/haptics'
+import ShowAll from './ShowAll.vue'
 
 const settle = useLoadTask()
 const toast = useToast()
@@ -73,18 +75,21 @@ const router = useRouter()
 const press = useLongPress(() => router.push({ name: 'home' }))
 function tick(t) {
   if (press.consumed()) return
+  haptic()
   write(t, () => tickTracker(t.id, today()))
 }
 
 onMounted(() => load().finally(settle))
 const link = useWidgetLink('home')
+// Pull to refresh on the Overview reloads every widget through this.
+defineExpose({ load })
 </script>
 
 <template>
   <section v-if="!failed && week && quick.length" class="card widget clickable" tabindex="0" role="link" :aria-label="'Open today\'s habits'" @click="link.onClick" @keydown="link.onKey">
     <div class="card-head">
       <h2>Habits today</h2>
-      <span class="meta"><RouterLink :to="{ name: 'home' }">Check in</RouterLink></span>
+      <span class="meta"><ShowAll to="home" label="Check in">Check in</ShowAll></span>
     </div>
     <div class="chips">
       <button

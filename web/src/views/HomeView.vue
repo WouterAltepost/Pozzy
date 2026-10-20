@@ -10,10 +10,20 @@ import TodayEventsWidget from '../components/home/TodayEventsWidget.vue'
 import TopEmailsWidget from '../components/home/TopEmailsWidget.vue'
 import TrackerRowWidget from '../components/home/TrackerRowWidget.vue'
 import WeeklyGoalsWidget from '../components/home/WeeklyGoalsWidget.vue'
+import PullToRefresh from '../components/ios/PullToRefresh.vue'
 import UiLoadGate from '../components/ui/UiLoadGate.vue'
+import { useMediaQuery } from '../composables/useMediaQuery'
 import { useLoadGateHost } from '../composables/useReady'
 
 const ready = useLoadGateHost()
+// Phone: the Fitness summary. The date sits small above the large title, every widget is a
+// plate with its headline and a Show all link, and a pull reloads every widget in place.
+const phone = useMediaQuery('(max-width: 1023px)')
+const widgets = new Set()
+const keep = (el) => el && widgets.add(el)
+async function refresh() {
+  await Promise.all([...widgets].filter((w) => w.load).map((w) => w.load().catch(() => {})))
+}
 
 const now = new Date()
 const weekday = now.toLocaleDateString('en-GB', { weekday: 'long' })
@@ -24,26 +34,32 @@ const week = Math.ceil(((now - jan4) / 86400000 + ((jan4.getDay() + 6) % 7) + 1)
 </script>
 
 <template>
+  <PullToRefresh :action="refresh">
   <div class="home">
-    <div class="display">
+    <div v-if="phone" class="display">
+      <span class="dateline">{{ weekday }} {{ date }}, week {{ week }}</span>
+      <h1>Overview</h1>
+    </div>
+    <div v-else class="display">
       <span class="eyebrow">{{ weekday }} · Week {{ week }}</span>
       <h1>{{ date }}</h1>
     </div>
     <UiLoadGate :ready="ready" label="Loading your day">
     <div class="widgets">
-      <ThreeDosWidget class="w-dos" />
-      <TodayEventsWidget class="w-today" />
-      <TopEmailsWidget class="w-mail" />
-      <TasksDueWidget class="w-due" />
-      <TrackerRowWidget class="span w-trackers" />
-      <HoursWeekWidget class="w-hours" />
-      <WeeklyGoalsWidget class="w-goals" />
-      <DeadlinesWidget class="w-deadlines" />
-      <BriefingWidget class="span w-briefing" />
-      <AiSpendWidget class="w-spend" />
+      <ThreeDosWidget :ref="keep" class="w-dos" />
+      <TodayEventsWidget :ref="keep" class="w-today" />
+      <TopEmailsWidget :ref="keep" class="w-mail" />
+      <TasksDueWidget :ref="keep" class="w-due" />
+      <TrackerRowWidget :ref="keep" class="span w-trackers" />
+      <HoursWeekWidget :ref="keep" class="w-hours" />
+      <WeeklyGoalsWidget :ref="keep" class="w-goals" />
+      <DeadlinesWidget :ref="keep" class="w-deadlines" />
+      <BriefingWidget :ref="keep" class="span w-briefing" />
+      <AiSpendWidget :ref="keep" class="w-spend" />
     </div>
     </UiLoadGate>
   </div>
+  </PullToRefresh>
 </template>
 
 <style scoped>
@@ -66,5 +82,29 @@ const week = Math.ceil(((now - jan4) / 86400000 + ((jan4.getDay() + 6) % 7) + 1)
   .widgets > .w-trackers { order: 5; } .widgets > .w-hours { order: 6; } .widgets > .w-mail { order: 7; } .widgets > .w-goals { order: 8; }
   .widgets > .w-deadlines { order: 9; } .widgets > .w-spend { order: 10; }
   .display { margin-bottom: var(--sp-5); }
+}
+
+/* iOS layer: summary plates, as in Health and Fitness. The headline sits in the plate with the
+   Show all link on its right, rows are 44pt with separators from the text, no lift on press. */
+@media (max-width: 1023px) {
+  .display { gap: 0; margin: 4px 0 var(--sp-5); }
+  .dateline { font-size: 0.8125rem; font-weight: 600; text-transform: uppercase; color: var(--ink-3); }
+  .widgets { gap: var(--sp-4); }
+  .widgets > * { animation: none; }
+  .widgets :deep(.card.widget) { padding: 12px 16px 6px; }
+  .widgets :deep(.card-head) { flex-wrap: nowrap; align-items: center; min-height: 32px; margin-bottom: 2px; }
+  .widgets :deep(.card-head h2) { font-size: 1.0625rem; font-weight: 600; }
+  .widgets :deep(.card-head .meta) { flex: none; }
+  .widgets :deep(.headline) { margin: 0 0 6px; font-size: 1.75rem; font-weight: 700; line-height: 1.15; color: var(--ink); }
+  .widgets :deep(.headline .unit) { font-size: 0.9375rem; font-weight: 400; color: var(--ink-3); }
+  .widgets :deep(.list-row) { gap: 12px; padding: 8px 0; font-size: 1.0625rem; }
+  .widgets :deep(.list-row + .list-row::before) { left: var(--sep, 0); right: -16px; background: var(--line-2); }
+  .widgets :deep(.list-row:has(> input[type='checkbox']:first-child)) { --sep: 34px; }
+  /* Status capsules read as coloured text in a row, the way Reminders shows a due date. */
+  .widgets :deep(.list-row .badge) { height: auto; padding: 0; background: none; font-size: 0.9375rem; font-weight: 400; letter-spacing: 0; }
+  .widgets :deep(.list-row .badge.tone-neutral) { color: var(--ink-3); }
+  .widgets :deep(.empty.compact) { padding: 10px 0 12px; }
+  .widgets :deep(.empty.compact .title) { font-size: 1.0625rem; color: var(--ink); font-weight: 400; }
+  .widgets :deep(.empty.compact .hint) { font-size: 0.9375rem; }
 }
 </style>

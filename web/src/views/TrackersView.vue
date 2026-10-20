@@ -4,6 +4,8 @@
 // check-in sheet. Days a habit is not due are dimmed, skipped days show a slash. The name opens
 // the habit's stats page. Reorder moves a habit within its area.
 import { computed, ref } from 'vue'
+import { useRoute } from 'vue-router'
+import PullToRefresh from '../components/ios/PullToRefresh.vue'
 import { PhArrowDown, PhArrowUp, PhFlame, PhPlus, PhSparkle } from '@phosphor-icons/vue'
 import CheckInSheet from '../components/habits/CheckInSheet.vue'
 import HabitEditor from '../components/habits/HabitEditor.vue'
@@ -28,6 +30,7 @@ const toast = useToast()
 const error = ref('')
 const today = todayFn()
 const phone = useMediaQuery('(max-width: 699px)')
+const route = useRoute()
 const reordering = ref(false)
 
 const ready = useReady(() => store.load())
@@ -176,6 +179,7 @@ const days = computed(() => store.week?.trackers[0]?.days.map((d) => d.date) || 
 </script>
 
 <template>
+  <PullToRefresh :action="() => store.load()">
   <div class="habits">
     <PageHeader v-if="!phone" title="Habits" eyebrow="Week view">
       <WeekNav :week-start="store.weekStart" @change="store.setWeek($event)" />
@@ -183,10 +187,10 @@ const days = computed(() => store.week?.trackers[0]?.days.map((d) => d.date) || 
       <UiButton v-if="store.trackers.length > 1" :variant="reordering ? 'primary' : 'secondary'" @click="reordering = !reordering">{{ reordering ? 'Done' : 'Reorder' }}</UiButton>
       <UiButton variant="primary" @click="openEditor('new')"><PhPlus />New habit</UiButton>
     </PageHeader>
-    <div v-else class="phead">
-      <h1>Habits</h1>
-      <UiButton variant="primary" size="sm" @click="openEditor('new')"><PhPlus />New</UiButton>
-    </div>
+    <h1 v-else class="ptitle">Habits</h1>
+    <Teleport v-if="phone && route.name === 'trackers'" defer to="#nav-trailing">
+      <button type="button" class="icon-btn" aria-label="New habit" @click="openEditor('new')"><PhPlus weight="regular" /></button>
+    </Teleport>
     <p v-if="error || store.error" class="error">{{ error || store.error }}</p>
 
     <UiLoadGate :ready="ready" label="Loading habits">
@@ -216,7 +220,7 @@ const days = computed(() => store.week?.trackers[0]?.days.map((d) => d.date) || 
             </span>
           </div>
         </section>
-        <label class="check pcheck"><input v-model="store.includeInactive" type="checkbox" @change="store.load()" /> Show archived habits</label>
+        <label class="card pswitch"><span>Show archived habits</span><input v-model="store.includeInactive" type="checkbox" role="switch" @change="store.load()" /></label>
       </template>
 
       <!-- Desktop: a table per area. -->
@@ -285,12 +289,13 @@ const days = computed(() => store.week?.trackers[0]?.days.map((d) => d.date) || 
     <HabitEditor :open="Boolean(editing)" :tracker="editing === 'new' ? null : editing" :busy="saving" :error="editError" @save="save" @close="editing = null" />
     <UiConfirm :open="Boolean(deleting)" title="Delete habit?" :message="deleting ? `${deleting.name} and every check-in it has will be gone. Archive keeps the history instead.` : ''" confirm-label="Delete" danger :busy="deleteBusy" @confirm="confirmDelete" @cancel="deleting = null" />
   </div>
+  </PullToRefresh>
 </template>
 
 <style scoped>
-.phead { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-2); margin-bottom: var(--sp-4); }
+.ptitle { margin: 4px 0 var(--sp-5); }
+.pswitch { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-3); padding: 6px 16px; min-height: 44px; font-size: var(--fs-base); }
 .check { display: flex; align-items: center; gap: 6px; font-size: var(--fs-md); white-space: nowrap; }
-.pcheck { margin: 0 4px var(--sp-5); color: var(--ink-3); }
 .card-head h2 { display: flex; align-items: center; gap: 8px; }
 .dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
 

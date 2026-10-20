@@ -3,11 +3,16 @@
 // element that springs to the chosen segment, so a change reads as the same object moving.
 import { nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { createSpring, reducedMotion } from '../../lib/spring'
+import { tick } from '../../lib/haptics'
 
 const props = defineProps({ modelValue: { type: [String, Number], required: true }, options: { type: Array, required: true } })
 const emit = defineEmits(['update:modelValue'])
 
 const root = ref(null)
+function pick(value) {
+  if (value !== props.modelValue) tick()
+  emit('update:modelValue', value)
+}
 const thumb = ref({ x: 0, w: 0, ready: false })
 const sx = createSpring({ value: 0, damping: 1, response: 0.3, onUpdate: (v) => (thumb.value.x = v) })
 const sw = createSpring({ value: 0, damping: 1, response: 0.3, onUpdate: (v) => (thumb.value.w = v) })
@@ -51,7 +56,7 @@ watch(() => [props.modelValue, props.options], () => nextTick(() => measure(true
       class="seg-item"
       :class="{ active: o.value === modelValue }"
       :aria-selected="o.value === modelValue"
-      @click="emit('update:modelValue', o.value)"
+      @click="pick(o.value)"
     >
       {{ o.label }}
     </button>
@@ -78,4 +83,14 @@ watch(() => [props.modelValue, props.options], () => nextTick(() => measure(true
 .seg-item:active { transform: scale(0.96); }
 .seg-item.active { color: var(--ink); font-weight: 600; }
 @media (hover: hover) and (pointer: fine) { .seg-item:not(.active):hover { color: var(--ink); } }
+/* iOS segmented control: a grey rounded track, a white thumb with a soft shadow, 13pt labels. */
+@media (max-width: 1023px) {
+  .seg { padding: 2px; border-radius: 9px; background: var(--surface-2); box-shadow: none; }
+  .thumb { top: 2px; bottom: 2px; border-radius: 7px; background: #fff; box-shadow: 0 3px 8px rgb(0 0 0 / 0.12), 0 3px 1px rgb(0 0 0 / 0.04); }
+  :root[data-theme='dark'] .thumb { background: #636366; }
+  .seg-item { height: 28px; padding: 0 12px; border-radius: 7px; font-size: 0.8125rem; font-weight: 500; color: var(--ink); }
+  .seg-item.active { font-weight: 600; }
+  .seg-item:active { transform: none; opacity: 0.6; }
+}
+@media (max-width: 1023px) and (prefers-color-scheme: dark) { :root:not([data-theme='light']) .thumb { background: #636366; } }
 </style>
