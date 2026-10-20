@@ -104,8 +104,23 @@ const overall = computed(() =>
     return vals.length ? vals.reduce((a, p) => a + Math.min(100, p), 0) / vals.length : null
   }),
 )
-const thisWeek = computed(() => overall.value[overall.value.length - 1] ?? null)
-const lastWeek = computed(() => overall.value[overall.value.length - 2] ?? null)
+
+// One habit in focus, or all of them. The chosen habit drives the number and the line, and
+// its row stays bright in the grid while the rest step back. Remembered per device.
+const selected = ref(read('pozzy.consistency.habit', 'all'))
+watch(selected, (v) => write('pozzy.consistency.habit', v))
+const focus = computed(() => (selected.value === 'all' ? null : rows.value.find((r) => r.id === selected.value) || null))
+watch(rows, (list) => {
+  if (selected.value !== 'all' && list.length && !list.some((r) => r.id === selected.value)) selected.value = 'all'
+})
+function toggleFocus(id) {
+  selected.value = selected.value === id ? 'all' : id
+}
+const values = computed(() => (focus.value ? focus.value.cells.map((c) => c.pct) : overall.value))
+const focusText = (i) => (focus.value ? focus.value.cells[i]?.text : null)
+
+const thisWeek = computed(() => values.value[values.value.length - 1] ?? null)
+const lastWeek = computed(() => values.value[values.value.length - 2] ?? null)
 const delta = computed(() => (thisWeek.value === null || lastWeek.value === null ? null : Math.round(thisWeek.value) - Math.round(lastWeek.value)))
 
 // Five steps of one hue: nothing, a little, half, most, all of it.
@@ -135,18 +150,20 @@ onBeforeUnmount(() => observer?.disconnect())
 watch(plot, (el) => el && observer?.observe(el))
 
 const trend = computed(() => {
-  const done = overall.value.slice(0, -1)
+  const done = values.value.slice(0, -1)
   const n = done.length
   if (n < 2) return null
   const w = width.value - pad.l - pad.r
   const h = HEIGHT - pad.t - pad.b
   const sx = (i) => pad.l + (i / (n - 1)) * w
-  const sy = (v) => pad.t + h - (v / 100) * h
+  // The line stops at 100% (target fully met); the tooltip and the headline keep the real number.
+  const top = 100
+  const sy = (v) => pad.t + h - (Math.min(v, top) / top) * h
   const pts = done.map((v, i) => (v === null ? null : { x: sx(i), y: sy(v), v, i })).filter(Boolean)
   if (pts.length < 2) return null
   const lastPt = pts[pts.length - 1]
   const labels = [0, Math.round((n - 1) / 2), n - 1].filter((v, i, a) => a.indexOf(v) === i).map((i) => ({ x: sx(i), text: shortDate(weeks.value[i]), anchor: i === 0 ? 'start' : i === n - 1 ? 'end' : 'middle' }))
-  return { pts, line: smoothPath(pts), area: areaPath(pts, sy(0)), grid: [0, 50, 100].map((v) => ({ v, y: sy(v) })), labels, lastPt }
+  return { pts, line: smoothPath(pts), area: areaPath(pts, sy(0)), grid: [0, top / 2, top].map((v) => ({ v, y: sy(v) })), labels, lastPt }
 })
 const hover = ref(null)
 function onMove(e) {
@@ -175,22 +192,31 @@ const monthMarks = computed(() => weeks.value.map((w, i) => (i === 0 || w.slice(
         <h2>Consistency</h2>
         <p class="sub">Share of each habit's target met per week</p>
       </div>
-      <UiSegmented v-model="range" :options="RANGES" />
     </div>
     <p v-if="error" class="error">{{ error }}</p>
+    <div class="controls">
+      <label v-if="rows.length" class="pick">
+        <span class="visually-hidden">Show</span>
+        <select v-model="selected" aria-label="Habit to show">
+          <option value="all">All habits</option>
+          <option v-for="r in rows" :key="r.id" :value="r.id">{{ r.name }}</option>
+        </select>
+      </label>
+      <UiSegmented v-model="range" :options="RANGES" />
+    </div>
 
     <template v-if="rows.length && weeks.length">
       <div class="hero">
-        <span class="hero-label">This week so far</span>
+        <span class="hero-label">{{ focus ? focus.name + ', this week so far' : 'All habits, this week so far' }}</span>
         <span class="hero-value">{{ thisWeek === null ? '-' : Math.round(thisWeek) + '%' }}</span>
         <span v-if="delta !== null" class="delta">
           <PhArrowUpRight v-if="delta > 0" class="up" weight="bold" /><PhArrowDownRight v-else-if="delta < 0" class="down" weight="bold" />
-          {{ delta === 0 ? 'Same as' : (delta > 0 ? '+' : '') + delta + ' pts vs' }} last week
+          {{ delta === 0 ? 'Same as' : (delta > 0 ? '+' : '') + delta + (Math.abs(delta) === 1 ? ' pt vs' : ' pts vs') }} last week
         </span>
       </div>
 
       <div ref="plot" class="plot" @pointermove="onMove" @pointerleave="hover = null">
-        <svg v-if="trend" :viewBox="`0 0 ${width} ${HEIGHT}`" :style="{ height: HEIGHT + 'px' }" role="img" :aria-label="`Overall completion per finished week, last week ${Math.round(trend.lastPt.v)}%`">
+        <svg v-if="trend" :viewBox="`0 0 ${width} ${HEIGHT}`" :style="{ height: HEIGHT + 'px' }" role="img" :aria-label="`${focus ? focus.name : 'Overall completion'} per finished week, last week ${Math.round(trend.lastPt.v)}%`">
           <defs>
             <linearGradient id="consistency-wash" x1="0" x2="0" y1="0" y2="1">
               <stop offset="0" stop-color="var(--brand)" stop-opacity="0.18" />
@@ -211,6 +237,7 @@ const monthMarks = computed(() => weeks.value.map((w, i) => (i === 0 || w.slice(
         <div v-if="hover" class="tip" :style="{ left: `${(hover.x / width) * 100}%` }">
           <span class="tip-week">Week of {{ hoverWeek }}</span>
           <span class="tip-val">{{ Math.round(hover.v) }}%</span>
+          <span v-if="focusText(hover.i)" class="tip-week">{{ focusText(hover.i) }}</span>
         </div>
       </div>
 
@@ -220,8 +247,8 @@ const monthMarks = computed(() => weeks.value.map((w, i) => (i === 0 || w.slice(
           <span v-for="(m, i) in monthMarks" :key="i" role="columnheader" class="mcell">{{ m }}</span>
           <span role="columnheader" class="gval">Now</span>
         </div>
-        <div v-for="r in rows" :key="r.id" class="gr" role="row" :style="{ '--n': weeks.length }">
-          <RouterLink :to="{ name: 'habit', params: { id: r.id } }" role="rowheader" class="gname truncate">{{ r.name }}</RouterLink>
+        <div v-for="r in rows" :key="r.id" class="gr" :class="{ focused: focus?.id === r.id, dimmed: focus && focus.id !== r.id }" role="row" :style="{ '--n': weeks.length }" @click="toggleFocus(r.id)">
+          <RouterLink :to="{ name: 'habit', params: { id: r.id } }" role="rowheader" class="gname truncate" @click.stop>{{ r.name }}</RouterLink>
           <span
             v-for="(c, i) in r.cells"
             :key="c.week"
@@ -248,10 +275,17 @@ const monthMarks = computed(() => weeks.value.map((w, i) => (i === 0 || w.slice(
 
 <style scoped>
 .consistency { --c: var(--brand); }
-.head { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--sp-3); flex-wrap: wrap; margin-bottom: var(--sp-4); }
+.head { margin-bottom: var(--sp-4); }
 .head h2 { margin: 0; }
 .sub { margin: 2px 0 0; font-size: var(--fs-sm); color: var(--ink-3); }
 
+.controls { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-3); margin: 0 0 var(--sp-4); }
+.pick { display: block; flex: 0 1 auto; min-width: 0; }
+.pick select { width: auto; max-width: 100%; text-overflow: ellipsis; height: 34px; padding: 0 32px 0 14px; border-radius: var(--r-pill); font-weight: 600; color: var(--ink); }
+.gr:not(.months) { cursor: pointer; border-radius: 6px; transition: opacity var(--dur-ui) ease; }
+.gr.dimmed { opacity: 0.32; }
+.gr.focused { background: color-mix(in srgb, var(--c) 8%, transparent); box-shadow: 0 0 0 4px color-mix(in srgb, var(--c) 8%, transparent); }
+.gr.focused .gname { font-weight: 600; }
 .hero { display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 12px; margin-bottom: var(--sp-2); }
 .hero-label { flex-basis: 100%; font-size: var(--fs-sm); color: var(--ink-3); }
 .hero-value { font-size: 2.5rem; font-weight: 700; letter-spacing: -0.02em; line-height: 1.05; color: var(--ink); }
@@ -297,7 +331,8 @@ const monthMarks = computed(() => weeks.value.map((w, i) => (i === 0 || w.slice(
 .scale .key { margin-left: 12px; }
 
 @media (max-width: 1023px) {
-  .head :deep(.seg) { flex: none; }
+  .pick select { height: 34px; font-size: 1.0625rem; }
+  .controls :deep(.seg) { flex: none; }
   .hero-value { font-size: 2.125rem; }
   .gr { grid-template-columns: minmax(72px, 108px) repeat(var(--n), minmax(0, 1fr)) 38px; gap: 3px; }
   .gname { font-size: 0.9375rem; }
